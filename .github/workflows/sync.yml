@@ -1,4 +1,4 @@
-name: Keo du lieu Google -> Supabase
+name: Keo du lieu Google + Meta -> Supabase
 
 on:
   schedule:
@@ -19,3 +19,4 @@ jobs:
           GA_SA_KEY: ${{ secrets.GA_SA_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          META_TOKEN: ${{ secrets.NGUOILONBINHAN_META_TOKEN }}
