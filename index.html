@@ -4,25 +4,36 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-:root{--bg:#F4F6F5;--surface:#fff;--sunk:#EDF1EF;--line:#DCE3E0;--ink:#141D1B;--ink2:#42514E;--muted:#6E7D79;--accent:#0F5348;--soft:#E1EEE9;--good:#4F7A1E;--crit:#A93126;--shadow:0 1px 2px rgba(20,29,27,.06),0 6px 20px -12px rgba(20,29,27,.22)}
-@media(prefers-color-scheme:dark){:root{--bg:#0D1210;--surface:#151D1B;--sunk:#1D2724;--line:#2A3633;--ink:#E7EDEA;--ink2:#B4C1BD;--muted:#8B9995;--accent:#4EB69D;--soft:#173029;--good:#8DBE4E;--crit:#E2776A;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -14px rgba(0,0,0,.7)}}
+:root{--bg:#F4F6F5;--surface:#fff;--sunk:#EDF1EF;--line:#DCE3E0;--ink:#141D1B;--ink2:#42514E;
+--muted:#6E7D79;--accent:#0F5348;--soft:#E1EEE9;--good:#4F7A1E;--warn:#A96C05;--crit:#A93126;
+--shadow:0 1px 2px rgba(20,29,27,.06),0 6px 20px -12px rgba(20,29,27,.22)}
+@media(prefers-color-scheme:dark){:root{--bg:#0D1210;--surface:#151D1B;--sunk:#1D2724;--line:#2A3633;
+--ink:#E7EDEA;--ink2:#B4C1BD;--muted:#8B9995;--accent:#4EB69D;--soft:#173029;--good:#8DBE4E;
+--warn:#DFA648;--crit:#E2776A;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -14px rgba(0,0,0,.7)}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,sans-serif;
+font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .wrap{max-width:1000px;margin:0 auto;padding:0 14px 60px}
-header{position:sticky;top:0;z-index:9;background:var(--bg);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+header{position:sticky;top:0;z-index:9;background:var(--bg);border-bottom:1px solid var(--line);
+padding-top:env(safe-area-inset-top)}
 .hin{max-width:1000px;margin:0 auto;padding:12px 14px}
 .brand{display:flex;align-items:center;gap:9px;font-weight:600}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
-.brand small{display:block;font-weight:400;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:11px;
+letter-spacing:.06em;text-transform:uppercase}
 .row{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap;align-items:center}
-select,button{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer}
+select,button{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);
+border:1px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer}
 button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);margin-top:14px}
-.card h2{margin:0 0 2px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;
+box-shadow:var(--shadow);margin-top:14px}
+.card h2{margin:0 0 2px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+color:var(--accent);font-weight:600}
 .card .sub{margin:0 0 14px;font-size:12.5px;color:var(--muted)}
-.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);
+border:1px solid var(--line);border-radius:12px;overflow:hidden}
 @media(min-width:620px){.kpis{grid-template-columns:repeat(4,1fr)}}
 .kpi{background:var(--surface);padding:13px 12px}
 .kpi .l{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
@@ -35,17 +46,24 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 .fm{display:flex;justify-content:space-between;font-size:13px;align-items:baseline}
 .tw{overflow-x:auto;margin:0 -16px;padding:0 16px}
 table{border-collapse:collapse;width:100%;font-size:13px;min-width:460px}
-th{text-align:right;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{text-align:right;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+font-weight:500;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 tbody tr:last-child td{border-bottom:0}
 .note{font-size:12.5px;color:var(--muted);margin-top:12px;padding-top:11px;border-top:1px dashed var(--line)}
 .q{font-size:13.5px;color:var(--ink2);background:var(--soft);border-radius:10px;padding:11px 13px;margin-top:13px}
 .q b{color:var(--accent)}
+.gap{font-size:13.5px;color:var(--ink2);background:var(--sunk);border-left:3px solid var(--warn);
+border-radius:0 10px 10px 0;padding:12px 14px;margin-top:13px}
+.gap b{color:var(--warn)}
+.big{font-size:19px;font-weight:600;letter-spacing:-.01em}
+/* login */
 .login{max-width:380px;margin:14vh auto;padding:0 18px;text-align:center}
 .login h1{font-size:24px;letter-spacing:-.02em;margin:14px 0 6px}
 .login p{color:var(--muted);font-size:14px;margin:0 0 22px}
-.login input{width:100%;font:inherit;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);margin-bottom:10px;text-align:center}
+.login input{width:100%;font:inherit;padding:12px 14px;border-radius:10px;border:1px solid var(--line);
+background:var(--surface);color:var(--ink);margin-bottom:10px;text-align:center}
 .login button{width:100%;padding:12px}
 .msg{margin-top:14px;font-size:13.5px;padding:11px;border-radius:10px}
 .msg.ok{background:var(--soft);color:var(--accent)}
@@ -54,24 +72,31 @@ tbody tr:last-child td{border-bottom:0}
 .chart{width:100%;height:auto;display:block}
 .hidden{display:none}
 </style></head><body>
+
 <div id="login" class="login">
-<div style="display:flex;justify-content:center"><span class="dot"></span></div>
-<h1>nguoilonbinhan.meschool</h1>
-<p>Nhập email công ty. Chúng tôi gửi một link đăng nhập — không cần mật khẩu.</p>
-<input id="email" type="email" placeholder="ten@meschool.vn" autocomplete="email">
-<button class="primary" id="send">Gửi link đăng nhập</button>
-<div id="msg"></div>
+  <div style="display:flex;justify-content:center"><span class="dot"></span></div>
+  <h1>nguoilonbinhan.meschool</h1>
+  <p>Nhập email công ty. Chúng tôi gửi một link đăng nhập — không cần mật khẩu.</p>
+  <input id="email" type="email" placeholder="ten@meschool.vn" autocomplete="email">
+  <button class="primary" id="send">Gửi link đăng nhập</button>
+  <div id="msg"></div>
 </div>
+
 <div id="app" class="hidden">
 <header><div class="hin">
-<div class="brand"><span class="dot"></span><div>nguoilonbinhan.meschool<small id="who">—</small></div></div>
-<div class="row">
-<select id="period"><option value="28">28 ngày gần nhất</option><option value="7">7 ngày gần nhất</option><option value="90">90 ngày</option></select>
-<button id="out" style="margin-left:auto">Đăng xuất</button>
-</div>
+  <div class="brand"><span class="dot"></span><div>nguoilonbinhan.meschool<small id="who">—</small></div></div>
+  <div class="row">
+    <select id="period">
+      <option value="28">28 ngày gần nhất</option>
+      <option value="7">7 ngày gần nhất</option>
+      <option value="90">90 ngày</option>
+    </select>
+    <button id="out" style="margin-left:auto">Đăng xuất</button>
+  </div>
 </div></header>
 <main class="wrap" id="body"></main>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
@@ -79,80 +104,145 @@ const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
+const vnd=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN")+"đ";
 const pct=(n,d=1)=>n==null||!isFinite(n)?"—":(n*100).toFixed(d)+"%";
 const shift=(iso,d)=>{const t=new Date(iso+"T00:00:00Z");t.setUTCDate(t.getUTCDate()+d);return t.toISOString().slice(0,10)};
+
 $("send").onclick=async()=>{
-const email=$("email").value.trim();
-if(!email){$("msg").className="msg err";$("msg").textContent="Chưa nhập email.";return}
-$("send").disabled=true;$("send").textContent="Đang gửi…";
-const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split("#")[0]}});
-$("send").disabled=false;$("send").textContent="Gửi link đăng nhập";
-if(error){$("msg").className="msg err";$("msg").textContent="Lỗi: "+error.message}
-else{$("msg").className="msg ok";$("msg").textContent="Đã gửi. Mở email và bấm vào link — link dùng được một lần."}
+  const email=$("email").value.trim();
+  if(!email){$("msg").className="msg err";$("msg").textContent="Chưa nhập email.";return}
+  $("send").disabled=true;$("send").textContent="Đang gửi…";
+  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split("#")[0]}});
+  $("send").disabled=false;$("send").textContent="Gửi link đăng nhập";
+  if(error){$("msg").className="msg err";$("msg").textContent="Lỗi: "+error.message}
+  else{$("msg").className="msg ok";$("msg").textContent="Đã gửi. Mở email và bấm vào link — link dùng được một lần."}
 };
 $("email").addEventListener("keydown",e=>{if(e.key==="Enter")$("send").click()});
 $("out").onclick=async()=>{await sb.auth.signOut();location.reload()};
 $("period").onchange=render;
+
 function spark(series){
-if(!series.length) return '<div class="note">Không có dữ liệu trong khoảng này</div>';
-const w=560,h=62,p=3,max=Math.max(...series.map(x=>x.v),1);
-const X=i=>p+i*(w-2*p)/Math.max(series.length-1,1), Y=v=>h-p-(v/max)*(h-2*p-8);
-const pts=series.map((x,i)=>X(i).toFixed(1)+","+Y(x.v).toFixed(1)).join(" ");
-const last=series[series.length-1];
-return '<svg class="chart" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" role="img" aria-label="Xu hướng theo ngày">'
-+'<polygon points="'+p+','+(h-p)+' '+pts+' '+X(series.length-1).toFixed(1)+','+(h-p)+'" fill="var(--accent)" opacity=".13"></polygon>'
-+'<polyline points="'+pts+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>'
-+'<circle cx="'+X(series.length-1).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="3.4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"></circle></svg>'
-+'<div class="note" style="border:0;padding:0;margin-top:7px;display:flex;justify-content:space-between"><span>'
-+series[0].d.slice(8)+"/"+series[0].d.slice(5,7)+'</span><span>đỉnh <b class="mono">'+fmt(max)+'</b> · gần nhất <b class="mono">'+fmt(last.v)+'</b></span></div>';
+  if(!series.length) return '<div class="note">Không có dữ liệu trong khoảng này</div>';
+  const w=560,h=62,p=3,max=Math.max(...series.map(x=>x.v),1);
+  const X=i=>p+i*(w-2*p)/Math.max(series.length-1,1), Y=v=>h-p-(v/max)*(h-2*p-8);
+  const pts=series.map((x,i)=>X(i).toFixed(1)+","+Y(x.v).toFixed(1)).join(" ");
+  const last=series[series.length-1];
+  return '<svg class="chart" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" role="img" aria-label="Xu hướng theo ngày">'
+   +'<polygon points="'+p+','+(h-p)+' '+pts+' '+X(series.length-1).toFixed(1)+','+(h-p)+'" fill="var(--accent)" opacity=".13"></polygon>'
+   +'<polyline points="'+pts+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>'
+   +'<circle cx="'+X(series.length-1).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="3.4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"></circle></svg>'
+   +'<div class="note" style="border:0;padding:0;margin-top:7px;display:flex;justify-content:space-between">'
+   +'<span>'+series[0].d.slice(8)+"/"+series[0].d.slice(5,7)+'</span><span>đỉnh <b class="mono">'+fmt(max)+'</b> · gần nhất <b class="mono">'+fmt(last.v)+'</b></span></div>';
 }
 function delta(cur,prev,goodUp=true){
-if(prev==null||prev===0) return '<div class="d">kỳ trước —</div>';
-const r=(cur-prev)/Math.abs(prev);
-const cls=Math.abs(r)<0.02?"flat":(r>0)===goodUp?"up":"down";
-const a=Math.abs(r)<0.02?"→":r>0?"↑":"↓";
-return '<div class="d"><span class="'+cls+'">'+a+" "+(Math.abs(r)*100).toFixed(0)+'%</span> <span style="opacity:.7">vs '+fmt(prev)+"</span></div>";
+  if(prev==null||prev===0) return '<div class="d">kỳ trước —</div>';
+  const r=(cur-prev)/Math.abs(prev);
+  const cls=Math.abs(r)<0.02?"flat":(r>0)===goodUp?"up":"down";
+  const a=Math.abs(r)<0.02?"→":r>0?"↑":"↓";
+  return '<div class="d"><span class="'+cls+'">'+a+" "+(Math.abs(r)*100).toFixed(0)+'%</span> <span style="opacity:.7">vs '+fmt(prev)+"</span></div>";
 }
 const kpi=(l,v,d)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v mono">'+v+"</div>"+(d||"")+"</div>";
+
 async function render(){
-const n=+$("period").value;
-$("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-const [{data:ga},{data:gs},{data:gq}] = await Promise.all([
-sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
-sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
-sb.from("gsc_query").select("query,clicks,impressions,ctr,position").order("impressions",{ascending:false}).limit(15)]);
-if(!ga||!gs){$("body").innerHTML='<div class="card"><h2>Không đọc được dữ liệu</h2><p class="sub">Tài khoản chưa được cấp quyền xem.</p></div>';return}
-const days=[...new Set(ga.map(r=>r.day))].sort();
-const end=days[days.length-1], start=shift(end,-(n-1)), pEnd=shift(start,-1), pStart=shift(pEnd,-(n-1));
-const inR=(d,a,b)=>d>=a&&d<=b;
-const sum=(rows,f,a,b)=>rows.filter(r=>inR(r.day,a,b)).reduce((s,r)=>s+(+r[f]||0),0);
-const ses=sum(ga,"sessions",start,end), pses=sum(ga,"sessions",pStart,pEnd);
-const usr=sum(ga,"active_users",start,end), pusr=sum(ga,"active_users",pStart,pEnd);
-const cl=sum(gs,"clicks",start,end), pcl=sum(gs,"clicks",pStart,pEnd);
-const im=sum(gs,"impressions",start,end), pim=sum(gs,"impressions",pStart,pEnd);
-const byDay={}; days.filter(d=>inR(d,start,end)).forEach(d=>byDay[d]=0);
-ga.forEach(r=>{if(byDay[r.day]!==undefined)byDay[r.day]+=(+r.sessions||0)});
-const series=Object.keys(byDay).sort().map(d=>({d,v:byDay[d]}));
-const ch={}; ga.filter(r=>inR(r.day,start,end)).forEach(r=>ch[r.channel]=(ch[r.channel]||0)+(+r.sessions||0));
-const chRows=Object.entries(ch).sort((a,b)=>b[1]-a[1]); const chTot=chRows.reduce((s,x)=>s+x[1],0)||1;
-const brand=gq?gq.filter(q=>/me\s*school/i.test(q.query)):[];
-const brandCl=brand.reduce((s,q)=>s+(+q.clicks||0),0);
-const allCl=gq?gq.reduce((s,q)=>s+(+q.clicks||0),0):0;
-$("body").innerHTML=
-'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p><div class="kpis">'
-+kpi("Phiên",fmt(ses),delta(ses,pses))+kpi("Người dùng",fmt(usr),delta(usr,pusr))
-+kpi("Lượt nhấp Google",fmt(cl),delta(cl,pcl))+kpi("Hiển thị",fmt(im),delta(im,pim))
-+'</div><div style="margin-top:14px">'+spark(series)+"</div></div>"
-+'<div class="card"><h2>Nguồn truy cập</h2><p class="sub">Phiên theo kênh · '+fmt(chTot)+" phiên</p>"
-+chRows.map(([k,v])=>'<div class="frow"><div class="fm"><span>'+k+'</span><span><b class="mono">'+fmt(v)+'</b> <span style="color:var(--muted)">'+pct(v/chTot,1)+'</span></span></div><div class="bar"><i style="width:'+(v/chRows[0][1]*100).toFixed(1)+'%"></i></div></div>').join("")
-+'<p class="note">Paid Search và Paid Social gần như bằng 0 — quảng cáo hầu như không đưa ai về website.</p></div>'
-+'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">Top theo lượt hiển thị</p><div class="tw"><table><thead><tr><th>Từ khoá</th><th>Hiển thị</th><th>Nhấp</th><th>CTR</th><th>Vị trí</th></tr></thead><tbody>'
-+(gq||[]).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)+'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+(+q.position).toFixed(1)+"</td></tr>").join("")
-+'</tbody></table></div><div class="q"><b>Câu hỏi:</b> từ khoá thương hiệu chỉ chiếm '+pct(allCl?brandCl/allCl:0,1)+' lượt nhấp trong nhóm này. Người tìm thơ và truyện cho con — họ có phải phụ huynh đang chọn trường không?</div></div>'
-+'<div class="card"><h2>Nguồn dữ liệu</h2><p class="sub">Số nào không có thì để trống, không bịa</p><div class="tw"><table><thead><tr><th>Nguồn</th><th>Đến ngày</th><th>Số ngày trễ</th></tr></thead><tbody>'
-+[["GA4",days[days.length-1]],["Search Console",gs.length?gs[gs.length-1].day:null]].map(([nm,d])=>{const lag=d?Math.round((Date.now()-new Date(d))/864e5):null;return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
-+'</tbody></table></div><p class="note">Meta, CRM, tổng đài, điểm danh, SUPA, tài chính — chưa nối.</p></div>';
+  const n=+$("period").value;
+  $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
+  const [{data:ga},{data:gs},{data:gq},{data:mt}] = await Promise.all([
+    sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
+    sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
+    sb.from("gsc_query").select("query,clicks,impressions,ctr,position").order("impressions",{ascending:false}).limit(15),
+    sb.from("meta_ad_daily").select("day,account_name,spend,impressions,reach,clicks").order("day")
+  ]);
+  if(!ga||!gs){$("body").innerHTML='<div class="card"><h2>Không đọc được dữ liệu</h2><p class="sub">Tài khoản chưa được cấp quyền xem.</p></div>';return}
+
+  const days=[...new Set(ga.map(r=>r.day))].sort();
+  const end=days[days.length-1], start=shift(end,-(n-1)), pEnd=shift(start,-1), pStart=shift(pEnd,-(n-1));
+  const inR=(d,a,b)=>d>=a&&d<=b;
+  const sum=(rows,f,a,b)=>(rows||[]).filter(r=>inR(r.day,a,b)).reduce((s,r)=>s+(+r[f]||0),0);
+
+  const ses=sum(ga,"sessions",start,end), pses=sum(ga,"sessions",pStart,pEnd);
+  const usr=sum(ga,"active_users",start,end), pusr=sum(ga,"active_users",pStart,pEnd);
+  const cl=sum(gs,"clicks",start,end), pcl=sum(gs,"clicks",pStart,pEnd);
+  const im=sum(gs,"impressions",start,end), pim=sum(gs,"impressions",pStart,pEnd);
+
+  const byDay={}; days.filter(d=>inR(d,start,end)).forEach(d=>byDay[d]=0);
+  ga.forEach(r=>{if(byDay[r.day]!==undefined)byDay[r.day]+=(+r.sessions||0)});
+  const series=Object.keys(byDay).sort().map(d=>({d,v:byDay[d]}));
+
+  const ch={}; ga.filter(r=>inR(r.day,start,end)).forEach(r=>ch[r.channel]=(ch[r.channel]||0)+(+r.sessions||0));
+  const chRows=Object.entries(ch).sort((a,b)=>b[1]-a[1]); const chTot=chRows.reduce((s,x)=>s+x[1],0)||1;
+  const paidSes=ga.filter(r=>inR(r.day,start,end)&&/paid/i.test(r.channel)).reduce((s,r)=>s+(+r.sessions||0),0);
+
+  const brand=gq?gq.filter(q=>/me\s*school/i.test(q.query)):[];
+  const brandCl=brand.reduce((s,q)=>s+(+q.clicks||0),0);
+  const allCl=gq?gq.reduce((s,q)=>s+(+q.clicks||0),0):0;
+
+  // ----- Meta -----
+  const M=mt||[];
+  const msp=sum(M,"spend",start,end),  pmsp=sum(M,"spend",pStart,pEnd);
+  const mcl=sum(M,"clicks",start,end), pmcl=sum(M,"clicks",pStart,pEnd);
+  const mim=sum(M,"impressions",start,end), pmim=sum(M,"impressions",pStart,pEnd);
+  const cpc=mcl?msp/mcl:null,  pcpc=pmcl?pmsp/pmcl:null;
+  const cpm=mim?msp/mim*1000:null, pcpm=pmim?pmsp/pmim*1000:null;
+  const acc={}; M.filter(r=>inR(r.day,start,end)).forEach(r=>{const k=r.account_name||"(không tên)";
+    acc[k]=acc[k]||{s:0,i:0,c:0}; acc[k].s+=+r.spend||0; acc[k].i+=+r.impressions||0; acc[k].c+=+r.clicks||0});
+  const accRows=Object.entries(acc).sort((a,b)=>b[1].s-a[1].s);
+  const mDays=[...new Set(M.map(r=>r.day))].sort();
+
+  const metaCard = M.length ?
+   '<div class="card"><h2>Quảng cáo Meta</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
+   +'<div class="kpis">'+kpi("Chi tiêu",vnd(msp),delta(msp,pmsp,false))
+   +kpi("Lượt nhấp",fmt(mcl),delta(mcl,pmcl))
+   +kpi("Giá mỗi nhấp",vnd(cpc),delta(cpc,pcpc,false))
+   +kpi("Giá mỗi 1.000 hiển thị",vnd(cpm),delta(cpm,pcpm,false))+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tài khoản</th><th>Chi tiêu</th><th>Hiển thị</th><th>Nhấp</th><th>Giá/nhấp</th></tr></thead><tbody>'
+   +accRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+vnd(v.s)+'</td><td class="mono">'+fmt(v.i)
+     +'</td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+vnd(v.c?v.s/v.c:null)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<div class="gap"><b>Khoảng trắng:</b> <span class="big mono">'+fmt(mcl)+'</span> lượt nhấp đã trả tiền trên Meta, '
+   +'nhưng website chỉ nhận <span class="big mono">'+fmt(paidSes)+'</span> phiên từ quảng cáo trong cùng kỳ.<br>'
+   +'Vậy những người bấm đó đi đâu — ai trả lời họ, sau bao lâu, và có ai trong số đó được ghi vào CRM không?</div></div>'
+   : '<div class="card"><h2>Quảng cáo Meta</h2><p class="sub">Chưa có dữ liệu trong khoảng này</p></div>';
+
+  $("body").innerHTML=
+   '<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
+   +'<div class="kpis">'+kpi("Phiên",fmt(ses),delta(ses,pses))+kpi("Người dùng",fmt(usr),delta(usr,pusr))
+   +kpi("Lượt nhấp Google",fmt(cl),delta(cl,pcl))+kpi("Hiển thị",fmt(im),delta(im,pim))+"</div>"
+   +'<div style="margin-top:14px">'+spark(series)+"</div></div>"
+
+   +metaCard
+
+   +'<div class="card"><h2>Nguồn truy cập</h2><p class="sub">Phiên theo kênh · '+fmt(chTot)+" phiên</p>"
+   +chRows.map(([k,v])=>'<div class="frow"><div class="fm"><span>'+k+'</span><span><b class="mono">'+fmt(v)
+     +'</b> <span style="color:var(--muted)">'+pct(v/chTot,1)+"</span></span></div>"
+     +'<div class="bar"><i style="width:'+(v/chRows[0][1]*100).toFixed(1)+'%"></i></div></div>').join("")
+   +'<p class="note">Paid Search và Paid Social gần như bằng 0 — quảng cáo hầu như không đưa ai về website.</p></div>'
+
+   +'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">Top theo lượt hiển thị</p>'
+   +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Hiển thị</th><th>Nhấp</th><th>CTR</th><th>Vị trí</th></tr></thead><tbody>'
+   +(gq||[]).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
+     +'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+(+q.position).toFixed(1)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<div class="q"><b>Câu hỏi:</b> từ khoá thương hiệu chỉ chiếm '+pct(allCl?brandCl/allCl:0,1)
+   +' lượt nhấp trong nhóm này. Người tìm thơ và truyện cho con — họ có phải phụ huynh đang chọn trường không?</div></div>'
+
+   +'<div class="card"><h2>Nguồn dữ liệu</h2><p class="sub">Số nào không có thì để trống, không bịa</p>'
+   +'<div class="tw"><table><thead><tr><th>Nguồn</th><th>Đến ngày</th><th>Số ngày trễ</th></tr></thead><tbody>'
+   +[["GA4",days[days.length-1]],["Search Console",gs.length?gs[gs.length-1].day:null],
+     ["Meta Ads",mDays.length?mDays[mDays.length-1]:null]]
+     .map(([nm,d])=>{const lag=d?Math.round((Date.now()-new Date(d))/864e5):null;
+       return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +'<p class="note">CRM, tổng đài, điểm danh, SUPA, tài chính — chưa nối.</p></div>';
 }
-sb.auth.onAuthStateChange(async(_e,session)=>{if(session){$("login").classList.add("hidden");$("app").classList.remove("hidden");$("who").textContent=session.user.email;render();}});
-(async()=>{const {data:{session}}=await sb.auth.getSession();if(session){$("login").classList.add("hidden");$("app").classList.remove("hidden");$("who").textContent=session.user.email;render();}})();
+
+sb.auth.onAuthStateChange(async(_e,session)=>{
+  if(session){
+    $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+    $("who").textContent=session.user.email;
+    render();
+  }
+});
+(async()=>{const {data:{session}}=await sb.auth.getSession();
+ if(session){$("login").classList.add("hidden");$("app").classList.remove("hidden");
+ $("who").textContent=session.user.email;render();}})();
 </script></body></html>
