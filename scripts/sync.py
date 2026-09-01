@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""nguoilonbinhan.meschool - keo GA4 + Search Console -> Supabase.
+"""nguoilonbinhan.meschool - keo GA4 + Search Console + Meta Ads -> Supabase.
 Chay tren GitHub Actions. Khoa lay tu bien moi truong, khong luu trong repo.
   GA_SA_KEY      : noi dung file JSON cua service account
   SUPABASE_URL   : https://xxx.supabase.co
   SUPABASE_KEY   : service_role key
+  META_TOKEN     : system user token cua Meta (quyen ads_read)
 """
-import json, os, sys, urllib.request, urllib.parse, datetime
+import json, os, sys, urllib.request, urllib.error, urllib.parse, datetime
 from google.oauth2 import service_account
 import google.auth.transport.requests
 
 GA4_PROPERTY = "413850223"
 SITE_URL     = "https://meschool.vn/"
+GRAPH_VER    = "v23.0"
 DAYS = int(sys.argv[1]) if len(sys.argv) > 1 else 90
 
 SB_URL = os.environ["SUPABASE_URL"].rstrip("/")
 SB_KEY = os.environ["SUPABASE_KEY"]
+META_TOKEN = os.environ.get("META_TOKEN", "").strip()
 
 SCOPES = ["https://www.googleapis.com/auth/analytics.readonly",
           "https://www.googleapis.com/auth/webmasters.readonly"]
@@ -97,6 +100,50 @@ total += upsert("gsc_page", [
     {"snapshot_on": TODAY, "page": x["keys"][0], "clicks": x["clicks"],
      "impressions": x["impressions"], "ctr": round(x["ctr"], 5),
      "position": round(x["position"], 2)} for x in gsc("page", 500)])
+
+# ---------- Meta Ads ----------
+def graph_get(path, params):
+    params = dict(params, access_token=META_TOKEN)
+    url = f"https://graph.facebook.com/{GRAPH_VER}/{path}?" + urllib.parse.urlencode(params)
+    try:
+        with urllib.request.urlopen(url, timeout=120) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "replace")[:600]
+        print(f"  Meta loi {e.code} tai {path}: {body}")
+        raise
+
+
+def num(v, typ=int):
+    try:
+        return typ(float(v))
+    except (TypeError, ValueError):
+        return None
+
+
+if META_TOKEN:
+    accounts = graph_get("me/adaccounts", {"fields": "id,name", "limit": 100}).get("data", [])
+    print(f"Meta: thay {len(accounts)} tai khoan quang cao")
+    rows = []
+    for acc in accounts:
+        d = graph_get(f"{acc['id']}/insights", {
+            "level": "account", "time_increment": 1,
+            "fields": "spend,impressions,reach,clicks",
+            "time_range": json.dumps({"since": str(start), "until": str(end)}),
+            "limit": 500})
+        got = d.get("data", [])
+        print(f"    {acc.get('name','?'):28s} {len(got)} ngay")
+        for x in got:
+            rows.append({"day": x["date_start"],
+                         "account_id": acc["id"],
+                         "account_name": acc.get("name"),
+                         "spend": num(x.get("spend"), float),
+                         "impressions": num(x.get("impressions")),
+                         "reach": num(x.get("reach")),
+                         "clicks": num(x.get("clicks"))})
+    total += upsert("meta_ad_daily", rows)
+else:
+    print("Bo qua Meta: chua co META_TOKEN")
 
 # ---------- nhat ky ----------
 upsert("ingest_run", [{"source": "github_actions", "window_start": str(start),
