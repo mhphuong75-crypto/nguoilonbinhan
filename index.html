@@ -105,7 +105,8 @@ const sb=supabase.createClient(URL_,KEY_);
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN")+"đ";
-const pct=(n,d=1)=>n==null||!isFinite(n)?"—":(n*100).toFixed(d)+"%";
+const pct=(n,d=1)=>n==null||!isFinite(n)?"—":(n*100).toFixed(d).replace(".",",")+"%";
+const dec=(n,d=1)=>n==null||!isFinite(n)?"—":(+n).toFixed(d).replace(".",",");
 const shift=(iso,d)=>{const t=new Date(iso+"T00:00:00Z");t.setUTCDate(t.getUTCDate()+d);return t.toISOString().slice(0,10)};
 
 $("send").onclick=async()=>{
@@ -146,12 +147,19 @@ const kpi=(l,v,d)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v mon
 async function render(){
   const n=+$("period").value;
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const [{data:ga},{data:gs},{data:gq},{data:mt}] = await Promise.all([
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp}] = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
-    sb.from("gsc_query").select("query,clicks,impressions,ctr,position").order("impressions",{ascending:false}).limit(15),
-    sb.from("meta_ad_daily").select("day,account_name,spend,impressions,reach,clicks").order("day")
+    sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
+    sb.from("meta_ad_daily").select("day,account_name,spend,impressions,reach,clicks").order("day"),
+    sb.from("meta_campaign_daily").select("day,account_name,campaign_name,objective,spend,impressions,reach,clicks,link_clicks,results,result_type").order("day"),
+    sb.from("gsc_page").select("snapshot_on,page,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("clicks",{ascending:false}).limit(1200),
+    sb.from("ga4_event_daily").select("day,event_name,event_count,total_users").order("day"),
+    sb.from("ga4_landing_daily").select("day,landing_page,sessions,engaged_sessions,engagement_rate,avg_engagement_sec,key_events").order("day")
   ]);
+  // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
+  const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
+  const gq=newest(gqAll,"snapshot_on"), gp=newest(gpAll,"snapshot_on");
   if(!ga||!gs){$("body").innerHTML='<div class="card"><h2>Không đọc được dữ liệu</h2><p class="sub">Tài khoản chưa được cấp quyền xem.</p></div>';return}
 
   const days=[...new Set(ga.map(r=>r.day))].sort();
@@ -172,9 +180,36 @@ async function render(){
   const chRows=Object.entries(ch).sort((a,b)=>b[1]-a[1]); const chTot=chRows.reduce((s,x)=>s+x[1],0)||1;
   const paidSes=ga.filter(r=>inR(r.day,start,end)&&/paid/i.test(r.channel)).reduce((s,r)=>s+(+r.sessions||0),0);
 
-  const brand=gq?gq.filter(q=>/me\s*school/i.test(q.query)):[];
+  const brand=gq.filter(q=>/me\s*school/i.test(q.query));
   const brandCl=brand.reduce((s,q)=>s+(+q.clicks||0),0);
-  const allCl=gq?gq.reduce((s,q)=>s+(+q.clicks||0),0):0;
+  const allCl=gq.reduce((s,q)=>s+(+q.clicks||0),0);
+
+  // ----- SU KIEN WEBSITE: website co cho phu huynh gio tay khong? -----
+  const RAISE=/form|submit|lead|contact|phone|tel|zalo|messeng|chat|call|dang.?ky|register|booking|dat.?lich|tu.?van/i;
+  const evAgg={}; (ev||[]).filter(r=>inR(r.day,start,end)).forEach(r=>{
+    const k=r.event_name; evAgg[k]=evAgg[k]||{c:0,u:0}; evAgg[k].c+=+r.event_count||0; evAgg[k].u+=+r.total_users||0});
+  const evRows=Object.entries(evAgg).sort((a,b)=>b[1].c-a[1].c);
+  const raiseRows=evRows.filter(([k])=>RAISE.test(k));
+  const raiseTot=raiseRows.reduce((s,x)=>s+x[1].c,0);
+
+  // ----- GAN LEN TOP: tu khoa vi tri 8-20, con nhieu cho de len -----
+  const ctrAt=p=>p<=1.5?.28:p<=2.5?.15:p<=3.5?.11:p<=4.5?.085:p<=5.5?.065:p<=10?.04:p<=20?.014:.005;
+  const near=gq.filter(q=>+q.position>=7.5&&+q.position<=20.5&&+q.impressions>=30)
+    .map(q=>({...q,gain:Math.round(+q.impressions*ctrAt(4)- +q.clicks)}))
+    .filter(q=>q.gain>0).sort((a,b)=>b.gain-a.gain).slice(0,12);
+  const nearGain=near.reduce((s,q)=>s+q.gain,0);
+  // tieu de hong: xep hang tot nhung it ai bam
+  const weakTitle=gq.filter(q=>+q.position<=10&&+q.impressions>=150&&+q.ctr<ctrAt(+q.position)*0.4)
+    .sort((a,b)=>b.impressions-a.impressions).slice(0,6);
+
+  // ----- TRANG: ghep Search Console (nguon) voi GA4 (nguoi doc that su lam gi) -----
+  const path=u=>{try{return new URL(u).pathname}catch(e){return (u||"").replace(/^https?:\/\/[^/]+/,"")||"/"}};
+  const lpAgg={}; (lp||[]).filter(r=>inR(r.day,start,end)).forEach(r=>{
+    const k=r.landing_page||"/"; lpAgg[k]=lpAgg[k]||{s:0,e:0,t:0};
+    lpAgg[k].s+=+r.sessions||0; lpAgg[k].e+=+r.engaged_sessions||0;
+    lpAgg[k].t+=(+r.avg_engagement_sec||0)*(+r.sessions||0)});
+  const pageRows=gp.slice(0,15).map(p=>{const g=lpAgg[path(p.page)]||null;
+    return {...p, ses:g?g.s:null, er:g&&g.s?g.e/g.s:null, sec:g&&g.s?g.t/g.s:null}});
 
   // ----- Meta -----
   const M=mt||[];
@@ -203,13 +238,101 @@ async function render(){
    +'Vậy những người bấm đó đi đâu — ai trả lời họ, sau bao lâu, và có ai trong số đó được ghi vào CRM không?</div></div>'
    : '<div class="card"><h2>Quảng cáo Meta</h2><p class="sub">Chưa có dữ liệu trong khoảng này</p></div>';
 
+  // ----- Meta theo campaign: tien di dau, campaign nao dot -----
+  const cmp={}; (mc||[]).filter(r=>inR(r.day,start,end)).forEach(r=>{
+    const k=(r.campaign_name||"(không tên)")+"|"+(r.account_name||"");
+    cmp[k]=cmp[k]||{name:r.campaign_name||"(không tên)",acc:r.account_name||"",obj:r.objective||"",
+                    s:0,i:0,re:0,c:0,lc:0,res:0,rt:r.result_type||""};
+    const o=cmp[k]; o.s+=+r.spend||0; o.i+=+r.impressions||0; o.re+=+r.reach||0;
+    o.c+=+r.clicks||0; o.lc+=+r.link_clicks||0; o.res+=+r.results||0;
+    if(r.result_type) o.rt=r.result_type});
+  const cmpRows=Object.values(cmp).sort((a,b)=>b.s-a.s).slice(0,20);
+  const cmpSpend=cmpRows.reduce((s,x)=>s+x.s,0), cmpRes=cmpRows.reduce((s,x)=>s+x.res,0);
+  const tired=cmpRows.filter(x=>x.re&&x.i/x.re>=2.5&&x.s>0);
+  const noRes=cmpRows.filter(x=>x.s>0&&!x.res);
+  const cmpCard = !cmpRows.length ? "" :
+   '<div class="card"><h2>Meta theo chiến dịch</h2><p class="sub">'+cmpRows.length+' chiến dịch có chi tiêu · '+start+" → "+end+'</p>'
+   +'<div class="tw"><table style="min-width:740px"><thead><tr><th>Chiến dịch</th><th>Chi tiêu</th><th>Tần suất</th><th>CPM</th><th>CTR</th><th>Kết quả</th><th>Giá/kết quả</th></tr></thead><tbody>'
+   +cmpRows.map(x=>{const f=x.re?x.i/x.re:null;
+     return '<tr><td style="max-width:230px;white-space:normal">'+x.name
+      +'<div style="font-size:11px;color:var(--muted)">'+x.acc+(x.obj?" · "+x.obj:"")+'</div>'
+      +'</td><td class="mono">'+vnd(x.s)
+      +'</td><td class="mono'+(f&&f>=2.5?" down":"")+'">'+(f?dec(f,2):"—")
+      +'</td><td class="mono">'+vnd(x.i?x.s/x.i*1000:null)
+      +'</td><td class="mono">'+pct(x.i?(x.lc||x.c)/x.i:null,2)
+      +'</td><td class="mono">'+(x.res?fmt(x.res)+' <span style="font-size:10px;color:var(--muted)">'+x.rt+'</span>':'<span class="down">0</span>')
+      +'</td><td class="mono">'+(x.res?vnd(x.s/x.res):"—")+"</td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +'<p class="note">Tần suất = mỗi người thấy quảng cáo bao nhiêu lần. Từ 2,5 trở lên là đang phát lại cho cùng một nhóm — tiền tăng, kết quả không tăng.</p>'
+   +(noRes.length ?
+     '<div class="gap"><b>'+noRes.length+' chiến dịch chi tiền nhưng Meta không ghi nhận một kết quả nào:</b> '
+     +noRes.slice(0,4).map(x=>x.name+" ("+vnd(x.s)+")").join(" · ")
+     +'<br>Hoặc chiến dịch đặt sai mục tiêu, hoặc kết quả đang xảy ra ở chỗ Meta không thấy được. Ai đặt mục tiêu cho những chiến dịch này?</div>' : "")
+   +(tired.length ?
+     '<div class="gap"><b>'+tired.length+' chiến dịch có tần suất ≥ 2,5:</b> '+tired.slice(0,4).map(x=>x.name).join(" · ")
+     +'<br>Cùng một nhóm phụ huynh đang bị phát đi phát lại. Lần cuối đổi hình/nội dung quảng cáo là bao giờ?</div>' : "")
+   +(cmpRes ? '<div class="q"><b>Tổng:</b> '+vnd(cmpSpend)+" cho "+fmt(cmpRes)+' kết quả — trung bình <b class="mono">'
+     +vnd(cmpSpend/cmpRes)+'</b> mỗi kết quả. Bao nhiêu trong số đó thành một cuộc hẹn thăm trường?</div>' : "")
+   +"</div>";
+
+  // ----- the: su kien website -----
+  const keTot=(lp||[]).filter(r=>inR(r.day,start,end)).reduce((s,r)=>s+(+r.key_events||0),0);
+  const evCard = !evRows.length ?
+   '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">Chưa có dữ liệu — lần kéo tới sẽ có</p></div>'
+   : '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">'+evRows.length+' loại sự kiện GA4 đang ghi nhận · '+start+" → "+end+'</p>'
+   +'<div class="tw"><table><thead><tr><th>Sự kiện</th><th>Số lần</th><th>Người</th><th>Giơ tay?</th></tr></thead><tbody>'
+   +evRows.slice(0,20).map(([k,v])=>'<tr><td class="mono">'+k+'</td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+fmt(v.u)
+     +'</td><td>'+(RAISE.test(k)?'<span class="up">✓</span>':'<span style="color:var(--muted)">—</span>')+'</td></tr>').join("")
+   +"</tbody></table></div>"
+   +(raiseRows.length ?
+      '<div class="q"><b>Có '+raiseRows.length+' cách để phụ huynh giơ tay.</b> '+fmt(raiseTot)+' lần trong kỳ, trên '+fmt(ses)
+      +' phiên — tỷ lệ <b class="mono">'+pct(ses?raiseTot/ses:0,2)+'</b>.'
+      +(keTot?' GA4 đếm được <b class="mono">'+fmt(keTot)+'</b> key event.':'')
+      +'<br>Ai nhận những lượt giơ tay này, và sau bao lâu thì có người gọi lại?</div>'
+    : '<div class="gap"><b>Không có một sự kiện nào là chỗ để phụ huynh giơ tay.</b> '
+      +'Toàn bộ '+evRows.length+' sự kiện đang ghi nhận đều là hành vi xem trang — không có form, không có nút gọi, không có Zalo, không có đặt lịch.<br>'
+      +'Nghĩa là <span class="big mono">'+fmt(ses)+'</span> phiên trong kỳ này đi vào website và <b>không có cách nào để lại tên.</b><br>'
+      +'Câu hỏi: việc gắn một đường giơ tay lên các trang có traffic — hôm nay ai được giao?</div>')
+   +"</div>";
+
+  // ----- the: trang co traffic -----
+  const pageCard = !pageRows.length ? "" :
+   '<div class="card"><h2>Trang kéo được người vào</h2><p class="sub">Top theo lượt nhấp từ Google · ghép với hành vi đọc trên GA4</p>'
+   +'<div class="tw"><table style="min-width:640px"><thead><tr><th>Trang</th><th>Nhấp</th><th>Hiển thị</th><th>Vị trí</th><th>Phiên</th><th>Đọc thật</th><th>Giây</th></tr></thead><tbody>'
+   +pageRows.map(p=>'<tr><td style="max-width:260px;white-space:normal;word-break:break-all">'+path(p.page)
+     +'</td><td class="mono">'+fmt(p.clicks)+'</td><td class="mono">'+fmt(p.impressions)
+     +'</td><td class="mono">'+dec(p.position,1)+'</td><td class="mono">'+fmt(p.ses)
+     +'</td><td class="mono">'+(p.er==null?"—":pct(p.er,0))+'</td><td class="mono">'+(p.sec==null?"—":Math.round(p.sec))+"</td></tr>").join("")
+   +'</tbody></table></div><p class="note">"Đọc thật" = phiên ở lại đủ lâu hoặc xem tiếp trang khác. Trang nhiều nhấp nhưng đọc thật thấp = tiêu đề hứa một đằng, nội dung một nẻo.</p></div>';
+
+  // ----- the: gan len top -----
+  const nearCard = !near.length ? "" :
+   '<div class="card"><h2>Gần lên top</h2><p class="sub">Từ khoá đang ở vị trí 8–20 · đẩy lên top 4 dễ hơn viết bài mới</p>'
+   +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Vị trí</th><th>Hiển thị</th><th>Nhấp nay</th><th>Thêm được</th></tr></thead><tbody>'
+   +near.map(q=>'<tr><td style="max-width:230px;white-space:normal">'+q.query+'</td><td class="mono">'+dec(q.position,1)
+     +'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
+     +'</td><td class="mono up">+'+fmt(q.gain)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +(weakTitle.length ?
+     '<p class="sub" style="margin:16px 0 6px;color:var(--warn);text-transform:none;letter-spacing:0;font-size:13px"><b>Xếp hạng tốt nhưng ít ai bấm — nhiều khả năng tiêu đề hỏng:</b></p>'
+     +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Vị trí</th><th>Hiển thị</th><th>CTR</th><th>Đáng lẽ</th></tr></thead><tbody>'
+     +weakTitle.map(q=>'<tr><td style="max-width:230px;white-space:normal">'+q.query+'</td><td class="mono">'+dec(q.position,1)
+       +'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono down">'+pct(q.ctr,1)+'</td><td class="mono">'+pct(ctrAt(+q.position),1)+"</td></tr>").join("")
+     +"</tbody></table></div>" : "")
+   +'<div class="q"><b>Cộng lại:</b> khoảng <span class="big mono">+'+fmt(nearGain)+'</span> lượt nhấp mỗi kỳ nếu '+near.length
+   +' từ khoá này lên được top 4 — không tốn một đồng quảng cáo nào.<br>Ai là người viết? Và tuần này họ sửa được mấy bài?</div></div>';
+
   $("body").innerHTML=
    '<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'+kpi("Phiên",fmt(ses),delta(ses,pses))+kpi("Người dùng",fmt(usr),delta(usr,pusr))
    +kpi("Lượt nhấp Google",fmt(cl),delta(cl,pcl))+kpi("Hiển thị",fmt(im),delta(im,pim))+"</div>"
    +'<div style="margin-top:14px">'+spark(series)+"</div></div>"
 
+   +evCard
+
    +metaCard
+
+   +cmpCard
 
    +'<div class="card"><h2>Nguồn truy cập</h2><p class="sub">Phiên theo kênh · '+fmt(chTot)+" phiên</p>"
    +chRows.map(([k,v])=>'<div class="frow"><div class="fm"><span>'+k+'</span><span><b class="mono">'+fmt(v)
@@ -219,15 +342,21 @@ async function render(){
 
    +'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">Top theo lượt hiển thị</p>'
    +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Hiển thị</th><th>Nhấp</th><th>CTR</th><th>Vị trí</th></tr></thead><tbody>'
-   +(gq||[]).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
-     +'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+(+q.position).toFixed(1)+"</td></tr>").join("")
+   +gq.slice(0,15).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
+     +'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+dec(q.position,1)+"</td></tr>").join("")
    +"</tbody></table></div>"
    +'<div class="q"><b>Câu hỏi:</b> từ khoá thương hiệu chỉ chiếm '+pct(allCl?brandCl/allCl:0,1)
-   +' lượt nhấp trong nhóm này. Người tìm thơ và truyện cho con — họ có phải phụ huynh đang chọn trường không?</div></div>'
+   +' lượt nhấp trên toàn bộ '+fmt(gq.length)+' từ khoá. Người tìm thơ và truyện cho con — họ có phải phụ huynh đang chọn trường không?</div></div>'
+
+   +nearCard
+
+   +pageCard
 
    +'<div class="card"><h2>Nguồn dữ liệu</h2><p class="sub">Số nào không có thì để trống, không bịa</p>'
    +'<div class="tw"><table><thead><tr><th>Nguồn</th><th>Đến ngày</th><th>Số ngày trễ</th></tr></thead><tbody>'
    +[["GA4",days[days.length-1]],["Search Console",gs.length?gs[gs.length-1].day:null],
+     ["Sự kiện GA4",(ev&&ev.length)?ev[ev.length-1].day:null],
+     ["Trang đích GA4",(lp&&lp.length)?lp[lp.length-1].day:null],
      ["Meta Ads",mDays.length?mDays[mDays.length-1]:null]]
      .map(([nm,d])=>{const lag=d?Math.round((Date.now()-new Date(d))/864e5):null;
        return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
