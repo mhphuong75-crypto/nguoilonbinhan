@@ -185,11 +185,15 @@ async function render(){
   const allCl=gq.reduce((s,q)=>s+(+q.clicks||0),0);
 
   // ----- SU KIEN WEBSITE: website co cho phu huynh gio tay khong? -----
-  const RAISE=/form|submit|lead|contact|phone|tel|zalo|messeng|chat|call|dang.?ky|register|booking|dat.?lich|tu.?van/i;
+  const RAISE=/form|submit|lead|contact|phone|hotline|tel|zalo|messeng|chat|call|dang.?ky|register|booking|dat.?lich|tu.?van/i;
+  const NOTRAISE=/form_start|^click$|^send$|select_content/i;
+  const isRaise=k=>RAISE.test(k)&&!NOTRAISE.test(k);
   const evAgg={}; (ev||[]).filter(r=>inR(r.day,start,end)).forEach(r=>{
     const k=r.event_name; evAgg[k]=evAgg[k]||{c:0,u:0}; evAgg[k].c+=+r.event_count||0; evAgg[k].u+=+r.total_users||0});
   const evRows=Object.entries(evAgg).sort((a,b)=>b[1].c-a[1].c);
-  const raiseRows=evRows.filter(([k])=>RAISE.test(k));
+  const raiseAll=evRows.filter(([k])=>isRaise(k));
+  const suspect=raiseAll.filter(([k,v])=>ses&&v.c/ses>0.03);
+  const raiseRows=raiseAll.filter(x=>suspect.indexOf(x)<0);
   const raiseTot=raiseRows.reduce((s,x)=>s+x[1].c,0);
 
   // ----- GAN LEN TOP: tu khoa vi tri 8-20, con nhieu cho de len -----
@@ -282,8 +286,11 @@ async function render(){
    : '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">'+evRows.length+' loại sự kiện GA4 đang ghi nhận · '+start+" → "+end+'</p>'
    +'<div class="tw"><table><thead><tr><th>Sự kiện</th><th>Số lần</th><th>Người</th><th>Giơ tay?</th></tr></thead><tbody>'
    +evRows.slice(0,20).map(([k,v])=>'<tr><td class="mono">'+k+'</td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+fmt(v.u)
-     +'</td><td>'+(RAISE.test(k)?'<span class="up">✓</span>':'<span style="color:var(--muted)">—</span>')+'</td></tr>').join("")
+     +'</td><td>'+(suspect.some(x=>x[0]===k)?'<span class="down">? sai</span>':isRaise(k)?'<span class="up">✓</span>':'<span style="color:var(--muted)">—</span>')+'</td></tr>').join("")
    +"</tbody></table></div>"
+   +(suspect.length ? '<div class="gap"><b>Nghi ngờ đo sai:</b> '
+     +suspect.map(([k,v])=>k+" ("+fmt(v.c)+" lần = "+pct(v.c/ses,1)+" số phiên)").join(" · ")
+     +'<br>Một sự kiện "giơ tay" xảy ra ở hơn 3% số phiên gần như chắc chắn là điều kiện kích hoạt bắt quá rộng — nó đang đếm cả những cú bấm không phải gửi thông tin. Đã loại khỏi tổng bên dưới.<br>Ai dựng trigger này trong GTM — và có ai đang báo cáo con số đó như số lead không?</div>' : "")
    +(raiseRows.length ?
       '<div class="q"><b>Có '+raiseRows.length+' cách để phụ huynh giơ tay.</b> '+fmt(raiseTot)+' lần trong kỳ, trên '+fmt(ses)
       +' phiên — tỷ lệ <b class="mono">'+pct(ses?raiseTot/ses:0,2)+'</b>.'
