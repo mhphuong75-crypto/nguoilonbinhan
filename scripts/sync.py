@@ -277,6 +277,6 @@ else:
 # ---------- nhat ky ----------
 upsert("ingest_run", [{"source": "github_actions", "window_start": str(start),
                        "window_end": str(end), "rows_written": total,
-                       "status": "ok" if not notes else "partial",
+                       "status": "partial" if any("LOI" in x for x in notes) else "ok",
                        "message": "sync.py v3 " + (";".join(notes) if notes else "day du")}])
 print(f"Xong. Tong {total} dong. {notes}")
