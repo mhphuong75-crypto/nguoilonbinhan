@@ -40,6 +40,9 @@ border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .kpi .v{font-size:25px;font-weight:600;letter-spacing:-.02em;margin-top:4px}
 .kpi .d{font-size:12px;margin-top:3px;color:var(--muted)}
 .up{color:var(--good)}.down{color:var(--crit)}.flat{color:var(--muted)}
+.hint{font-size:11px;line-height:1.35;color:var(--muted);margin-top:5px}
+.leg{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.5}
+.leg b{color:var(--ink2);font-weight:500}
 .bar{height:14px;background:var(--sunk);border-radius:4px;overflow:hidden;margin-top:4px}
 .bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
 .frow{margin-bottom:10px}
@@ -104,7 +107,8 @@ const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
-const vnd=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN")+"đ";
+const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
+ return (Math.abs(k)<10? k.toFixed(1).replace(".",",") : Math.round(k).toLocaleString("vi-VN"))+" ng";};
 const pct=(n,d=1)=>n==null||!isFinite(n)?"—":(n*100).toFixed(d).replace(".",",")+"%";
 const dec=(n,d=1)=>n==null||!isFinite(n)?"—":(+n).toFixed(d).replace(".",",");
 const shift=(iso,d)=>{const t=new Date(iso+"T00:00:00Z");t.setUTCDate(t.getUTCDate()+d);return t.toISOString().slice(0,10)};
@@ -142,12 +146,13 @@ function delta(cur,prev,goodUp=true){
   const a=Math.abs(r)<0.02?"→":r>0?"↑":"↓";
   return '<div class="d"><span class="'+cls+'">'+a+" "+(Math.abs(r)*100).toFixed(0)+'%</span> <span style="opacity:.7">vs '+fmt(prev)+"</span></div>";
 }
-const kpi=(l,v,d)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v mono">'+v+"</div>"+(d||"")+"</div>";
+const kpi=(l,v,d,h)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v mono">'+v+"</div>"+(d||"")
+ +(h?'<div class="hint">'+h+"</div>":"")+"</div>";
 
 async function render(){
   const n=+$("period").value;
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp}] = await Promise.all([
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc}] = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
     sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
@@ -155,7 +160,8 @@ async function render(){
     sb.from("meta_campaign_daily").select("day,account_name,campaign_name,objective,spend,impressions,reach,clicks,link_clicks,results,result_type").order("day"),
     sb.from("gsc_page").select("snapshot_on,page,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("clicks",{ascending:false}).limit(1200),
     sb.from("ga4_event_daily").select("day,event_name,event_count,total_users").order("day"),
-    sb.from("ga4_landing_daily").select("day,landing_page,sessions,engaged_sessions,engagement_rate,avg_engagement_sec,key_events").order("day")
+    sb.from("ga4_landing_daily").select("day,landing_page,sessions,engaged_sessions,engagement_rate,avg_engagement_sec,key_events").order("day"),
+    sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(20000)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -229,14 +235,16 @@ async function render(){
 
   const metaCard = M.length ?
    '<div class="card"><h2>Quảng cáo Meta</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
-   +'<div class="kpis">'+kpi("Chi tiêu",vnd(msp),delta(msp,pmsp,false))
-   +kpi("Lượt nhấp",fmt(mcl),delta(mcl,pmcl))
-   +kpi("Giá mỗi nhấp",vnd(cpc),delta(cpc,pcpc,false))
-   +kpi("Giá mỗi 1.000 hiển thị",vnd(cpm),delta(cpm,pcpm,false))+"</div>"
+   +'<div class="kpis">'
+   +kpi("Tiền đã tiêu",vnd(msp),delta(msp,pmsp,false),"nghìn đồng")
+   +kpi("Lượt bấm",fmt(mcl),delta(mcl,pmcl),"số lần bấm vào quảng cáo")
+   +kpi("Giá 1 lượt bấm",vnd(cpc),delta(cpc,pcpc,false),"tiền ÷ lượt bấm")
+   +kpi("Giá 1.000 lần hiện",vnd(cpm),delta(cpm,pcpm,false),"càng cao càng đắt để hiện ra")+"</div>"
    +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tài khoản</th><th>Chi tiêu</th><th>Hiển thị</th><th>Nhấp</th><th>Giá/nhấp</th></tr></thead><tbody>'
    +accRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+vnd(v.s)+'</td><td class="mono">'+fmt(v.i)
      +'</td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+vnd(v.c?v.s/v.c:null)+"</td></tr>").join("")
    +"</tbody></table></div>"
+   +'<p class="leg"><b>ng = nghìn đồng.</b> Ví dụ 135.000 ng = 135 triệu đồng.</p>'
    +'<div class="gap"><b>Khoảng trắng:</b> <span class="big mono">'+fmt(mcl)+'</span> lượt nhấp đã trả tiền trên Meta, '
    +'nhưng website chỉ nhận <span class="big mono">'+fmt(paidSes)+'</span> phiên từ quảng cáo trong cùng kỳ.<br>'
    +'Vậy những người bấm đó đi đâu — ai trả lời họ, sau bao lâu, và có ai trong số đó được ghi vào CRM không?</div></div>'
@@ -267,6 +275,8 @@ async function render(){
       +'</td><td class="mono">'+(x.res?fmt(x.res)+' <span style="font-size:10px;color:var(--muted)">'+x.rt+'</span>':'<span class="down">0</span>')
       +'</td><td class="mono">'+(x.res?vnd(x.s/x.res):"—")+"</td></tr>"}).join("")
    +"</tbody></table></div>"
+   +'<p class="leg"><b>ng = nghìn đồng</b> (135.000 ng = 135 triệu) · <b>CPM</b> = tiền để quảng cáo hiện ra 1.000 lần · '
+   +'<b>CTR</b> = bao nhiêu % người thấy thì bấm · <b>Kết quả</b> = việc Meta ghi nhận được (tin nhắn, lead…).</p>'
    +'<p class="note">Tần suất = mỗi người thấy quảng cáo bao nhiêu lần. Từ 2,5 trở lên là đang phát lại cho cùng một nhóm — tiền tăng, kết quả không tăng.</p>'
    +(noRes.length ?
      '<div class="gap"><b>'+noRes.length+' chiến dịch chi tiền nhưng Meta không ghi nhận một kết quả nào:</b> '
@@ -279,6 +289,33 @@ async function render(){
      +vnd(cmpSpend/cmpRes)+'</b> mỗi kết quả. Bao nhiêu trong số đó thành một cuộc hẹn thăm trường?</div>' : "")
    +"</div>";
 
+  // ----- AI GIO TAY TREN WEBSITE (du lieu cua chinh ME School) -----
+  const TEN={zalo:"Zalo",hotline:"Gọi hotline",messenger:"Nhắn Messenger",form:"Gửi form"};
+  const NGUON={trangchu:"Trang chủ",blog:"Bài blog",web:"Trang khác"};
+  const W=(wc||[]).filter(r=>r.ts && inR(String(r.ts).slice(0,10),start,end));
+  const wKind={}, wRef={};
+  W.forEach(r=>{wKind[r.kind]=(wKind[r.kind]||0)+1; const g=r.ref||"web"; wRef[g]=(wRef[g]||0)+1});
+  const wTot=W.length;
+  const wDays=[...new Set(W.map(r=>String(r.ts).slice(0,10)))].sort();
+  const wCard = !wTot ?
+   '<div class="card"><h2>Ai giơ tay trên website</h2><p class="sub">Dữ liệu của chính ME School — bắt đầu ghi từ 03/09/2026</p>'
+   +'<div class="q">Chưa có lượt nào trong khoảng đang chọn. Bảng này chỉ đếm từ lúc bật, không có dữ liệu quá khứ.<br>'
+   +'Chọn khoảng <b>7 ngày gần nhất</b> để xem những lượt mới nhất.</div></div>'
+   : '<div class="card"><h2>Ai giơ tay trên website</h2><p class="sub">Dữ liệu của chính ME School · không qua Google hay Meta · '+start+" → "+end+'</p>'
+   +'<div class="kpis">'
+   +kpi("Tổng lượt giơ tay",fmt(wTot),"","người chủ động muốn liên lạc")
+   +kpi("Trên tổng lượt vào",pct(ses?wTot/ses:0,2),"","bao nhiêu % khách để lại liên hệ")
+   +kpi("Từ bài blog",fmt(wRef.blog||0),"","nội dung miễn phí mang về")
+   +kpi("Từ trang chủ",fmt(wRef.trangchu||0),"","người vào thẳng website")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Cách liên lạc</th><th>Số lượt</th><th>Tỷ lệ</th></tr></thead><tbody>'
+   +Object.entries(wKind).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<tr><td>'+(TEN[k]||k)
+     +'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(v/wTot,0)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Cách đọc:</b> mỗi dòng là một lần phụ huynh bấm nút liên lạc trên web. '
+   +'Đây <b>chưa phải lead</b> — bấm gọi không có nghĩa là đã nói chuyện được. '
+   +'Nhưng đây là số ME School tự đo, không phụ thuộc bên nào.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> '+fmt(wTot)+' lượt giơ tay trong kỳ này — bao nhiêu trong số đó có tên trong AMIS?</div></div>';
+
   // ----- the: su kien website -----
   const keTot=(lp||[]).filter(r=>inR(r.day,start,end)).reduce((s,r)=>s+(+r.key_events||0),0);
   const evCard = !evRows.length ?
@@ -288,6 +325,8 @@ async function render(){
    +evRows.slice(0,20).map(([k,v])=>'<tr><td class="mono">'+k+'</td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+fmt(v.u)
      +'</td><td>'+(suspect.some(x=>x[0]===k)?'<span class="down">? sai</span>':isRaise(k)?'<span class="up">✓</span>':'<span style="color:var(--muted)">—</span>')+'</td></tr>').join("")
    +"</tbody></table></div>"
+   +'<p class="leg"><b>Số lần</b> = tổng số lần xảy ra · <b>Người</b> = số người khác nhau. '
+   +'Lấy Số lần ÷ Người: nếu một sự kiện "giơ tay" ra tỷ lệ trên 10 thì gần như chắc chắn đo sai — không ai bấm gửi form 10 lần.</p>'
    +(suspect.length ? '<div class="gap"><b>Nghi ngờ đo sai:</b> '
      +suspect.map(([k,v])=>k+" ("+fmt(v.c)+" lần = "+pct(v.c/ses,1)+" số phiên)").join(" · ")
      +'<br>Một sự kiện "giơ tay" xảy ra ở hơn 3% số phiên gần như chắc chắn là điều kiện kích hoạt bắt quá rộng — nó đang đếm cả những cú bấm không phải gửi thông tin. Đã loại khỏi tổng bên dưới.<br>Ai dựng trigger này trong GTM — và có ai đang báo cáo con số đó như số lead không?</div>' : "")
@@ -326,16 +365,23 @@ async function render(){
      +weakTitle.map(q=>'<tr><td style="max-width:230px;white-space:normal">'+q.query+'</td><td class="mono">'+dec(q.position,1)
        +'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono down">'+pct(q.ctr,1)+'</td><td class="mono">'+pct(ctrAt(+q.position),1)+"</td></tr>").join("")
      +"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Thêm được</b> là <b>ước lượng</b>, không phải cam kết: giả sử từ khoá lên vị trí 4 '
+   +'thì cứ 100 lần hiện ra sẽ có ~8,5 người bấm (mức trung bình của ngành).</p>'
    +'<div class="q"><b>Cộng lại:</b> khoảng <span class="big mono">+'+fmt(nearGain)+'</span> lượt nhấp mỗi kỳ nếu '+near.length
    +' từ khoá này lên được top 4 — không tốn một đồng quảng cáo nào.<br>Ai là người viết? Và tuần này họ sửa được mấy bài?</div></div>';
 
   $("body").innerHTML=
    '<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
-   +'<div class="kpis">'+kpi("Phiên",fmt(ses),delta(ses,pses))+kpi("Người dùng",fmt(usr),delta(usr,pusr))
-   +kpi("Lượt nhấp Google",fmt(cl),delta(cl,pcl))+kpi("Hiển thị",fmt(im),delta(im,pim))+"</div>"
+   +'<div class="kpis">'
+   +kpi("Lượt vào web",fmt(ses),delta(ses,pses),"mỗi lần một người mở website")
+   +kpi("Số người",fmt(usr),delta(usr,pusr),"người khác nhau, không tính lặp")
+   +kpi("Bấm từ Google",fmt(cl),delta(cl,pcl),"bấm vào web từ kết quả tìm kiếm")
+   +kpi("Hiện trên Google",fmt(im),delta(im,pim),"số lần web xuất hiện, chưa ai bấm")+"</div>"
    +'<div style="margin-top:14px">'+spark(series)+"</div></div>"
 
    +evCard
+
+   +wCard
 
    +metaCard
 
@@ -345,6 +391,8 @@ async function render(){
    +chRows.map(([k,v])=>'<div class="frow"><div class="fm"><span>'+k+'</span><span><b class="mono">'+fmt(v)
      +'</b> <span style="color:var(--muted)">'+pct(v/chTot,1)+"</span></span></div>"
      +'<div class="bar"><i style="width:'+(v/chRows[0][1]*100).toFixed(1)+'%"></i></div></div>').join("")
+   +'<p class="leg"><b>Organic Search</b> = tự tìm thấy trên Google · <b>Direct</b> = gõ thẳng địa chỉ hoặc bookmark · '
+   +'<b>Paid Social</b> = từ quảng cáo Facebook · <b>Referral</b> = trang khác dẫn sang.</p>'
    +'<p class="note">Paid Search và Paid Social gần như bằng 0 — quảng cáo hầu như không đưa ai về website.</p></div>'
 
    +'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">Top theo lượt hiển thị</p>'
@@ -352,6 +400,8 @@ async function render(){
    +gq.slice(0,15).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
      +'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+dec(q.position,1)+"</td></tr>").join("")
    +"</tbody></table></div>"
+   +'<p class="leg"><b>Hiện</b> = số lần web xuất hiện trên Google · <b>Bấm</b> = số lần có người bấm vào · '
+   +'<b>CTR</b> = bấm ÷ hiện · <b>Vị trí</b> = thứ hạng trung bình, 1 là cao nhất (có số lẻ vì là trung bình).</p>'
    +'<div class="q"><b>Câu hỏi:</b> từ khoá thương hiệu chỉ chiếm '+pct(allCl?brandCl/allCl:0,1)
    +' lượt nhấp trên toàn bộ '+fmt(gq.length)+' từ khoá. Người tìm thơ và truyện cho con — họ có phải phụ huynh đang chọn trường không?</div></div>'
 
