@@ -152,7 +152,7 @@ const kpi=(l,v,d,h)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v m
 async function render(){
   const n=+$("period").value;
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc}] = await Promise.all([
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi}] = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
     sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
@@ -161,7 +161,9 @@ async function render(){
     sb.from("gsc_page").select("snapshot_on,page,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("clicks",{ascending:false}).limit(1200),
     sb.from("ga4_event_daily").select("day,event_name,event_count,total_users").order("day"),
     sb.from("ga4_landing_daily").select("day,landing_page,sessions,engaged_sessions,engagement_rate,avg_engagement_sec,key_events").order("day"),
-    sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(20000)
+    sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(20000),
+    sb.from("v_hocsinh").select("nhom,campus,lop").limit(20000),
+    sb.from("v_crm_tuyensinh").select("ngay_tao,giai_doan,chu_so_huu,nguon").limit(20000)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -382,8 +384,38 @@ async function render(){
    +'<div class="q"><b>Cộng lại:</b> khoảng <span class="big mono">+'+fmt(nearGain)+'</span> lượt nhấp mỗi kỳ nếu '+near.length
    +' từ khoá này lên được top 4 — không tốn một đồng quảng cáo nào.<br>Ai là người viết? Và tuần này họ sửa được mấy bài?</div></div>';
 
+  // ----- the: hoc sinh va tuyen sinh (AMIS CRM) -----
+  const H=hs||[], TS=tsi||[];
+  const nhomD={}; H.forEach(r=>nhomD[r.nhom]=(nhomD[r.nhom]||0)+1);
+  const diHoc=nhomD["Đang đi học"]||0, choHoc=nhomD["Đã đóng tiền, chờ đi học"]||0,
+        baoLuu=nhomD["Bảo lưu"]||0, chuaPL=nhomD["Chưa phân loại"]||0;
+  const camp={}; H.filter(r=>r.nhom==="Đang đi học").forEach(r=>{const c=r.campus||"(chưa gán campus)";camp[c]=(camp[c]||0)+1});
+  const campRows=Object.entries(camp).sort((a,b)=>b[1]-a[1]);
+  const tsMoi=TS.filter(r=>r.ngay_tao&&String(r.ngay_tao).slice(0,10)>=start&&String(r.ngay_tao).slice(0,10)<=end);
+  const gd={}; tsMoi.forEach(r=>{const k=r.giai_doan||"(chưa có)";gd[k]=(gd[k]||0)+1});
+  const gdRows=Object.entries(gd).sort((a,b)=>b[1]-a[1]);
+  const hsCard = !H.length ? "" :
+   '<div class="card"><h2>Học sinh và tuyển sinh</h2><p class="sub">Từ AMIS CRM · cập nhật ở lần bấm “Kéo AMIS” gần nhất</p>'
+   +'<div class="kpis">'
+   +kpi("Đang đi học",fmt(diHoc),"","có lớp cụ thể, đang phát sinh doanh thu")
+   +kpi("Đóng tiền, chờ đi học",fmt(choHoc),"","lớp ghi “Chờ nhập học”")
+   +kpi("Bảo lưu",fmt(baoLuu),"","tạm nghỉ, còn giữ chỗ")
+   +kpi("Lead mới trong kỳ",fmt(tsMoi.length),"","tính theo ngày tạo tuyển sinh")+"</div>"
+   +(campRows.length ? '<div class="tw" style="margin-top:14px"><table><thead><tr><th>Campus</th><th>Đang đi học</th></tr></thead><tbody>'
+     +campRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +(gdRows.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lead mới trong kỳ, theo giai đoạn</p>'
+     +'<div class="tw"><table><thead><tr><th>Giai đoạn</th><th>Số lead</th></tr></thead><tbody>'
+     +gdRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Cách phân loại:</b> trường “Lớp” trong AMIS chứa cả lớp thật lẫn trạng thái. '
+   +'Thứ tự ưu tiên: đã rời (Nghỉ học/Tốt nghiệp/Hoàn cọc) → Bảo lưu → Chờ nhập học → Ngắn ngày → lớp thật (TTLN/Ghi nhận/GTTC). '
+   +'Một học sinh có thể mang nhiều giá trị cùng lúc, nên thứ tự này quyết định họ được đếm vào đâu.</p>'
+   +(chuaPL ? '<div class="gap"><b>'+fmt(chuaPL)+' học sinh chưa phân loại được</b> — bản ghi không có giá trị ở trường Lớp.<br>'
+     +'Ai điền trường này khi nhận học sinh mới?</div>' : "")
+   +'<div class="q"><b>Câu hỏi:</b> con số “đang đi học” này có khớp với sổ điểm danh sáng nay ở từng campus không — lệch ở đâu?</div></div>';
+
   $("body").innerHTML=
-   '<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
+   hsCard
+   +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'
    +kpi("Lượt vào web",fmt(ses),delta(ses,pses),"mỗi lần một người mở website")
    +kpi("Số người",fmt(usr),delta(usr,pusr),"người khác nhau, không tính lặp")
