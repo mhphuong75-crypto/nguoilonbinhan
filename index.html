@@ -162,8 +162,8 @@ async function render(){
     sb.from("ga4_event_daily").select("day,event_name,event_count,total_users").order("day"),
     sb.from("ga4_landing_daily").select("day,landing_page,sessions,engaged_sessions,engagement_rate,avg_engagement_sec,key_events").order("day"),
     sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(20000),
-    sb.from("v_hocsinh").select("nhom,campus,lop").limit(20000),
-    sb.from("v_crm_tuyensinh").select("ngay_tao,giai_doan,chu_so_huu,nguon").limit(20000)
+    sb.from("v_siso").select("nhom,campus,so_hs").limit(2000),
+    sb.from("v_tuyensinh_ngay").select("ngay,giai_doan,so_lead").limit(2000)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -386,13 +386,14 @@ async function render(){
 
   // ----- the: hoc sinh va tuyen sinh (AMIS CRM) -----
   const H=hs||[], TS=tsi||[];
-  const nhomD={}; H.forEach(r=>nhomD[r.nhom]=(nhomD[r.nhom]||0)+1);
+  const nhomD={}; H.forEach(r=>nhomD[r.nhom]=(nhomD[r.nhom]||0)+(+r.so_hs||0));
   const diHoc=nhomD["Đang đi học"]||0, choHoc=nhomD["Đã đóng tiền, chờ đi học"]||0,
         baoLuu=nhomD["Bảo lưu"]||0, chuaPL=nhomD["Chưa phân loại"]||0;
-  const camp={}; H.filter(r=>r.nhom==="Đang đi học").forEach(r=>{const c=r.campus||"(chưa gán campus)";camp[c]=(camp[c]||0)+1});
+  const camp={}; H.filter(r=>r.nhom==="Đang đi học").forEach(r=>{const c=r.campus||"(chưa gán campus)";camp[c]=(camp[c]||0)+(+r.so_hs||0)});
   const campRows=Object.entries(camp).sort((a,b)=>b[1]-a[1]);
-  const tsMoi=TS.filter(r=>r.ngay_tao&&String(r.ngay_tao).slice(0,10)>=start&&String(r.ngay_tao).slice(0,10)<=end);
-  const gd={}; tsMoi.forEach(r=>{const k=r.giai_doan||"(chưa có)";gd[k]=(gd[k]||0)+1});
+  const tsMoi=TS.filter(r=>r.ngay&&r.ngay>=start&&r.ngay<=end);
+  const tsTong=tsMoi.reduce((s2,r)=>s2+(+r.so_lead||0),0);
+  const gd={}; tsMoi.forEach(r=>{const k=r.giai_doan||"(chưa có)";gd[k]=(gd[k]||0)+(+r.so_lead||0)});
   const gdRows=Object.entries(gd).sort((a,b)=>b[1]-a[1]);
   const hsCard = !H.length ? "" :
    '<div class="card"><h2>Học sinh và tuyển sinh</h2><p class="sub">Từ AMIS CRM · cập nhật ở lần bấm “Kéo AMIS” gần nhất</p>'
@@ -400,7 +401,7 @@ async function render(){
    +kpi("Đang đi học",fmt(diHoc),"","có lớp cụ thể, đang phát sinh doanh thu")
    +kpi("Đóng tiền, chờ đi học",fmt(choHoc),"","lớp ghi “Chờ nhập học”")
    +kpi("Bảo lưu",fmt(baoLuu),"","tạm nghỉ, còn giữ chỗ")
-   +kpi("Lead mới trong kỳ",fmt(tsMoi.length),"","tính theo ngày tạo tuyển sinh")+"</div>"
+   +kpi("Lead mới trong kỳ",fmt(tsTong),"","tính theo ngày tạo tuyển sinh")+"</div>"
    +(campRows.length ? '<div class="tw" style="margin-top:14px"><table><thead><tr><th>Campus</th><th>Đang đi học</th></tr></thead><tbody>'
      +campRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v)+"</td></tr>").join("")+"</tbody></table></div>" : "")
    +(gdRows.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lead mới trong kỳ, theo giai đoạn</p>'
