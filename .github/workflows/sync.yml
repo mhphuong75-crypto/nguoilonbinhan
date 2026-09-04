@@ -13,10 +13,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install google-auth requests
+      - run: pip install google-auth requests openpyxl
       - run: python scripts/sync.py 90
         env:
           GA_SA_KEY: ${{ secrets.GA_SA_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           META_TOKEN: ${{ secrets.NGUOILONBINHAN_META_TOKEN }}
+      - name: Boc file Tomia trong kho -> tomia_ngay
+        if: always()
+        run: python scripts/tomia.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
