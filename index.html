@@ -415,6 +415,9 @@ async function render(){
    +'Một học sinh có thể mang nhiều giá trị cùng lúc, nên thứ tự này quyết định họ được đếm vào đâu.</p>'
    +(chuaPL ? '<div class="gap"><b>'+fmt(chuaPL)+' học sinh chưa phân loại được</b> — bản ghi không có giá trị ở trường Lớp.<br>'
      +'Ai điền trường này khi nhận học sinh mới?</div>' : "")
+   +'<div class="gap"><b>Chưa đủ toàn hệ thống.</b> Con số trên chỉ gồm các campus dùng AMIS CRM. '
+   +'Tân Thuận (~65 học sinh, 14 giáo viên) không dùng CRM do cấu trúc pháp lý riêng; Linh Đàm cũng không — đang xác minh. '
+   +'Nguồn khác: file nhân sự ghi 768 học sinh / 61 lớp / 161 giáo viên; Tomia (01/06) ghi 777 đi học ở 15 trường.</div>'
    +'<div class="q"><b>Câu hỏi:</b> con số “đang đi học” này có khớp với sổ điểm danh sáng nay ở từng campus không — lệch ở đâu?</div></div>';
 
   $("body").innerHTML=
