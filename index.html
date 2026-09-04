@@ -317,18 +317,30 @@ async function render(){
    +'<div class="q"><b>Câu hỏi:</b> '+fmt(wTot)+' lượt giơ tay trong kỳ này — bao nhiêu trong số đó có tên trong AMIS?</div></div>';
 
   // ----- the: su kien website -----
+  const TENSK={
+    page_view:"Xem một trang", session_start:"Một lượt vào web", first_visit:"Lần đầu vào web",
+    user_engagement:"Ở lại đọc (quá 10 giây)", scroll:"Kéo xuống cuối trang",
+    click:"Bấm liên kết ra ngoài", form_start:"Bắt đầu điền form", form_submit:"Gửi form",
+    view_search_results:"Tìm kiếm trên web", generate_lead:"Được ghi nhận là lead",
+    remove_from_cart:"Bỏ khỏi giỏ hàng (thừa từ nền tảng bán hàng)", add_to_cart:"Thêm vào giỏ hàng (thừa)",
+    view_item:"Xem sản phẩm (thừa)", send:"Gửi (chưa rõ đo gì)",
+    GA4_Form_Submit:"Gửi form (đo bằng GTM)", GA4_click_form_submit:"Bấm nút trong form",
+    GA4_click_messenger:"Bấm nhắn Messenger", GA4_click_hotline:"Bấm gọi hotline",
+    GA4_click_zalo:"Bấm nhắn Zalo"};
+  const tenSK=k=>TENSK[k]||k.replace(/^GA4_/,"").replace(/_/g," ");
   const keTot=(lp||[]).filter(r=>inR(r.day,start,end)).reduce((s,r)=>s+(+r.key_events||0),0);
   const evCard = !evRows.length ?
    '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">Chưa có dữ liệu — lần kéo tới sẽ có</p></div>'
    : '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">'+evRows.length+' loại sự kiện GA4 đang ghi nhận · '+start+" → "+end+'</p>'
    +'<div class="tw"><table><thead><tr><th>Sự kiện</th><th>Số lần</th><th>Người</th><th>Giơ tay?</th></tr></thead><tbody>'
-   +evRows.slice(0,20).map(([k,v])=>'<tr><td class="mono">'+k+'</td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+fmt(v.u)
+   +evRows.slice(0,20).map(([k,v])=>'<tr><td style="white-space:normal">'+tenSK(k)
+     +'<div style="font-size:10.5px;color:var(--muted)" class="mono">'+k+'</div></td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+fmt(v.u)
      +'</td><td>'+(suspect.some(x=>x[0]===k)?'<span class="down">? sai</span>':isRaise(k)?'<span class="up">✓</span>':'<span style="color:var(--muted)">—</span>')+'</td></tr>').join("")
    +"</tbody></table></div>"
    +'<p class="leg"><b>Số lần</b> = tổng số lần xảy ra · <b>Người</b> = số người khác nhau. '
    +'Lấy Số lần ÷ Người: nếu một sự kiện "giơ tay" ra tỷ lệ trên 10 thì gần như chắc chắn đo sai — không ai bấm gửi form 10 lần.</p>'
    +(suspect.length ? '<div class="gap"><b>Nghi ngờ đo sai:</b> '
-     +suspect.map(([k,v])=>k+" ("+fmt(v.c)+" lần = "+pct(v.c/ses,1)+" số phiên)").join(" · ")
+     +suspect.map(([k,v])=>tenSK(k)+" ("+fmt(v.c)+" lần = "+pct(v.c/ses,1)+" số phiên)").join(" · ")
      +'<br>Một sự kiện "giơ tay" xảy ra ở hơn 3% số phiên gần như chắc chắn là điều kiện kích hoạt bắt quá rộng — nó đang đếm cả những cú bấm không phải gửi thông tin. Đã loại khỏi tổng bên dưới.<br>Ai dựng trigger này trong GTM — và có ai đang báo cáo con số đó như số lead không?</div>' : "")
    +(raiseRows.length ?
       '<div class="q"><b>Có '+raiseRows.length+' cách để phụ huynh giơ tay.</b> '+fmt(raiseTot)+' lần trong kỳ, trên '+fmt(ses)
