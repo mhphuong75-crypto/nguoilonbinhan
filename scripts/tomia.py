@@ -128,6 +128,12 @@ def main():
             print(f"  {ten}: LOI {type(e).__name__} {e}")
     print(f"Xong. Ghi {tong} dong vao tomia_ngay.")
 
+    # chot so si so hom nay + don cac dot keo AMIS cu (giu 2 dot gan nhat)
+    try:
+        print("Don kho:", goi(f"{SB_URL}/rest/v1/rpc/don_kho", "POST", {}))
+    except Exception as e:
+        print(f"Don kho: LOI {type(e).__name__} {e}")
+
 
 if __name__ == "__main__":
     main()
