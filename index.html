@@ -294,16 +294,19 @@ async function render(){
   // ----- AI GIO TAY TREN WEBSITE (du lieu cua chinh ME School) -----
   const TEN={zalo:"Zalo",hotline:"Gọi hotline",messenger:"Nhắn Messenger",form:"Gửi form"};
   const NGUON={trangchu:"Trang chủ",blog:"Bài blog",web:"Trang khác"};
-  const W=(wc||[]).filter(r=>r.ts && inR(String(r.ts).slice(0,10),start,end));
+  // bang nay ghi thoi gian thuc -> luon tinh den hom nay, khong dung theo cua so GA4 (GA4 tre 2 ngay)
+  const homNay=new Date(Date.now()+7*3600*1000).toISOString().slice(0,10);
+  const endW = end>homNay ? end : homNay;
+  const W=(wc||[]).filter(r=>r.ts && inR(String(r.ts).slice(0,10),start,endW));
   const wKind={}, wRef={};
   W.forEach(r=>{wKind[r.kind]=(wKind[r.kind]||0)+1; const g=r.ref||"web"; wRef[g]=(wRef[g]||0)+1});
   const wTot=W.length;
   const wDays=[...new Set(W.map(r=>String(r.ts).slice(0,10)))].sort();
   const wCard = !wTot ?
    '<div class="card"><h2>Ai giơ tay trên website</h2><p class="sub">Dữ liệu của chính ME School — bắt đầu ghi từ 03/09/2026</p>'
-   +'<div class="q">Chưa có lượt nào trong khoảng đang chọn. Bảng này chỉ đếm từ lúc bật, không có dữ liệu quá khứ.<br>'
+   +'<div class="q">Chưa có lượt nào. Bảng này chỉ đếm từ lúc bật (03/09/2026), không có dữ liệu quá khứ.<br>'
    +'Chọn khoảng <b>7 ngày gần nhất</b> để xem những lượt mới nhất.</div></div>'
-   : '<div class="card"><h2>Ai giơ tay trên website</h2><p class="sub">Dữ liệu của chính ME School · không qua Google hay Meta · '+start+" → "+end+'</p>'
+   : '<div class="card"><h2>Ai giơ tay trên website</h2><p class="sub">Dữ liệu của chính ME School · không qua Google hay Meta · '+start+" → "+endW+' (thời gian thực, tính đến hôm nay)</p>'
    +'<div class="kpis">'
    +kpi("Tổng lượt giơ tay",fmt(wTot),"","người chủ động muốn liên lạc")
    +kpi("Trên tổng lượt vào",pct(ses?wTot/ses:0,2),"","bao nhiêu % khách để lại liên hệ")
