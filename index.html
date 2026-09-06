@@ -156,7 +156,7 @@ async function render(){
   const CP=$("camp").value||"";            // "" = toan he thong
   const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong}] = await Promise.all([
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo}] = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
     sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
@@ -170,7 +170,10 @@ async function render(){
     sb.from("v_lead_campus").select("ngay,campus,giai_doan,nguon,so_lead").limit(2000),
     sb.from("v_diem_danh").select("ngay,campus,di_hoc,vang,dan_thuoc").order("ngay",{ascending:false}).limit(2000),
     sb.from("v_siso").select("nhom,campus,so_hs").limit(1),
-    sb.from("v_web_tong").select("cua_so,su_kien,phien").limit(10)
+    sb.from("v_web_tong").select("cua_so,su_kien,phien").limit(10),
+    sb.from("v_tuan_campus").select("tuan,campus,cuoc_goi,lead_moi,hen,da_tham_quan,dat_coc,da_di_hoc").order("tuan",{ascending:false}).limit(2000),
+    sb.from("chi_tieu").select("campus,thang,tuyen_moi,si_so_kh").limit(500),
+    sb.from("v_can_ly_do").select("campus,ten,giai_doan,so_ngay_im_lang,ly_do,ngay_doi").order("so_ngay_im_lang",{ascending:false}).limit(1000)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -460,6 +463,49 @@ async function render(){
    +'Tân Thuận và Linh Đàm không dùng CRM (cấu trúc pháp lý riêng), nên hai bảng không bao giờ bằng nhau — chênh lệch đó là bình thường, miễn là giải thích được.</p>'
    +'<div class="q"><b>Câu hỏi:</b> ngày có tỷ lệ có mặt thấp nhất trong 14 ngày trên — hôm đó xảy ra chuyện gì, và ai là người đầu tiên biết?</div></div>';
 
+  // ----- THE: TUAN NAY vs CHI TIEU -----
+  const thangNay=new Date().getMonth()+1;
+  const ctThang=(ct||[]).filter(r=>+r.thang===thangNay && hopCP(r.campus))
+    .reduce((s2,r)=>s2+(+r.tuyen_moi||0),0);
+  const ctTuan=ctThang/4;
+  const twLoc=(tw||[]).filter(r=>hopCP(r.campus));
+  const twT={}; twLoc.forEach(r=>{const o=twT[r.tuan]||(twT[r.tuan]={tuan:r.tuan,goi:0,lead:0,hen:0,tq:0,coc:0,dh:0});
+    o.goi+=+r.cuoc_goi||0; o.lead+=+r.lead_moi||0; o.hen+=+r.hen||0; o.tq+=+r.da_tham_quan||0;
+    o.coc+=+r.dat_coc||0; o.dh+=+r.da_di_hoc||0});
+  const twRows=Object.values(twT).sort((a,b)=>a.tuan<b.tuan?1:-1).slice(0,6);
+  const tuanNay=twRows[0]||null;
+  const lyLoc=(lyDo||[]).filter(r=>hopCP(r.campus));
+  const kt={}; lyLoc.forEach(r=>{const o=kt[r.giai_doan]||(kt[r.giai_doan]={n:0,ngay:0,chua:0});
+    o.n++; o.ngay+=+r.so_ngay_im_lang||0; if(!r.ly_do||r.ly_do==="(chưa ghi lý do)")o.chua++});
+  const ktRows=Object.entries(kt).sort((a,b)=>b[1].n-a[1].n);
+  const ketTot=lyLoc.length;
+  const ctCard = !twRows.length ? "" :
+   '<div class="card"><h2>Tuần này so với chỉ tiêu</h2><p class="sub">'+nhanCP+' · chỉ tiêu tháng '+thangNay+' chia đều 4 tuần · nguồn: file kế hoạch 2026</p>'
+   +'<div class="kpis">'
+   +kpi("Chỉ tiêu tuần",dec(ctTuan,1),"","chỉ tiêu tháng "+fmt(ctThang)+" ÷ 4")
+   +kpi("Đã đi học tuần này",fmt(tuanNay?tuanNay.dh:0),"",(tuanNay?tuanNay.tuan:"")+" — lead chuyển sang “Kết thúc thành công”")
+   +kpi("Chênh",(tuanNay?(tuanNay.dh-ctTuan>=0?"+":"")+dec(tuanNay.dh-ctTuan,1):"—"),"","thực tế trừ chỉ tiêu tuần")
+   +kpi("Đang kẹt giữa phễu",fmt(ketTot),"","đã vào phễu nhưng chưa ra kết quả")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tuần</th><th>Cuộc gọi</th><th>Lead mới</th><th>Hẹn</th><th>Đã thăm</th><th>Đặt cọc</th><th>Đi học</th><th>vs chỉ tiêu</th></tr></thead><tbody>'
+   +twRows.map(r=>{const d=r.dh-ctTuan; const cls=d>=0?"up":"down";
+     return "<tr><td>"+r.tuan+'</td><td class="mono">'+fmt(r.goi)+'</td><td class="mono">'+fmt(r.lead)+'</td><td class="mono">'+fmt(r.hen)
+     +'</td><td class="mono">'+fmt(r.tq)+'</td><td class="mono">'+fmt(r.coc)+'</td><td class="mono">'+fmt(r.dh)
+     +'</td><td class="mono"><span class="'+cls+'">'+(d>=0?"+":"")+dec(d,1)+"</span></td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +(ktRows.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang kẹt — và không ai ghi vì sao</p>'
+     +'<div class="tw"><table><thead><tr><th>Đang ở bước</th><th>Số lead</th><th>Im lặng TB (ngày)</th><th>Chưa ghi lý do</th></tr></thead><tbody>'
+     +ktRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+Math.round(v.ngay/v.n)
+       +'</td><td class="mono">'+fmt(v.chua)+" / "+fmt(v.n)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +(lyLoc.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Im lặng lâu nhất — 10 trường hợp cần một câu trả lời</p>'
+     +'<div class="tw"><table><thead><tr><th>Phụ huynh / bé</th><th>Campus</th><th>Đang ở bước</th><th>Im lặng</th></tr></thead><tbody>'
+     +lyLoc.slice(0,10).map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+r.campus+"</td><td>"+r.giai_doan
+       +'</td><td class="mono">'+fmt(r.so_ngay_im_lang)+" ngày</td></tr>").join("")+"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Cách đọc:</b> “Đi học” = lead đã chuyển sang <i>Kết thúc thành công</i> trong tuần đó. '
+   +'CRM chỉ lưu <b>trạng thái hiện tại</b>, không lưu lịch sử chuyển bước — nên tuần được tính theo <i>ngày cập nhật gần nhất</i>. '
+   +'Một lead được sửa lại vì lý do khác sẽ nhảy sang tuần mới. Số này đủ để thấy xu hướng, chưa đủ để chấm KPI cá nhân.</p>'
+   +'<div class="q"><b>Câu hỏi cho từng campus:</b> trong 10 dòng trên, ai đã gọi lại lần cuối, ngày nào, và phụ huynh nói gì? '
+   +'Nếu không ai trả lời được thì <b>đó mới là con số cần sửa</b>, không phải tỷ lệ chốt.</div></div>';
+
   const hsCard = !H.length ? "" :
    '<div class="card"><h2>Học sinh và tuyển sinh</h2><p class="sub">Từ AMIS CRM · '+nhanCP+' · cập nhật ở lần bấm “Kéo AMIS” gần nhất</p>'
    +'<div class="kpis">'
@@ -491,7 +537,8 @@ async function render(){
    +'<div class="q"><b>Câu hỏi:</b> con số “đang đi học” này có khớp với sổ điểm danh sáng nay ở từng campus không — lệch ở đâu?</div></div>';
 
   $("body").innerHTML=
-   hsCard
+   ctCard
+   +hsCard
    +ddCard
    +luuY
    +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
