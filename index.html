@@ -90,8 +90,8 @@ background:var(--surface);color:var(--ink);margin-bottom:10px;text-align:center}
   <div class="brand"><span class="dot"></span><div>nguoilonbinhan.meschool<small id="who">—</small></div></div>
   <div class="row">
     <select id="period">
-      <option value="28">28 ngày gần nhất</option>
       <option value="7">7 ngày gần nhất</option>
+      <option value="28">28 ngày</option>
       <option value="90">90 ngày</option>
     </select>
     <select id="camp"><option value="">Toàn hệ thống</option></select>
@@ -175,8 +175,10 @@ async function render(){
     sb.from("chi_tieu").select("campus,thang,tuyen_moi,si_so_kh").limit(500),
     sb.from("v_can_ly_do").select("campus,ten,giai_doan,so_ngay_im_lang,ly_do,ngay_doi").order("so_ngay_im_lang",{ascending:false}).limit(1000),
     sb.from("v_cohort_tuan").select("tuan_tao,campus,lead,cham_24h,cham_2_lan_tro_len,chua_ai_cham,hen_tham,coc_chot,tu_choi,im_lang_14").limit(500),
-    sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000),
-    sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu").order("im_lang",{ascending:false}).limit(1000)
+    (CP? sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").eq("campus",CP).not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)
+       : sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)),
+    (CP? sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu").eq("campus",CP).order("im_lang",{ascending:false}).limit(1000)
+       : sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu").order("im_lang",{ascending:false}).limit(1000))
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -192,7 +194,9 @@ async function render(){
     [...ds].sort().forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;$("camp").appendChild(o)});
   }
   const nhanCP = CP ? CP : "toàn hệ thống";
-  const luuY = CP ? '<div class="gap">Đang lọc theo <b>'+CP+'</b>. Thẻ dưới đây chưa tách được theo campus — số đang là của toàn hệ thống.</div>' : "";
+  const moGap = CP ? '<details><summary style="cursor:pointer;padding:14px 18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;font-weight:600">Xem dữ liệu toàn hệ thống — Website · Meta · Google (không tách được theo campus)</summary><div style="margin-top:14px">' : "";
+  const dongGap = CP ? "</div></details>" : "";
+  const luuY = "";
 
   const days=[...new Set(ga.map(r=>r.day))].sort();
   const end=days[days.length-1], start=shift(end,-(n-1)), pEnd=shift(start,-1), pStart=shift(pEnd,-(n-1));
@@ -447,6 +451,7 @@ async function render(){
   const ddTong=ddTruong.reduce((s2,r)=>s2+(+r.di_hoc_tb||0),0);
   const ddCard = !ddNay ? "" :
    '<div class="card"><h2>Trẻ đến lớp mỗi ngày</h2><p class="sub">Từ Tomia · '+nhanCP+' · ngày gần nhất có dữ liệu: '+ddNay.ngay+' · '+ddTruong.length+' trường</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Bảng ngày = <b>14 ngày gần nhất có dữ liệu</b>; bảng trường = <b>trung bình 28 ngày</b>. Không đổi theo ô chọn thời gian.</p>'
    +'<div class="kpis">'
    +kpi("Đang có mặt",fmt(ddNay.di_hoc),"","trẻ thật sự đến lớp hôm đó")
    +kpi("Vắng",fmt(ddNay.vang),"","nghỉ ốm, nghỉ phép")
@@ -474,8 +479,11 @@ async function render(){
     "Im lặng trên 14 ngày":"Một lần chạm cuối. Rồi đóng KÈM LÝ DO — kể cả lý do “không phù hợp”."};
   const vLoc=(viec||[]).filter(r=>hopCP(r.campus));
   const vRo={}; vLoc.forEach(r=>{(vRo[r.ro]=vRo[r.ro]||[]).push(r)});
+  // ba ro dau la de CUU -> moi nhat truoc; ro "im lang" la de DONG -> lau nhat truoc
+  Object.keys(vRo).forEach(k=>{ if(k!=="Im lặng trên 14 ngày") vRo[k].sort((a,b)=>(+a.im_lang||0)-(+b.im_lang||0)); });
   const viecCard = !vLoc.length ? "" :
    '<div class="card"><h2>Việc của tuần này</h2><p class="sub">'+nhanCP+' · '+fmt(vLoc.length)+' hồ sơ đang chờ một hành động cụ thể</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Danh sách này tính trên <b>90 ngày gần nhất</b>, không đổi theo ô chọn thời gian.</p>'
    +'<div class="kpis">'
    +RO.map(k=>kpi(k,fmt((vRo[k]||[]).length),"",
        (vRo[k]&&vRo[k].length)?("im lặng TB "+Math.round(vRo[k].reduce((s2,r)=>s2+(+r.im_lang||0),0)/vRo[k].length)+" ngày"):"không có ai")).join("")
@@ -488,14 +496,18 @@ async function render(){
        +rows.map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")
          +'</td><td class="mono">'+fmt(r.so_cham)+'</td><td class="mono">'+fmt(r.im_lang)+" ngày</td></tr>").join("")
        +"</tbody></table></div>"
-       +(vRo[k].length>8?'<p class="leg">Hiện 8 hồ sơ im lặng lâu nhất trong '+fmt(vRo[k].length)+'. Lọc theo campus để thấy phần của mình.</p>':"")}).join("")
+       +(vRo[k].length>8?'<p class="leg">Hiện 8 hồ sơ '+(k==="Im lặng trên 14 ngày"?"im lặng lâu nhất":"mới nhất")+' trong '+fmt(vRo[k].length)+'. Lọc theo campus để thấy phần của mình.</p>':"")}).join("")
    +'<p class="leg"><b>“Lần chạm” chỉ đếm cuộc gọi ghi trong CRM.</b> Tin nhắn Zalo/Messenger không vào đây — nên một phụ huynh đang được nhắn rất kỹ vẫn hiện là <b>0 lần chạm</b>. '
    +'Trước khi trách ai, hỏi họ đã nhắn chưa.</p>'
+   +'<p class="leg"><b>Thứ tự:</b> ba rổ đầu xếp <b>mới nhất trước</b> — càng mới càng còn ấm, cứu được. '
+   +'Rổ “im lặng trên 14 ngày” xếp <b>lâu nhất trước</b>, vì việc ở đó không phải cứu mà là <b>đóng kèm lý do</b>. '
+   +'Số liệu 180 ngày: 60% ca chốt trong 14 ngày đầu, 79% trong 30 ngày — nhưng vẫn có 12% chốt sau 60 ngày, nên đừng xoá, chỉ hạ nhịp.</p>'
    +'<div class="q"><b>Quy tắc:</b> mỗi hồ sơ trong danh sách này chỉ rời khỏi đây theo hai đường — <b>lên bước tiếp</b>, hoặc <b>đóng kèm lý do</b>. Không có đường thứ ba là “để đấy”.</div></div>';
 
   // ----- THE: DANH SACH TUNG HO SO THEO TANG PHEU -----
   const dsLoc=(ds||[]).filter(r=>hopCP(r.campus));
   const dsT={}; dsLoc.forEach(r=>{(dsT[r.tang]=dsT[r.tang]||[]).push(r)});
+  Object.keys(dsT).forEach(k=>dsT[k].sort((a,b)=>(+a.im_lang||0)-(+b.im_lang||0)));  // moi nhat truoc
   const dsTang=Object.keys(dsT).sort();
   const ngan=(t,n)=>{t=String(t||"");return t.length>n?t.slice(0,n)+"…":t};
   const dsCard = !dsLoc.length ? "" :
@@ -518,7 +530,7 @@ async function render(){
          +'</td><td class="mono">'+fmt(r.so_cham)+(r.goi_khong_nghe?" ("+r.goi_khong_nghe+" không nghe)":"")
          +"</td><td>"+lc+'</td><td class="mono">'+fmt(r.im_lang)+"n</td></tr>"}).join("")
        +"</tbody></table></div>"
-       +(dsT[k].length>15?'<p class="leg">Hiện 15 hồ sơ im lặng lâu nhất trong '+fmt(dsT[k].length)+'.</p>':"")
+       +(dsT[k].length>15?'<p class="leg">Hiện 15 hồ sơ mới nhất trong '+fmt(dsT[k].length)+' (im lặng ít ngày nhất trước).</p>':"")
        +"</details>"}).join("")
    +'<p class="leg"><b>Chưa có số điện thoại trong bảng này.</b> Số nằm ở module <i>Liên hệ</i> của AMIS, chưa được kéo về — dấu trang “Kéo AMIS” đã cập nhật, bấm lại một lần là có. '
    +'<b>“Gọi không nghe”</b> = cuộc gọi có thời lượng 0 giây. Toàn hệ thống: <b>một nửa số cuộc gọi rơi vào loại này</b>.</p>'
@@ -533,6 +545,7 @@ async function render(){
   const cohRows=Object.values(cohT).sort((a,b)=>a.t<b.t?1:-1).slice(0,10);
   const cohCard = !cohRows.length ? "" :
    '<div class="card"><h2>Nhóm vào tuần nào, giờ ra sao</h2><p class="sub">'+nhanCP+' · mỗi hàng là những người xuất hiện trong tuần đó, theo họ về sau</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ 12 tuần gần nhất, <b>không đổi theo ô chọn thời gian</b> — cohort chỉ có nghĩa khi nhìn đủ dài.</p>'
    +'<div class="tw"><table><thead><tr><th>Tuần vào</th><th>Lead</th><th>Chạm ≤24h</th><th>≥2 lần chạm</th><th>Chưa ai chạm</th><th>Hẹn/Thăm</th><th>Cọc/Chốt</th><th>Từ chối</th><th>Im lặng >14n</th></tr></thead><tbody>'
    +cohRows.map(r=>"<tr><td>"+r.t+'</td><td class="mono">'+fmt(r.lead)
      +'</td><td class="mono">'+(r.lead?pct(r.c24/r.lead,0):"—")+'</td><td class="mono">'+(r.lead?pct(r.c2/r.lead,0):"—")
@@ -562,6 +575,7 @@ async function render(){
   const ketTot=lyLoc.length;
   const ctCard = !twRows.length ? "" :
    '<div class="card"><h2>Tuần này so với chỉ tiêu</h2><p class="sub">'+nhanCP+' · chỉ tiêu tháng '+thangNay+' chia đều 4 tuần · nguồn: file kế hoạch 2026</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Thẻ này luôn tính theo <b>tuần lịch</b> (thứ Hai → Chủ nhật), <b>không đổi theo ô chọn thời gian</b> ở đầu trang.</p>'
    +'<div class="kpis">'
    +kpi("Chỉ tiêu tuần",dec(ctTuan,1),"","chỉ tiêu tháng "+fmt(ctThang)+" ÷ 4")
    +kpi("Đã đi học tuần này",fmt(tuanNay?tuanNay.dh:0),"",(tuanNay?tuanNay.tuan:"")+" — lead chuyển sang “Kết thúc thành công”")
@@ -624,7 +638,7 @@ async function render(){
    +dsCard
    +hsCard
    +ddCard
-   +luuY
+   +moGap
    +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'
    +kpi("Lượt vào web",fmt(ses),delta(ses,pses),"mỗi lần một người mở website")
@@ -674,7 +688,8 @@ async function render(){
      .map(([nm,d])=>{const lag=(d&&/^\d{4}-\d{2}-\d{2}$/.test(d))?Math.round((Date.now()-new Date(d))/864e5):null;
        return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
    +"</tbody></table></div>"
-   +'<p class="note">Chưa nối: Harasocial (hộp thư Messenger/Zalo) · SUPA checklist · giáo viên · tài chính.</p></div>';
+   +'<p class="note">Chưa nối: Harasocial (hộp thư Messenger/Zalo) · SUPA checklist · giáo viên · tài chính.</p></div>'
+   +dongGap;
 }
 
 sb.auth.onAuthStateChange(async(_e,session)=>{
