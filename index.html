@@ -152,18 +152,21 @@ const kpi=(l,v,d,h)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v m
 async function render(){
   const n=+$("period").value;
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi}] = await Promise.all([
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong}] = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
     sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
     sb.from("meta_ad_daily").select("day,account_name,spend,impressions,reach,clicks").order("day"),
     sb.from("meta_campaign_daily").select("day,account_name,campaign_name,objective,spend,impressions,reach,clicks,link_clicks,results,result_type").order("day"),
     sb.from("gsc_page").select("snapshot_on,page,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("clicks",{ascending:false}).limit(1200),
-    sb.from("ga4_event_daily").select("day,event_name,event_count,total_users").order("day"),
-    sb.from("ga4_landing_daily").select("day,landing_page,sessions,engaged_sessions,engagement_rate,avg_engagement_sec,key_events").order("day"),
+    sb.from("v_web_su_kien").select("cua_so,event_name,so_lan,nguoi").limit(500),
+    sb.from("v_web_trang").select("cua_so,landing_page,phien,gan_ket,giay_tong,su_kien").limit(500),
     sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(20000),
     sb.from("v_siso").select("nhom,campus,so_hs,so_lop").limit(2000),
-    sb.from("v_tuyensinh_ngay").select("ngay,giai_doan,so_lead").limit(2000)
+    sb.from("v_tuyensinh_ngay").select("ngay,giai_doan,so_lead").limit(2000),
+    sb.from("v_diem_danh_ngay").select("ngay,di_hoc,vang,dan_thuoc,ty_le").order("ngay",{ascending:false}).limit(200),
+    sb.from("v_diem_danh_truong").select("ten_truong,so_ngay,di_hoc_tb,vang_tb,ty_le,ngay_cuoi").limit(100),
+    sb.from("v_web_tong").select("cua_so,su_kien,phien").limit(10)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -196,8 +199,8 @@ async function render(){
   const RAISE=/form|submit|lead|contact|phone|hotline|tel|zalo|messeng|chat|call|dang.?ky|register|booking|dat.?lich|tu.?van/i;
   const NOTRAISE=/form_start|^click$|^send$|select_content/i;
   const isRaise=k=>RAISE.test(k)&&!NOTRAISE.test(k);
-  const evAgg={}; (ev||[]).filter(r=>inR(r.day,start,end)).forEach(r=>{
-    const k=r.event_name; evAgg[k]=evAgg[k]||{c:0,u:0}; evAgg[k].c+=+r.event_count||0; evAgg[k].u+=+r.total_users||0});
+  const evAgg={}; (ev||[]).filter(r=>+r.cua_so===n).forEach(r=>{
+    const k=r.event_name; evAgg[k]={c:+r.so_lan||0,u:+r.nguoi||0}});
   const evRows=Object.entries(evAgg).sort((a,b)=>b[1].c-a[1].c);
   const raiseAll=evRows.filter(([k])=>isRaise(k));
   const suspect=raiseAll.filter(([k,v])=>ses&&v.c/ses>0.03);
@@ -208,7 +211,7 @@ async function render(){
   const ctrAt=p=>p<=1.5?.28:p<=2.5?.15:p<=3.5?.11:p<=4.5?.085:p<=5.5?.065:p<=10?.04:p<=20?.014:.005;
   const near=gq.filter(q=>+q.position>=7.5&&+q.position<=20.5&&+q.impressions>=30)
     .map(q=>({...q,gain:Math.round(+q.impressions*ctrAt(4)- +q.clicks)}))
-    .filter(q=>q.gain>0).sort((a,b)=>b.gain-a.gain).slice(0,12);
+    .filter(q=>q.gain>0).sort((a,b)=>b.gain-a.gain).slice(0,5);
   const nearGain=near.reduce((s,q)=>s+q.gain,0);
   // tieu de hong: xep hang tot nhung it ai bam
   const weakTitle=gq.filter(q=>+q.position<=10&&+q.impressions>=150&&+q.ctr<ctrAt(+q.position)*0.4)
@@ -216,11 +219,9 @@ async function render(){
 
   // ----- TRANG: ghep Search Console (nguon) voi GA4 (nguoi doc that su lam gi) -----
   const path=u=>{try{return new URL(u).pathname}catch(e){return (u||"").replace(/^https?:\/\/[^/]+/,"")||"/"}};
-  const lpAgg={}; (lp||[]).filter(r=>inR(r.day,start,end)).forEach(r=>{
-    const k=r.landing_page||"/"; lpAgg[k]=lpAgg[k]||{s:0,e:0,t:0};
-    lpAgg[k].s+=+r.sessions||0; lpAgg[k].e+=+r.engaged_sessions||0;
-    lpAgg[k].t+=(+r.avg_engagement_sec||0)*(+r.sessions||0)});
-  const pageRows=gp.slice(0,15).map(p=>{const g=lpAgg[path(p.page)]||null;
+  const lpAgg={}; (lp||[]).filter(r=>+r.cua_so===n).forEach(r=>{
+    lpAgg[r.landing_page||"/"]={s:+r.phien||0, e:+r.gan_ket||0, t:+r.giay_tong||0}});
+  const pageRows=gp.slice(0,10).map(p=>{const g=lpAgg[path(p.page)]||null;
     return {...p, ses:g?g.s:null, er:g&&g.s?g.e/g.s:null, sec:g&&g.s?g.t/g.s:null}});
 
   // ----- Meta -----
@@ -333,7 +334,7 @@ async function render(){
     GA4_click_messenger:"Bấm nhắn Messenger", GA4_click_hotline:"Bấm gọi hotline",
     GA4_click_zalo:"Bấm nhắn Zalo"};
   const tenSK=k=>TENSK[k]||k.replace(/^GA4_/,"").replace(/_/g," ");
-  const keTot=(lp||[]).filter(r=>inR(r.day,start,end)).reduce((s,r)=>s+(+r.key_events||0),0);
+  const keTot=((wTong||[]).find(r=>+r.cua_so===n)||{}).su_kien||0;
   const evCard = !evRows.length ?
    '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">Chưa có dữ liệu — lần kéo tới sẽ có</p></div>'
    : '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">'+evRows.length+' loại sự kiện GA4 đang ghi nhận · '+start+" → "+end+'</p>'
@@ -399,6 +400,33 @@ async function render(){
   const tsTong=tsMoi.reduce((s2,r)=>s2+(+r.so_lead||0),0);
   const gd={}; tsMoi.forEach(r=>{const k=r.giai_doan||"(chưa có)";gd[k]=(gd[k]||0)+(+r.so_lead||0)});
   const gdRows=Object.entries(gd).sort((a,b)=>b[1]-a[1]);
+  // ----- THE: TRE DEN LOP MOI NGAY (Tomia) -----
+  const DD=(dd||[]).slice().sort((a,b)=>a.ngay<b.ngay?1:-1);   // moi nhat truoc
+  const ddNay=DD[0]||null;
+  const dd14=DD.slice(0,14).slice().reverse();
+  const ddTruong=(ddT||[]).slice().sort((a,b)=>(+b.di_hoc_tb||0)-(+a.di_hoc_tb||0));
+  const ddTong=ddTruong.reduce((s2,r)=>s2+(+r.di_hoc_tb||0),0);
+  const ddCard = !ddNay ? "" :
+   '<div class="card"><h2>Trẻ đến lớp mỗi ngày</h2><p class="sub">Từ Tomia · ngày gần nhất có dữ liệu: '+ddNay.ngay+' · '+ddTruong.length+' trường</p>'
+   +'<div class="kpis">'
+   +kpi("Đang có mặt",fmt(ddNay.di_hoc),"","trẻ thật sự đến lớp hôm đó")
+   +kpi("Vắng",fmt(ddNay.vang),"","nghỉ ốm, nghỉ phép")
+   +kpi("Tỷ lệ có mặt",dec(ddNay.ty_le,1)+"%","","đi học ÷ (đi học + vắng)")
+   +kpi("Trẻ có dặn thuốc",fmt(ddNay.dan_thuoc),"","cần người theo dõi trong ngày")+"</div>"
+   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">14 ngày gần nhất</p>'
+   +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Đi học</th><th>Vắng</th><th>Có mặt</th></tr></thead><tbody>'
+   +dd14.slice().reverse().map(r=>"<tr><td>"+r.ngay+'</td><td class="mono">'+fmt(r.di_hoc)+'</td><td class="mono">'+fmt(r.vang)
+     +'</td><td class="mono">'+dec(r.ty_le,1)+"%</td></tr>").join("")+"</tbody></table></div>"
+   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Trung bình 28 ngày, theo trường</p>'
+   +'<div class="tw"><table><thead><tr><th>Trường</th><th>Đi học TB</th><th>Vắng TB</th><th>Tỷ lệ có mặt</th></tr></thead><tbody>'
+   +ddTruong.map(r=>"<tr><td>"+r.ten_truong+'</td><td class="mono">'+fmt(r.di_hoc_tb)+'</td><td class="mono">'+fmt(r.vang_tb)
+     +'</td><td class="mono">'+dec(r.ty_le,1)+"%</td></tr>").join("")
+   +'<tr><td><b>Toàn hệ thống</b></td><td class="mono"><b>'+fmt(ddTong)+"</b></td><td></td><td></td></tr>"
+   +"</tbody></table></div>"
+   +'<p class="leg">Tomia có <b>'+ddTruong.length+' trường</b>, AMIS CRM có <b>13</b>. '
+   +'Tân Thuận và Linh Đàm không dùng CRM (cấu trúc pháp lý riêng), nên hai bảng không bao giờ bằng nhau — chênh lệch đó là bình thường, miễn là giải thích được.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> ngày có tỷ lệ có mặt thấp nhất trong 14 ngày trên — hôm đó xảy ra chuyện gì, và ai là người đầu tiên biết?</div></div>';
+
   const hsCard = !H.length ? "" :
    '<div class="card"><h2>Học sinh và tuyển sinh</h2><p class="sub">Từ AMIS CRM · cập nhật ở lần bấm “Kéo AMIS” gần nhất</p>'
    +'<div class="kpis">'
@@ -425,6 +453,7 @@ async function render(){
 
   $("body").innerHTML=
    hsCard
+   +ddCard
    +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'
    +kpi("Lượt vào web",fmt(ses),delta(ses,pses),"mỗi lần một người mở website")
@@ -449,9 +478,9 @@ async function render(){
    +'<b>Paid Social</b> = từ quảng cáo Facebook · <b>Referral</b> = trang khác dẫn sang.</p>'
    +'<p class="note">Paid Search và Paid Social gần như bằng 0 — quảng cáo hầu như không đưa ai về website.</p></div>'
 
-   +'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">Top theo lượt hiển thị</p>'
+   +'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">5 từ khoá mang về nhiều lượt hiển thị nhất</p>'
    +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Hiển thị</th><th>Nhấp</th><th>CTR</th><th>Vị trí</th></tr></thead><tbody>'
-   +gq.slice(0,15).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
+   +gq.slice(0,5).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
      +'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+dec(q.position,1)+"</td></tr>").join("")
    +"</tbody></table></div>"
    +'<p class="leg"><b>Hiện</b> = số lần web xuất hiện trên Google · <b>Bấm</b> = số lần có người bấm vào · '
@@ -466,13 +495,15 @@ async function render(){
    +'<div class="card"><h2>Nguồn dữ liệu</h2><p class="sub">Số nào không có thì để trống, không bịa</p>'
    +'<div class="tw"><table><thead><tr><th>Nguồn</th><th>Đến ngày</th><th>Số ngày trễ</th></tr></thead><tbody>'
    +[["GA4",days[days.length-1]],["Search Console",gs.length?gs[gs.length-1].day:null],
-     ["Sự kiện GA4",(ev&&ev.length)?ev[ev.length-1].day:null],
-     ["Trang đích GA4",(lp&&lp.length)?lp[lp.length-1].day:null],
-     ["Meta Ads",mDays.length?mDays[mDays.length-1]:null]]
+     ["Sự kiện + trang đích GA4",end],
+     ["Meta Ads",mDays.length?mDays[mDays.length-1]:null],
+     ["Điểm danh Tomia",ddNay?ddNay.ngay:null],
+     ["Học sinh AMIS CRM",H.length?"lần bấm “Kéo AMIS” gần nhất":null],
+     ["Lượt giơ tay trên web",(W.length?String(W[0].ts).slice(0,10):null)]]
      .map(([nm,d])=>{const lag=d?Math.round((Date.now()-new Date(d))/864e5):null;
        return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
    +"</tbody></table></div>"
-   +'<p class="note">CRM, tổng đài, điểm danh, SUPA, tài chính — chưa nối.</p></div>';
+   +'<p class="note">Chưa nối: Harasocial (hộp thư Messenger/Zalo) · SUPA checklist · giáo viên · tài chính.</p></div>';
 }
 
 sb.auth.onAuthStateChange(async(_e,session)=>{
