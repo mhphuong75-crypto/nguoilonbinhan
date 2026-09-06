@@ -500,7 +500,7 @@ async function render(){
      ["Điểm danh Tomia",ddNay?ddNay.ngay:null],
      ["Học sinh AMIS CRM",H.length?"lần bấm “Kéo AMIS” gần nhất":null],
      ["Lượt giơ tay trên web",(W.length?String(W[0].ts).slice(0,10):null)]]
-     .map(([nm,d])=>{const lag=d?Math.round((Date.now()-new Date(d))/864e5):null;
+     .map(([nm,d])=>{const lag=(d&&/^\d{4}-\d{2}-\d{2}$/.test(d))?Math.round((Date.now()-new Date(d))/864e5):null;
        return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
    +"</tbody></table></div>"
    +'<p class="note">Chưa nối: Harasocial (hộp thư Messenger/Zalo) · SUPA checklist · giáo viên · tài chính.</p></div>';
