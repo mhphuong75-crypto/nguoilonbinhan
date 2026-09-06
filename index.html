@@ -156,7 +156,7 @@ async function render(){
   const CP=$("camp").value||"";            // "" = toan he thong
   const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec}] = await Promise.all([
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds}] = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
     sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
@@ -175,7 +175,8 @@ async function render(){
     sb.from("chi_tieu").select("campus,thang,tuyen_moi,si_so_kh").limit(500),
     sb.from("v_can_ly_do").select("campus,ten,giai_doan,so_ngay_im_lang,ly_do,ngay_doi").order("so_ngay_im_lang",{ascending:false}).limit(1000),
     sb.from("v_cohort_tuan").select("tuan_tao,campus,lead,cham_24h,cham_2_lan_tro_len,chua_ai_cham,hen_tham,coc_chot,tu_choi,im_lang_14").limit(500),
-    sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)
+    sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000),
+    sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu").order("im_lang",{ascending:false}).limit(1000)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -492,6 +493,38 @@ async function render(){
    +'Trước khi trách ai, hỏi họ đã nhắn chưa.</p>'
    +'<div class="q"><b>Quy tắc:</b> mỗi hồ sơ trong danh sách này chỉ rời khỏi đây theo hai đường — <b>lên bước tiếp</b>, hoặc <b>đóng kèm lý do</b>. Không có đường thứ ba là “để đấy”.</div></div>';
 
+  // ----- THE: DANH SACH TUNG HO SO THEO TANG PHEU -----
+  const dsLoc=(ds||[]).filter(r=>hopCP(r.campus));
+  const dsT={}; dsLoc.forEach(r=>{(dsT[r.tang]=dsT[r.tang]||[]).push(r)});
+  const dsTang=Object.keys(dsT).sort();
+  const ngan=(t,n)=>{t=String(t||"");return t.length>n?t.slice(0,n)+"…":t};
+  const dsCard = !dsLoc.length ? "" :
+   '<div class="card"><h2>Danh sách từng hồ sơ, theo tầng phễu</h2><p class="sub">'+nhanCP+' · '+fmt(dsLoc.length)+' hồ sơ vào trong 90 ngày · bấm từng tầng để mở</p>'
+   +'<div class="tw"><table><thead><tr><th>Tầng</th><th>Hồ sơ</th><th>Lần chạm</th><th>Nghe máy</th><th>Gọi không nghe</th></tr></thead><tbody>'
+   +dsTang.map(k=>{const v=dsT[k];
+     return "<tr><td>"+k+'</td><td class="mono">'+fmt(v.length)
+       +'</td><td class="mono">'+fmt(v.reduce((s2,r)=>s2+(+r.so_cham||0),0))
+       +'</td><td class="mono">'+fmt(v.reduce((s2,r)=>s2+(+r.goi_nghe_may||0),0))
+       +'</td><td class="mono">'+fmt(v.reduce((s2,r)=>s2+(+r.goi_khong_nghe||0),0))+"</td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +dsTang.map(k=>{const v=dsT[k].slice(0,15);
+     return '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">'+k+" — "+fmt(dsT[k].length)+" hồ sơ</summary>"
+       +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>Phụ huynh / bé</th><th>Campus</th><th>Kênh</th><th>Vào ngày</th><th>Chạm</th><th>Lần cuối — ai, làm gì, khi nào</th><th>Im lặng</th></tr></thead><tbody>'
+       +v.map(r=>{const ai=(r.cham_cuoi_ai||"").replace(/\s*\(\d+\)\s*$/,"");
+         const lc = r.cham_cuoi_ngay ? (ai+" · "+ngan(r.cham_cuoi_lam_gi,38)+" · "+r.cham_cuoi_ngay
+                    +(r.cham_cuoi_ghi_chu?'<br><span style="opacity:.7">“'+ngan(r.cham_cuoi_ghi_chu,70)+'”</span>':""))
+                    : '<span style="opacity:.6">chưa có lần chạm nào ghi trong CRM</span>';
+         return "<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")+"</td><td>"+r.ngay_tao
+         +'</td><td class="mono">'+fmt(r.so_cham)+(r.goi_khong_nghe?" ("+r.goi_khong_nghe+" không nghe)":"")
+         +"</td><td>"+lc+'</td><td class="mono">'+fmt(r.im_lang)+"n</td></tr>"}).join("")
+       +"</tbody></table></div>"
+       +(dsT[k].length>15?'<p class="leg">Hiện 15 hồ sơ im lặng lâu nhất trong '+fmt(dsT[k].length)+'.</p>':"")
+       +"</details>"}).join("")
+   +'<p class="leg"><b>Chưa có số điện thoại trong bảng này.</b> Số nằm ở module <i>Liên hệ</i> của AMIS, chưa được kéo về — dấu trang “Kéo AMIS” đã cập nhật, bấm lại một lần là có. '
+   +'<b>“Gọi không nghe”</b> = cuộc gọi có thời lượng 0 giây. Toàn hệ thống: <b>một nửa số cuộc gọi rơi vào loại này</b>.</p>'
+   +'<div class="q"><b>Cách dùng:</b> mở tầng của campus mình, đọc cột “lần cuối”. Dòng nào ghi <i>chưa có lần chạm nào</i> mà phụ huynh vẫn đang được nhắn tin — '
+   +'thì lỗi ở chỗ ghi nhận, không phải ở người làm. Dòng nào im lặng trên 14 ngày và không ai nhớ đã nói gì — thì đó là một gia đình đang bị bỏ quên.</div></div>';
+
   // ----- THE: COHORT THEO TUAN VAO -----
   const cohLoc=(coh||[]).filter(r=>hopCP(r.campus));
   const cohT={}; cohLoc.forEach(r=>{const o=cohT[r.tuan_tao]||(cohT[r.tuan_tao]={t:r.tuan_tao,lead:0,c24:0,c2:0,ch0:0,ht:0,cc:0,tc:0,im:0});
@@ -588,6 +621,7 @@ async function render(){
    viecCard
    +ctCard
    +cohCard
+   +dsCard
    +hsCard
    +ddCard
    +luuY
