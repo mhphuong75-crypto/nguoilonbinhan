@@ -156,7 +156,7 @@ async function render(){
   const CP=$("camp").value||"";            // "" = toan he thong
   const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo}] = await Promise.all([
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec}] = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
     sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
@@ -173,7 +173,9 @@ async function render(){
     sb.from("v_web_tong").select("cua_so,su_kien,phien").limit(10),
     sb.from("v_tuan_campus").select("tuan,campus,cuoc_goi,lead_moi,hen,da_tham_quan,dat_coc,da_di_hoc").order("tuan",{ascending:false}).limit(2000),
     sb.from("chi_tieu").select("campus,thang,tuyen_moi,si_so_kh").limit(500),
-    sb.from("v_can_ly_do").select("campus,ten,giai_doan,so_ngay_im_lang,ly_do,ngay_doi").order("so_ngay_im_lang",{ascending:false}).limit(1000)
+    sb.from("v_can_ly_do").select("campus,ten,giai_doan,so_ngay_im_lang,ly_do,ngay_doi").order("so_ngay_im_lang",{ascending:false}).limit(1000),
+    sb.from("v_cohort_tuan").select("tuan_tao,campus,lead,cham_24h,cham_2_lan_tro_len,chua_ai_cham,hen_tham,coc_chot,tu_choi,im_lang_14").limit(500),
+    sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -463,6 +465,52 @@ async function render(){
    +'Tân Thuận và Linh Đàm không dùng CRM (cấu trúc pháp lý riêng), nên hai bảng không bao giờ bằng nhau — chênh lệch đó là bình thường, miễn là giải thích được.</p>'
    +'<div class="q"><b>Câu hỏi:</b> ngày có tỷ lệ có mặt thấp nhất trong 14 ngày trên — hôm đó xảy ra chuyện gì, và ai là người đầu tiên biết?</div></div>';
 
+  // ----- THE: VIEC CUA TUAN NAY (danh sach hanh dong) -----
+  const RO=["Chưa ai chạm","Đã thăm chưa chốt","Hẹn rồi, chưa thấy kết quả","Im lặng trên 14 ngày"];
+  const LUAT={"Chưa ai chạm":"Chạm lần đầu trong 24h. Nếu khách chỉ nhắn tin, nhắn — đừng gọi.",
+    "Đã thăm chưa chốt":"Gọi trong 48h sau visit. Hỏi đúng một câu: điều gì khiến anh/chị chưa quyết?",
+    "Hẹn rồi, chưa thấy kết quả":"Xác nhận lại lịch, hoặc hỏi vì sao không đến được. Ghi lại câu trả lời.",
+    "Im lặng trên 14 ngày":"Một lần chạm cuối. Rồi đóng KÈM LÝ DO — kể cả lý do “không phù hợp”."};
+  const vLoc=(viec||[]).filter(r=>hopCP(r.campus));
+  const vRo={}; vLoc.forEach(r=>{(vRo[r.ro]=vRo[r.ro]||[]).push(r)});
+  const viecCard = !vLoc.length ? "" :
+   '<div class="card"><h2>Việc của tuần này</h2><p class="sub">'+nhanCP+' · '+fmt(vLoc.length)+' hồ sơ đang chờ một hành động cụ thể</p>'
+   +'<div class="kpis">'
+   +RO.map(k=>kpi(k,fmt((vRo[k]||[]).length),"",
+       (vRo[k]&&vRo[k].length)?("im lặng TB "+Math.round(vRo[k].reduce((s2,r)=>s2+(+r.im_lang||0),0)/vRo[k].length)+" ngày"):"không có ai")).join("")
+   +"</div>"
+   +RO.filter(k=>vRo[k]&&vRo[k].length).map(k=>{
+     const rows=vRo[k].slice(0,8);
+     return '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">'+k+' — '+fmt(vRo[k].length)+' hồ sơ</p>'
+       +'<div class="q" style="margin:0 0 8px">'+LUAT[k]+'</div>'
+       +'<div class="tw"><table><thead><tr><th>Phụ huynh / bé</th><th>Campus</th><th>Kênh</th><th>Lần chạm</th><th>Im lặng</th></tr></thead><tbody>'
+       +rows.map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")
+         +'</td><td class="mono">'+fmt(r.so_cham)+'</td><td class="mono">'+fmt(r.im_lang)+" ngày</td></tr>").join("")
+       +"</tbody></table></div>"
+       +(vRo[k].length>8?'<p class="leg">Hiện 8 hồ sơ im lặng lâu nhất trong '+fmt(vRo[k].length)+'. Lọc theo campus để thấy phần của mình.</p>':"")}).join("")
+   +'<p class="leg"><b>“Lần chạm” chỉ đếm cuộc gọi ghi trong CRM.</b> Tin nhắn Zalo/Messenger không vào đây — nên một phụ huynh đang được nhắn rất kỹ vẫn hiện là <b>0 lần chạm</b>. '
+   +'Trước khi trách ai, hỏi họ đã nhắn chưa.</p>'
+   +'<div class="q"><b>Quy tắc:</b> mỗi hồ sơ trong danh sách này chỉ rời khỏi đây theo hai đường — <b>lên bước tiếp</b>, hoặc <b>đóng kèm lý do</b>. Không có đường thứ ba là “để đấy”.</div></div>';
+
+  // ----- THE: COHORT THEO TUAN VAO -----
+  const cohLoc=(coh||[]).filter(r=>hopCP(r.campus));
+  const cohT={}; cohLoc.forEach(r=>{const o=cohT[r.tuan_tao]||(cohT[r.tuan_tao]={t:r.tuan_tao,lead:0,c24:0,c2:0,ch0:0,ht:0,cc:0,tc:0,im:0});
+    o.lead+=+r.lead||0; o.c24+=+r.cham_24h||0; o.c2+=+r.cham_2_lan_tro_len||0; o.ch0+=+r.chua_ai_cham||0;
+    o.ht+=+r.hen_tham||0; o.cc+=+r.coc_chot||0; o.tc+=+r.tu_choi||0; o.im+=+r.im_lang_14||0});
+  const cohRows=Object.values(cohT).sort((a,b)=>a.t<b.t?1:-1).slice(0,10);
+  const cohCard = !cohRows.length ? "" :
+   '<div class="card"><h2>Nhóm vào tuần nào, giờ ra sao</h2><p class="sub">'+nhanCP+' · mỗi hàng là những người xuất hiện trong tuần đó, theo họ về sau</p>'
+   +'<div class="tw"><table><thead><tr><th>Tuần vào</th><th>Lead</th><th>Chạm ≤24h</th><th>≥2 lần chạm</th><th>Chưa ai chạm</th><th>Hẹn/Thăm</th><th>Cọc/Chốt</th><th>Từ chối</th><th>Im lặng >14n</th></tr></thead><tbody>'
+   +cohRows.map(r=>"<tr><td>"+r.t+'</td><td class="mono">'+fmt(r.lead)
+     +'</td><td class="mono">'+(r.lead?pct(r.c24/r.lead,0):"—")+'</td><td class="mono">'+(r.lead?pct(r.c2/r.lead,0):"—")
+     +'</td><td class="mono">'+fmt(r.ch0)+'</td><td class="mono">'+fmt(r.ht)+'</td><td class="mono">'+fmt(r.cc)
+     +'</td><td class="mono">'+fmt(r.tc)+'</td><td class="mono">'+fmt(r.im)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Đọc ngang</b> một hàng: nhóm đó chín dần ra sao. <b>Đọc dọc</b> một cột: quy trình có đổi không. '
+   +'Hàng dưới cùng đã có nhiều tuần để chín; hàng trên cùng thì chưa — đừng so trực tiếp hai hàng cách xa nhau.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> cột “≥2 lần chạm” đang rất thấp. Nếu phụ huynh mầm non cần vài tuần và vài lần trò chuyện mới quyết, '
+   +'thì việc thiếu không phải là lead — mà là <b>lần chạm thứ hai</b>. Ai chịu trách nhiệm cho lần thứ hai đó?</div></div>';
+
   // ----- THE: TUAN NAY vs CHI TIEU -----
   const thangNay=new Date().getMonth()+1;
   const ctThang=(ct||[]).filter(r=>+r.thang===thangNay && hopCP(r.campus))
@@ -537,7 +585,9 @@ async function render(){
    +'<div class="q"><b>Câu hỏi:</b> con số “đang đi học” này có khớp với sổ điểm danh sáng nay ở từng campus không — lệch ở đâu?</div></div>';
 
   $("body").innerHTML=
-   ctCard
+   viecCard
+   +ctCard
+   +cohCard
    +hsCard
    +ddCard
    +luuY
