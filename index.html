@@ -94,6 +94,7 @@ background:var(--surface);color:var(--ink);margin-bottom:10px;text-align:center}
       <option value="7">7 ngày gần nhất</option>
       <option value="90">90 ngày</option>
     </select>
+    <select id="camp"><option value="">Toàn hệ thống</option></select>
     <button id="out" style="margin-left:auto">Đăng xuất</button>
   </div>
 </div></header>
@@ -125,6 +126,7 @@ $("send").onclick=async()=>{
 $("email").addEventListener("keydown",e=>{if(e.key==="Enter")$("send").click()});
 $("out").onclick=async()=>{await sb.auth.signOut();location.reload()};
 $("period").onchange=render;
+$("camp").onchange=render;
 
 function spark(series){
   if(!series.length) return '<div class="note">Không có dữ liệu trong khoảng này</div>';
@@ -151,6 +153,8 @@ const kpi=(l,v,d,h)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v m
 
 async function render(){
   const n=+$("period").value;
+  const CP=$("camp").value||"";            // "" = toan he thong
+  const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
   const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong}] = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
@@ -163,15 +167,26 @@ async function render(){
     sb.from("v_web_trang").select("cua_so,landing_page,phien,gan_ket,giay_tong,su_kien").limit(500),
     sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(20000),
     sb.from("v_siso").select("nhom,campus,so_hs,so_lop").limit(2000),
-    sb.from("v_tuyensinh_ngay").select("ngay,giai_doan,so_lead").limit(2000),
-    sb.from("v_diem_danh_ngay").select("ngay,di_hoc,vang,dan_thuoc,ty_le").order("ngay",{ascending:false}).limit(200),
-    sb.from("v_diem_danh_truong").select("ten_truong,so_ngay,di_hoc_tb,vang_tb,ty_le,ngay_cuoi").limit(100),
+    sb.from("v_lead_campus").select("ngay,campus,giai_doan,nguon,so_lead").limit(2000),
+    sb.from("v_diem_danh").select("ngay,campus,di_hoc,vang,dan_thuoc").order("ngay",{ascending:false}).limit(2000),
+    sb.from("v_siso").select("nhom,campus,so_hs").limit(1),
     sb.from("v_web_tong").select("cua_so,su_kien,phien").limit(10)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
   const gq=newest(gqAll,"snapshot_on"), gp=newest(gpAll,"snapshot_on");
   if(!ga||!gs){$("body").innerHTML='<div class="card"><h2>Không đọc được dữ liệu</h2><p class="sub">Tài khoản chưa được cấp quyền xem.</p></div>';return}
+
+  // nap danh sach campus vao o chon, chi lam mot lan
+  if($("camp").options.length<2){
+    const ds=new Set();
+    (hs||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa gán campus)")ds.add(r.campus)});
+    (dd||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa rõ)")ds.add(r.campus)});
+    (tsi||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa rõ)")ds.add(r.campus)});
+    [...ds].sort().forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;$("camp").appendChild(o)});
+  }
+  const nhanCP = CP ? CP : "toàn hệ thống";
+  const luuY = CP ? '<div class="gap">Đang lọc theo <b>'+CP+'</b>. Thẻ dưới đây chưa tách được theo campus — số đang là của toàn hệ thống.</div>' : "";
 
   const days=[...new Set(ga.map(r=>r.day))].sort();
   const end=days[days.length-1], start=shift(end,-(n-1)), pEnd=shift(start,-1), pStart=shift(pEnd,-(n-1));
@@ -389,7 +404,7 @@ async function render(){
    +' từ khoá này lên được top 4 — không tốn một đồng quảng cáo nào.<br>Ai là người viết? Và tuần này họ sửa được mấy bài?</div></div>';
 
   // ----- the: hoc sinh va tuyen sinh (AMIS CRM) -----
-  const H=hs||[], TS=tsi||[];
+  const H=(hs||[]).filter(r=>hopCP(r.campus)), TS=(tsi||[]).filter(r=>hopCP(r.campus)||(!CP));
   const nhomD={}; H.forEach(r=>nhomD[r.nhom]=(nhomD[r.nhom]||0)+(+r.so_hs||0));
   const diHoc=nhomD["Đang đi học"]||0, choHoc=nhomD["Đã đóng tiền, chờ đi học"]||0,
         baoLuu=nhomD["Bảo lưu"]||0, chuaPL=nhomD["Chưa phân loại"]||0;
@@ -400,14 +415,32 @@ async function render(){
   const tsTong=tsMoi.reduce((s2,r)=>s2+(+r.so_lead||0),0);
   const gd={}; tsMoi.forEach(r=>{const k=r.giai_doan||"(chưa có)";gd[k]=(gd[k]||0)+(+r.so_lead||0)});
   const gdRows=Object.entries(gd).sort((a,b)=>b[1]-a[1]);
+  // ai dang giu lead: trung tam hay campus (chi hien khi xem toan he thong)
+  const CHOT=/thành công|đặt cọc/i;
+  const giu={}; (tsi||[]).filter(r=>r.ngay&&r.ngay>=start&&r.ngay<=end).forEach(r=>{
+    const k=(r.campus==="TRUNG TÂM")?"Trung tâm (Hiền)":"Campus tự giữ";
+    const o=giu[k]||(giu[k]={lead:0,chot:0,tq:0});
+    o.lead+=(+r.so_lead||0);
+    if(CHOT.test(r.giai_doan||"")) o.chot+=(+r.so_lead||0);
+    if(/tham quan/i.test(r.giai_doan||"")) o.tq+=(+r.so_lead||0)});
+  const giuRows=Object.entries(giu).sort((a,b)=>b[1].lead-a[1].lead);
   // ----- THE: TRE DEN LOP MOI NGAY (Tomia) -----
-  const DD=(dd||[]).slice().sort((a,b)=>a.ngay<b.ngay?1:-1);   // moi nhat truoc
+  const ddLoc=(dd||[]).filter(r=>hopCP(r.campus));
+  const ddNgay={}; ddLoc.forEach(r=>{const o=ddNgay[r.ngay]||(ddNgay[r.ngay]={ngay:r.ngay,di_hoc:0,vang:0,dan_thuoc:0});
+    o.di_hoc+=+r.di_hoc||0; o.vang+=+r.vang||0; o.dan_thuoc+=+r.dan_thuoc||0});
+  const DD=Object.values(ddNgay).map(r=>({...r, ty_le: (r.di_hoc+r.vang)?100*r.di_hoc/(r.di_hoc+r.vang):null}))
+    .sort((a,b)=>a.ngay<b.ngay?1:-1);
   const ddNay=DD[0]||null;
-  const dd14=DD.slice(0,14).slice().reverse();
-  const ddTruong=(ddT||[]).slice().sort((a,b)=>(+b.di_hoc_tb||0)-(+a.di_hoc_tb||0));
+  const dd14=DD.slice(0,14);
+  const moc28=DD.length?DD[Math.min(27,DD.length-1)].ngay:"";
+  const ddT2={}; ddLoc.filter(r=>r.ngay>=moc28).forEach(r=>{const o=ddT2[r.campus]||(ddT2[r.campus]={ten_truong:r.campus,d:0,v:0,n:0});
+    o.d+=+r.di_hoc||0; o.v+=+r.vang||0; o.n++});
+  const ddTruong=Object.values(ddT2).map(o=>({ten_truong:o.ten_truong, di_hoc_tb:Math.round(o.d/(o.n||1)),
+    vang_tb:Math.round(o.v/(o.n||1)), ty_le:(o.d+o.v)?100*o.d/(o.d+o.v):null}))
+    .sort((a,b)=>b.di_hoc_tb-a.di_hoc_tb);
   const ddTong=ddTruong.reduce((s2,r)=>s2+(+r.di_hoc_tb||0),0);
   const ddCard = !ddNay ? "" :
-   '<div class="card"><h2>Trẻ đến lớp mỗi ngày</h2><p class="sub">Từ Tomia · ngày gần nhất có dữ liệu: '+ddNay.ngay+' · '+ddTruong.length+' trường</p>'
+   '<div class="card"><h2>Trẻ đến lớp mỗi ngày</h2><p class="sub">Từ Tomia · '+nhanCP+' · ngày gần nhất có dữ liệu: '+ddNay.ngay+' · '+ddTruong.length+' trường</p>'
    +'<div class="kpis">'
    +kpi("Đang có mặt",fmt(ddNay.di_hoc),"","trẻ thật sự đến lớp hôm đó")
    +kpi("Vắng",fmt(ddNay.vang),"","nghỉ ốm, nghỉ phép")
@@ -428,7 +461,7 @@ async function render(){
    +'<div class="q"><b>Câu hỏi:</b> ngày có tỷ lệ có mặt thấp nhất trong 14 ngày trên — hôm đó xảy ra chuyện gì, và ai là người đầu tiên biết?</div></div>';
 
   const hsCard = !H.length ? "" :
-   '<div class="card"><h2>Học sinh và tuyển sinh</h2><p class="sub">Từ AMIS CRM · cập nhật ở lần bấm “Kéo AMIS” gần nhất</p>'
+   '<div class="card"><h2>Học sinh và tuyển sinh</h2><p class="sub">Từ AMIS CRM · '+nhanCP+' · cập nhật ở lần bấm “Kéo AMIS” gần nhất</p>'
    +'<div class="kpis">'
    +kpi("Đang đi học",fmt(diHoc),"","có lớp cụ thể, đang phát sinh doanh thu")
    +kpi("Đóng tiền, chờ đi học",fmt(choHoc),"","lớp ghi “Chờ nhập học”")
@@ -438,6 +471,12 @@ async function render(){
      +campRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.hs)+'</td><td class="mono">'+fmt(v.lop)+'</td><td class="mono">'+(v.lop?(v.hs/v.lop).toFixed(1):"--")+"</td></tr>").join("")
      +'<tr><td><b>Toàn hệ thống</b></td><td class="mono"><b>'+fmt(diHoc)+'</b></td><td class="mono"><b>'+fmt(tongLop)+'</b></td><td class="mono"><b>'+(tongLop?(diHoc/tongLop).toFixed(1):"--")+"</b></td></tr>"
      +"</tbody></table></div>" : "")
+   +(giuRows.length>1 && !CP ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lead mới trong kỳ, theo nơi giữ</p>'
+     +'<div class="tw"><table><thead><tr><th>Nơi giữ</th><th>Lead</th><th>Tham quan</th><th>Chốt</th><th>Tỷ lệ chốt</th></tr></thead><tbody>'
+     +giuRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.lead)+'</td><td class="mono">'+fmt(v.tq)
+       +'</td><td class="mono">'+fmt(v.chot)+'</td><td class="mono">'+(v.lead?pct(v.chot/v.lead,1):"—")+"</td></tr>").join("")
+     +"</tbody></table></div>"
+     +'<p class="leg">“Nơi giữ” lấy từ trường <b>Chủ sở hữu</b> trong AMIS. Lead do Hiền nhận rồi chuyển về campus mà không đổi chủ sở hữu thì vẫn nằm ở dòng trên — nên bảng này đo <b>ai đứng tên</b>, chưa chắc đã là <b>ai gọi</b>.</p>' : "")
    +(gdRows.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lead mới trong kỳ, theo giai đoạn</p>'
      +'<div class="tw"><table><thead><tr><th>Giai đoạn</th><th>Số lead</th></tr></thead><tbody>'
      +gdRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v)+"</td></tr>").join("")+"</tbody></table></div>" : "")
@@ -454,6 +493,7 @@ async function render(){
   $("body").innerHTML=
    hsCard
    +ddCard
+   +luuY
    +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'
    +kpi("Lượt vào web",fmt(ses),delta(ses,pses),"mỗi lần một người mở website")
