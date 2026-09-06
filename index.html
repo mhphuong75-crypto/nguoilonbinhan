@@ -182,7 +182,7 @@ async function render(){
     const ds=new Set();
     (hs||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa gán campus)")ds.add(r.campus)});
     (dd||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa rõ)")ds.add(r.campus)});
-    (tsi||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa rõ)")ds.add(r.campus)});
+    (tsi||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa rõ)"&&r.campus!=="TRUNG TÂM")ds.add(r.campus)});
     [...ds].sort().forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;$("camp").appendChild(o)});
   }
   const nhanCP = CP ? CP : "toàn hệ thống";
