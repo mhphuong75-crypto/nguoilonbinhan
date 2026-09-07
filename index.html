@@ -439,7 +439,7 @@ async function render(){
   const ddNgay={}; ddLoc.forEach(r=>{const o=ddNgay[r.ngay]||(ddNgay[r.ngay]={ngay:r.ngay,di_hoc:0,vang:0,dan_thuoc:0});
     o.di_hoc+=+r.di_hoc||0; o.vang+=+r.vang||0; o.dan_thuoc+=+r.dan_thuoc||0});
   // thu Bay/Chu nhat trung binh ~120 tre = 1/5 ngay thuong -> phai tach, khong tron vao trung binh
-  const cuoiTuan=d=>{const w=new Date(d+"T00:00:00").getUTCDay(); return w===0||w===6;};
+  const cuoiTuan=d=>{const w=new Date(d+"T00:00:00Z").getUTCDay(); return w===0||w===6;};
   const DDall=Object.values(ddNgay).map(r=>({...r, ct:cuoiTuan(r.ngay), ty_le: (r.di_hoc+r.vang)?100*r.di_hoc/(r.di_hoc+r.vang):null}))
     .sort((a,b)=>a.ngay<b.ngay?1:-1);
   const DD=DDall.filter(r=>!r.ct);          // chi ngay thuong
@@ -454,6 +454,16 @@ async function render(){
     vang_tb:Math.round(o.v/(o.n||1)), ty_le:(o.d+o.v)?100*o.d/(o.d+o.v):null}))
     .sort((a,b)=>b.di_hoc_tb-a.di_hoc_tb);
   const ddTong=ddTruong.reduce((s2,r)=>s2+(+r.di_hoc_tb||0),0);
+  // TAN THUAN / LINH DAM khong dung AMIS CRM -> si so "tam" = trung binh so tre co mat
+  // trong 5 ngay hoc gan nhat (chi ngay thuong), lay tu diem danh Tomia
+  const NGOAI_CRM=["TÂN THUẬN","LINH ĐÀM"];
+  const ngayHoc=DD.slice(0,5).map(r=>r.ngay);
+  const siTam=NGOAI_CRM.map(c=>{
+    const v=ddLoc.filter(r=>r.campus===c && ngayHoc.indexOf(r.ngay)>=0).map(r=>+r.di_hoc||0);
+    return {campus:c, hs:v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null, n:v.length};
+  }).filter(x=>x.hs!==null);
+  const tamTong=siTam.reduce((s2,x)=>s2+x.hs,0);
+  const tamNgay=ngayHoc.length?ngayHoc[ngayHoc.length-1]+" → "+ngayHoc[0]:"";
   const ddCard = !ddNay ? "" :
    '<div class="card"><h2>Trẻ đến lớp mỗi ngày</h2><p class="sub">Từ Tomia · '+nhanCP+' · ngày thường gần nhất: '+ddNay.ngay+' · '+ddTruong.length+' trường</p>'
    +'<p class="leg" style="margin-top:-6px">⏱ Chỉ tính <b>ngày thường (T2–T6)</b>. Bảng ngày = <b>14 ngày thường gần nhất</b>; bảng trường = <b>trung bình 20 ngày thường</b> (≈4 tuần). Không đổi theo ô chọn thời gian.'
@@ -549,15 +559,24 @@ async function render(){
     o.lead+=+r.lead||0; o.c24+=+r.cham_24h||0; o.c2+=+r.cham_2_lan_tro_len||0; o.ch0+=+r.chua_ai_cham||0;
     o.ht+=+r.hen_tham||0; o.cc+=+r.coc_chot||0; o.tc+=+r.tu_choi||0; o.im+=+r.im_lang_14||0});
   const cohRows=Object.values(cohT).sort((a,b)=>a.t<b.t?1:-1).slice(0,10);
+  // tuoi lua tinh bang tuan; lua >=3 tuan ma van con nguoi chua ai cham = qua han dong so
+  const nowMs=Date.now();
+  const tuoiLua=t=>Math.max(0,Math.floor((nowMs-new Date(t+"T00:00:00Z").getTime())/6048e5));
+  const quaHan=cohRows.filter(r=>tuoiLua(r.t)>=3 && r.ch0>0);
+  const quaHanNguoi=quaHan.reduce((s2,r)=>s2+r.ch0,0);
   const cohCard = !cohRows.length ? "" :
    '<div class="card"><h2>Nhóm vào tuần nào, giờ ra sao</h2><p class="sub">'+nhanCP+' · mỗi hàng là những người xuất hiện trong tuần đó, theo họ về sau</p>'
    +'<p class="leg" style="margin-top:-6px">⏱ 12 tuần gần nhất, <b>không đổi theo ô chọn thời gian</b> — cohort chỉ có nghĩa khi nhìn đủ dài.</p>'
-   +'<div class="tw"><table><thead><tr><th>Tuần vào</th><th>Lead</th><th>Chạm ≤24h</th><th>≥2 lần chạm</th><th>Chưa ai chạm</th><th>Hẹn/Thăm</th><th>Cọc/Chốt</th><th>Từ chối</th><th>Im lặng >14n</th></tr></thead><tbody>'
-   +cohRows.map(r=>"<tr><td>"+r.t+'</td><td class="mono">'+fmt(r.lead)
+   +'<div class="tw"><table><thead><tr><th>Tuần vào</th><th>Tuổi lứa</th><th>Lead</th><th>Chạm ≤24h</th><th>≥2 lần chạm</th><th>Chưa ai chạm</th><th>Hẹn/Thăm</th><th>Cọc/Chốt</th><th>Từ chối</th><th>Im lặng >14n</th></tr></thead><tbody>'
+   +cohRows.map(r=>{const tu=tuoiLua(r.t); const do_=tu>=3&&r.ch0>0;
+     return '<tr'+(do_?' style="background:rgba(220,38,38,.10)"':'')+'><td>'+r.t+(do_?' 🔴':'')+'</td><td class="mono">'+(tu===0?"tuần này":tu+" tuần")+'</td><td class="mono">'+fmt(r.lead)
      +'</td><td class="mono">'+(r.lead?pct(r.c24/r.lead,0):"—")+'</td><td class="mono">'+(r.lead?pct(r.c2/r.lead,0):"—")
-     +'</td><td class="mono">'+fmt(r.ch0)+'</td><td class="mono">'+fmt(r.ht)+'</td><td class="mono">'+fmt(r.cc)
-     +'</td><td class="mono">'+fmt(r.tc)+'</td><td class="mono">'+fmt(r.im)+"</td></tr>").join("")
+     +'</td><td class="mono"'+(do_?' style="color:#f87171;font-weight:700"':'')+'>'+fmt(r.ch0)+'</td><td class="mono">'+fmt(r.ht)+'</td><td class="mono">'+fmt(r.cc)
+     +'</td><td class="mono">'+fmt(r.tc)+'</td><td class="mono">'+fmt(r.im)+"</td></tr>"}).join("")
    +"</tbody></table></div>"
+   +(quaHan.length?'<div class="gap"><b>'+quaHan.length+' lứa đã quá 3 tuần mà vẫn còn '+fmt(quaHanNguoi)+' người chưa ai chạm.</b><br>'
+     +'Một lứa chỉ sống 3 tuần trong phễu. Sang tuần thứ tư thì hoặc đã gọi, hoặc phải ghi lý do và đóng sổ — không để ô trống. '
+     +'Lứa nào bôi đỏ ở trên là lứa đang quá hạn đóng sổ.</div>':'')
    +'<p class="leg"><b>Đọc ngang</b> một hàng: nhóm đó chín dần ra sao. <b>Đọc dọc</b> một cột: quy trình có đổi không. '
    +'Hàng dưới cùng đã có nhiều tuần để chín; hàng trên cùng thì chưa — đừng so trực tiếp hai hàng cách xa nhau.</p>'
    +'<div class="q"><b>Câu hỏi:</b> cột “≥2 lần chạm” đang rất thấp. Nếu phụ huynh mầm non cần vài tuần và vài lần trò chuyện mới quyết, '
@@ -618,11 +637,16 @@ async function render(){
    +kpi("Đang đi học",fmt(diHoc),"","có lớp cụ thể, đang phát sinh doanh thu")
    +kpi("Đóng tiền, chờ đi học",fmt(choHoc),"","lớp ghi “Chờ nhập học”")
    +kpi("Bảo lưu",fmt(baoLuu),"","tạm nghỉ, còn giữ chỗ")
-   +kpi("Lead mới trong kỳ",fmt(tsTong),"","tính theo ngày tạo tuyển sinh")+"</div>"
+   +kpi("Lead mới trong kỳ",fmt(tsTong),"","tính theo ngày tạo tuyển sinh")
+   +(tamTong?kpi("Toàn hệ thống (gồm tạm)",fmt(diHoc+tamTong),"",fmt(diHoc)+" từ CRM + "+fmt(tamTong)+" tạm từ điểm danh"):"")+"</div>"
    +(campRows.length ? '<div class="tw" style="margin-top:14px"><table><thead><tr><th>Campus</th><th>Đang đi học</th><th>Số lớp</th><th>HS/lớp</th></tr></thead><tbody>'
      +campRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.hs)+'</td><td class="mono">'+fmt(v.lop)+'</td><td class="mono">'+(v.lop?(v.hs/v.lop).toFixed(1):"--")+"</td></tr>").join("")
-     +'<tr><td><b>Toàn hệ thống</b></td><td class="mono"><b>'+fmt(diHoc)+'</b></td><td class="mono"><b>'+fmt(tongLop)+'</b></td><td class="mono"><b>'+(tongLop?(diHoc/tongLop).toFixed(1):"--")+"</b></td></tr>"
-     +"</tbody></table></div>" : "")
+     +'<tr><td><b>Cộng CRM ('+campRows.length+' campus)</b></td><td class="mono"><b>'+fmt(diHoc)+'</b></td><td class="mono"><b>'+fmt(tongLop)+'</b></td><td class="mono"><b>'+(tongLop?(diHoc/tongLop).toFixed(1):"--")+"</b></td></tr>"
+     +siTam.map(x=>'<tr><td>'+x.campus+' <span style="opacity:.55">· tạm</span></td><td class="mono">'+fmt(x.hs)+'</td><td class="mono">--</td><td class="mono">--</td></tr>').join("")
+     +(tamTong?'<tr><td><b>Toàn hệ thống</b></td><td class="mono"><b>'+fmt(diHoc+tamTong)+'</b></td><td class="mono">--</td><td class="mono">--</td></tr>':"")
+     +"</tbody></table></div>"
+     +(tamTong?'<p class="leg"><b>“tạm” = chưa phải sổ sĩ số.</b> Tân Thuận và Linh Đàm không dùng AMIS CRM, nên số ở đây là <b>trung bình số trẻ có mặt trong 5 ngày học gần nhất</b> ('+tamNgay+') lấy từ điểm danh Tomia. '
+       +'Đây là số <i>trẻ đi học</i>, không phải số <i>trẻ đã ghi danh</i> — trẻ nghỉ ốm cả tuần sẽ không được đếm, nên con số này luôn <b>thấp hơn sĩ số thật</b>. Dùng để có một con số toàn hệ thống, chưa dùng để tính doanh thu.</p>':"") : "")
    +(giuRows.length>1 && !CP ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lead mới trong kỳ, theo nơi giữ</p>'
      +'<div class="tw"><table><thead><tr><th>Nơi giữ</th><th>Lead</th><th>Tham quan</th><th>Chốt</th><th>Tỷ lệ chốt</th></tr></thead><tbody>'
      +giuRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.lead)+'</td><td class="mono">'+fmt(v.tq)
@@ -637,9 +661,9 @@ async function render(){
    +'Một học sinh có thể mang nhiều giá trị cùng lúc, nên thứ tự này quyết định họ được đếm vào đâu.</p>'
    +(chuaPL ? '<div class="gap"><b>'+fmt(chuaPL)+' học sinh chưa phân loại được</b> — bản ghi không có giá trị ở trường Lớp.<br>'
      +'Ai điền trường này khi nhận học sinh mới?</div>' : "")
-   +'<div class="gap"><b>Chưa đủ toàn hệ thống.</b> Con số trên chỉ gồm các campus dùng AMIS CRM. '
-   +'Tân Thuận (~65 học sinh, 14 giáo viên) không dùng CRM do cấu trúc pháp lý riêng; Linh Đàm cũng không — đang xác minh. '
-   +'Nguồn khác: file nhân sự ghi 768 học sinh / 61 lớp / 161 giáo viên; Tomia (01/06) ghi 777 đi học ở 15 trường.</div>'
+   +'<div class="gap"><b>Hai campus đang dùng số tạm.</b> Tân Thuận và Linh Đàm không dùng AMIS CRM (cấu trúc pháp lý riêng), '
+   +'nên sĩ số của họ đang lấy từ điểm danh Tomia — xem chú thích dưới bảng. Khi nào hai campus này có sổ sĩ số thật, thay vào đây và bỏ chữ “tạm”.<br>'
+   +'Đối chiếu: file nhân sự ghi <b>768 học sinh / 161 giáo viên</b>.</div>'
    +'<div class="q"><b>Câu hỏi:</b> con số “đang đi học” này có khớp với sổ điểm danh sáng nay ở từng campus không — lệch ở đâu?</div></div>';
 
   $("body").innerHTML=
