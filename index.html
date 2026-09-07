@@ -177,8 +177,8 @@ async function render(){
     sb.from("v_cohort_tuan").select("tuan_tao,campus,lead,cham_24h,cham_2_lan_tro_len,chua_ai_cham,hen_tham,coc_chot,tu_choi,im_lang_14").limit(500),
     (CP? sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").eq("campus",CP).not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)
        : sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)),
-    (CP? sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu").eq("campus",CP).order("im_lang",{ascending:false}).limit(1000)
-       : sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu").order("im_lang",{ascending:false}).limit(1000))
+    (CP? sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").eq("campus",CP).order("im_lang",{ascending:false}).limit(1000)
+       : sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").order("im_lang",{ascending:false}).limit(1000))
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -487,6 +487,7 @@ async function render(){
    +'Tân Thuận và Linh Đàm không dùng CRM (cấu trúc pháp lý riêng), nên hai bảng không bao giờ bằng nhau — chênh lệch đó là bình thường, miễn là giải thích được.</p>'
    +'<div class="q"><b>Câu hỏi:</b> ngày có tỷ lệ có mặt thấp nhất trong 14 ngày trên — hôm đó xảy ra chuyện gì, và ai là người đầu tiên biết?</div></div>';
 
+  const sdt=v=>v?'<a href="tel:'+String(v).replace(/[^\d+]/g,"")+'" class="mono" style="color:inherit">'+v+"</a>":'<span style="opacity:.45">—</span>';
   // ----- THE: VIEC CUA TUAN NAY (danh sach hanh dong) -----
   const RO=["Chưa ai chạm","Đã thăm chưa chốt","Hẹn rồi, chưa thấy kết quả","Im lặng trên 14 ngày"];
   const LUAT={"Chưa ai chạm":"Chạm lần đầu trong 24h. Nếu khách chỉ nhắn tin, nhắn — đừng gọi.",
@@ -508,8 +509,8 @@ async function render(){
      const rows=vRo[k].slice(0,8);
      return '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">'+k+' — '+fmt(vRo[k].length)+' hồ sơ</p>'
        +'<div class="q" style="margin:0 0 8px">'+LUAT[k]+'</div>'
-       +'<div class="tw"><table><thead><tr><th>Phụ huynh / bé</th><th>Campus</th><th>Kênh</th><th>Lần chạm</th><th>Im lặng</th></tr></thead><tbody>'
-       +rows.map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")
+       +'<div class="tw"><table><thead><tr><th>Phụ huynh / bé</th><th>Số điện thoại</th><th>Campus</th><th>Kênh</th><th>Lần chạm</th><th>Im lặng</th></tr></thead><tbody>'
+       +rows.map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+sdt(r.dien_thoai)+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")
          +'</td><td class="mono">'+fmt(r.so_cham)+'</td><td class="mono">'+fmt(r.im_lang)+" ngày</td></tr>").join("")
        +"</tbody></table></div>"
        +(vRo[k].length>8?'<p class="leg">Hiện 8 hồ sơ '+(k==="Im lặng trên 14 ngày"?"im lặng lâu nhất":"mới nhất")+' trong '+fmt(vRo[k].length)+'. Lọc theo campus để thấy phần của mình.</p>':"")}).join("")
@@ -537,18 +538,19 @@ async function render(){
    +"</tbody></table></div>"
    +dsTang.map(k=>{const v=dsT[k].slice(0,15);
      return '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">'+k+" — "+fmt(dsT[k].length)+" hồ sơ</summary>"
-       +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>Phụ huynh / bé</th><th>Campus</th><th>Kênh</th><th>Vào ngày</th><th>Chạm</th><th>Lần cuối — ai, làm gì, khi nào</th><th>Im lặng</th></tr></thead><tbody>'
+       +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>Phụ huynh / bé</th><th>Số điện thoại</th><th>Campus</th><th>Kênh</th><th>Vào ngày</th><th>Chạm</th><th>Lần cuối — ai, làm gì, khi nào</th><th>Im lặng</th></tr></thead><tbody>'
        +v.map(r=>{const ai=(r.cham_cuoi_ai||"").replace(/\s*\(\d+\)\s*$/,"");
          const lc = r.cham_cuoi_ngay ? (ai+" · "+ngan(r.cham_cuoi_lam_gi,38)+" · "+r.cham_cuoi_ngay
                     +(r.cham_cuoi_ghi_chu?'<br><span style="opacity:.7">“'+ngan(r.cham_cuoi_ghi_chu,70)+'”</span>':""))
                     : '<span style="opacity:.6">chưa có lần chạm nào ghi trong CRM</span>';
-         return "<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")+"</td><td>"+r.ngay_tao
+         return "<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+sdt(r.dien_thoai)+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")+"</td><td>"+r.ngay_tao
          +'</td><td class="mono">'+fmt(r.so_cham)+(r.goi_khong_nghe?" ("+r.goi_khong_nghe+" không nghe)":"")
          +"</td><td>"+lc+'</td><td class="mono">'+fmt(r.im_lang)+"n</td></tr>"}).join("")
        +"</tbody></table></div>"
        +(dsT[k].length>15?'<p class="leg">Hiện 15 hồ sơ mới nhất trong '+fmt(dsT[k].length)+' (im lặng ít ngày nhất trước).</p>':"")
        +"</details>"}).join("")
-   +'<p class="leg"><b>Chưa có số điện thoại trong bảng này.</b> Số nằm ở module <i>Liên hệ</i> của AMIS, chưa được kéo về — dấu trang “Kéo AMIS” đã cập nhật, bấm lại một lần là có. '
+   +'<p class="leg"><b>Số điện thoại</b> lấy từ module <i>Liên hệ</i> (PHỤ HUYNH) của AMIS, nối qua trường <i>Liên hệ</i> của hồ sơ tuyển sinh — bấm được để gọi thẳng trên điện thoại. '
+   +'Khoảng <b>11% hồ sơ chưa có số</b>: đó là hồ sơ chưa gắn liên hệ nào trong CRM, không phải phụ huynh không cho số. '
    +'<b>“Gọi không nghe”</b> = cuộc gọi có thời lượng 0 giây. Toàn hệ thống: <b>một nửa số cuộc gọi rơi vào loại này</b>.</p>'
    +'<div class="q"><b>Cách dùng:</b> mở tầng của campus mình, đọc cột “lần cuối”. Dòng nào ghi <i>chưa có lần chạm nào</i> mà phụ huynh vẫn đang được nhắn tin — '
    +'thì lỗi ở chỗ ghi nhận, không phải ở người làm. Dòng nào im lặng trên 14 ngày và không ai nhớ đã nói gì — thì đó là một gia đình đang bị bỏ quên.</div></div>';
