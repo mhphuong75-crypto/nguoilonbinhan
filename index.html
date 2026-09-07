@@ -438,30 +438,36 @@ async function render(){
   const ddLoc=(dd||[]).filter(r=>hopCP(r.campus));
   const ddNgay={}; ddLoc.forEach(r=>{const o=ddNgay[r.ngay]||(ddNgay[r.ngay]={ngay:r.ngay,di_hoc:0,vang:0,dan_thuoc:0});
     o.di_hoc+=+r.di_hoc||0; o.vang+=+r.vang||0; o.dan_thuoc+=+r.dan_thuoc||0});
-  const DD=Object.values(ddNgay).map(r=>({...r, ty_le: (r.di_hoc+r.vang)?100*r.di_hoc/(r.di_hoc+r.vang):null}))
+  // thu Bay/Chu nhat trung binh ~120 tre = 1/5 ngay thuong -> phai tach, khong tron vao trung binh
+  const cuoiTuan=d=>{const w=new Date(d+"T00:00:00").getUTCDay(); return w===0||w===6;};
+  const DDall=Object.values(ddNgay).map(r=>({...r, ct:cuoiTuan(r.ngay), ty_le: (r.di_hoc+r.vang)?100*r.di_hoc/(r.di_hoc+r.vang):null}))
     .sort((a,b)=>a.ngay<b.ngay?1:-1);
+  const DD=DDall.filter(r=>!r.ct);          // chi ngay thuong
+  const DDct=DDall.filter(r=>r.ct);         // cuoi tuan, de rieng
   const ddNay=DD[0]||null;
   const dd14=DD.slice(0,14);
-  const moc28=DD.length?DD[Math.min(27,DD.length-1)].ngay:"";
-  const ddT2={}; ddLoc.filter(r=>r.ngay>=moc28).forEach(r=>{const o=ddT2[r.campus]||(ddT2[r.campus]={ten_truong:r.campus,d:0,v:0,n:0});
+  const ctTB=DDct.slice(0,8).length?Math.round(DDct.slice(0,8).reduce((s2,r)=>s2+r.di_hoc,0)/DDct.slice(0,8).length):null;
+  const moc28=DD.length?DD[Math.min(19,DD.length-1)].ngay:"";   // 20 ngay THUONG ~ 4 tuan
+  const ddT2={}; ddLoc.filter(r=>r.ngay>=moc28 && !cuoiTuan(r.ngay)).forEach(r=>{const o=ddT2[r.campus]||(ddT2[r.campus]={ten_truong:r.campus,d:0,v:0,n:0});
     o.d+=+r.di_hoc||0; o.v+=+r.vang||0; o.n++});
   const ddTruong=Object.values(ddT2).map(o=>({ten_truong:o.ten_truong, di_hoc_tb:Math.round(o.d/(o.n||1)),
     vang_tb:Math.round(o.v/(o.n||1)), ty_le:(o.d+o.v)?100*o.d/(o.d+o.v):null}))
     .sort((a,b)=>b.di_hoc_tb-a.di_hoc_tb);
   const ddTong=ddTruong.reduce((s2,r)=>s2+(+r.di_hoc_tb||0),0);
   const ddCard = !ddNay ? "" :
-   '<div class="card"><h2>Trẻ đến lớp mỗi ngày</h2><p class="sub">Từ Tomia · '+nhanCP+' · ngày gần nhất có dữ liệu: '+ddNay.ngay+' · '+ddTruong.length+' trường</p>'
-   +'<p class="leg" style="margin-top:-6px">⏱ Bảng ngày = <b>14 ngày gần nhất có dữ liệu</b>; bảng trường = <b>trung bình 28 ngày</b>. Không đổi theo ô chọn thời gian.</p>'
+   '<div class="card"><h2>Trẻ đến lớp mỗi ngày</h2><p class="sub">Từ Tomia · '+nhanCP+' · ngày thường gần nhất: '+ddNay.ngay+' · '+ddTruong.length+' trường</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Chỉ tính <b>ngày thường (T2–T6)</b>. Bảng ngày = <b>14 ngày thường gần nhất</b>; bảng trường = <b>trung bình 20 ngày thường</b> (≈4 tuần). Không đổi theo ô chọn thời gian.'
+   +(ctTB!==null?' · Cuối tuần để riêng: trung bình <b>'+fmt(ctTB)+' trẻ</b>/ngày.':'')+'</p>'
    +'<div class="kpis">'
    +kpi("Đang có mặt",fmt(ddNay.di_hoc),"","trẻ thật sự đến lớp hôm đó")
    +kpi("Vắng",fmt(ddNay.vang),"","nghỉ ốm, nghỉ phép")
    +kpi("Tỷ lệ có mặt",dec(ddNay.ty_le,1)+"%","","đi học ÷ (đi học + vắng)")
    +kpi("Trẻ có dặn thuốc",fmt(ddNay.dan_thuoc),"","cần người theo dõi trong ngày")+"</div>"
-   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">14 ngày gần nhất</p>'
+   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">14 ngày thường gần nhất (bỏ T7/CN)</p>'
    +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Đi học</th><th>Vắng</th><th>Có mặt</th></tr></thead><tbody>'
    +dd14.slice().reverse().map(r=>"<tr><td>"+r.ngay+'</td><td class="mono">'+fmt(r.di_hoc)+'</td><td class="mono">'+fmt(r.vang)
      +'</td><td class="mono">'+dec(r.ty_le,1)+"%</td></tr>").join("")+"</tbody></table></div>"
-   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Trung bình 28 ngày, theo trường</p>'
+   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Trung bình 20 ngày thường, theo trường</p>'
    +'<div class="tw"><table><thead><tr><th>Trường</th><th>Đi học TB</th><th>Vắng TB</th><th>Tỷ lệ có mặt</th></tr></thead><tbody>'
    +ddTruong.map(r=>"<tr><td>"+r.ten_truong+'</td><td class="mono">'+fmt(r.di_hoc_tb)+'</td><td class="mono">'+fmt(r.vang_tb)
      +'</td><td class="mono">'+dec(r.ty_le,1)+"%</td></tr>").join("")
@@ -559,8 +565,12 @@ async function render(){
 
   // ----- THE: TUAN NAY vs CHI TIEU -----
   const thangNay=new Date().getMonth()+1;
-  const ctThang=(ct||[]).filter(r=>+r.thang===thangNay && hopCP(r.campus))
-    .reduce((s2,r)=>s2+(+r.tuyen_moi||0),0);
+  // moi tuan phai so voi chi tieu CUA THANG CHUA TUAN DO, khong phai thang hien tai
+  const ctThangMap={}; (ct||[]).filter(r=>hopCP(r.campus))
+    .forEach(r=>{ctThangMap[+r.thang]=(ctThangMap[+r.thang]||0)+(+r.tuyen_moi||0)});
+  const ctThangCua = t => ctThangMap[+String(t).slice(5,7)]||0;
+  const ctTuanCua  = t => ctThangCua(t)/4;
+  const ctThang=ctThangMap[thangNay]||0;
   const ctTuan=ctThang/4;
   const twLoc=(tw||[]).filter(r=>hopCP(r.campus));
   const twT={}; twLoc.forEach(r=>{const o=twT[r.tuan]||(twT[r.tuan]={tuan:r.tuan,goi:0,lead:0,hen:0,tq:0,coc:0,dh:0});
@@ -574,17 +584,18 @@ async function render(){
   const ktRows=Object.entries(kt).sort((a,b)=>b[1].n-a[1].n);
   const ketTot=lyLoc.length;
   const ctCard = !twRows.length ? "" :
-   '<div class="card"><h2>Tuần này so với chỉ tiêu</h2><p class="sub">'+nhanCP+' · chỉ tiêu tháng '+thangNay+' chia đều 4 tuần · nguồn: file kế hoạch 2026</p>'
+   '<div class="card"><h2>Tuần này so với chỉ tiêu</h2><p class="sub">'+nhanCP+' · mỗi tuần so với chỉ tiêu <b>của tháng chứa tuần đó</b> ÷ 4 · nguồn: file kế hoạch 2026</p>'
    +'<p class="leg" style="margin-top:-6px">⏱ Thẻ này luôn tính theo <b>tuần lịch</b> (thứ Hai → Chủ nhật), <b>không đổi theo ô chọn thời gian</b> ở đầu trang.</p>'
    +'<div class="kpis">'
-   +kpi("Chỉ tiêu tuần",dec(ctTuan,1),"","chỉ tiêu tháng "+fmt(ctThang)+" ÷ 4")
+   +kpi("Chỉ tiêu tuần",dec(tuanNay?ctTuanCua(tuanNay.tuan):ctTuan,1),"","chỉ tiêu tháng "+(tuanNay?+String(tuanNay.tuan).slice(5,7):thangNay)+" ("+fmt(tuanNay?ctThangCua(tuanNay.tuan):ctThang)+") ÷ 4")
    +kpi("Đã đi học tuần này",fmt(tuanNay?tuanNay.dh:0),"",(tuanNay?tuanNay.tuan:"")+" — lead chuyển sang “Kết thúc thành công”")
-   +kpi("Chênh",(tuanNay?(tuanNay.dh-ctTuan>=0?"+":"")+dec(tuanNay.dh-ctTuan,1):"—"),"","thực tế trừ chỉ tiêu tuần")
+   +kpi("Chênh",(tuanNay?((tuanNay.dh-ctTuanCua(tuanNay.tuan)>=0?"+":"")+dec(tuanNay.dh-ctTuanCua(tuanNay.tuan),1)):"—"),"","thực tế trừ chỉ tiêu tuần")
    +kpi("Đang kẹt giữa phễu",fmt(ketTot),"","đã vào phễu nhưng chưa ra kết quả")+"</div>"
-   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tuần</th><th>Cuộc gọi</th><th>Lead mới</th><th>Hẹn</th><th>Đã thăm</th><th>Đặt cọc</th><th>Đi học</th><th>vs chỉ tiêu</th></tr></thead><tbody>'
-   +twRows.map(r=>{const d=r.dh-ctTuan; const cls=d>=0?"up":"down";
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tuần</th><th>Cuộc gọi</th><th>Lead mới</th><th>Hẹn</th><th>Đã thăm</th><th>Đặt cọc</th><th>Đi học</th><th>Chỉ tiêu</th><th>vs chỉ tiêu</th></tr></thead><tbody>'
+   +twRows.map(r=>{const ctR=ctTuanCua(r.tuan); const d=r.dh-ctR; const cls=d>=0?"up":"down";
      return "<tr><td>"+r.tuan+'</td><td class="mono">'+fmt(r.goi)+'</td><td class="mono">'+fmt(r.lead)+'</td><td class="mono">'+fmt(r.hen)
      +'</td><td class="mono">'+fmt(r.tq)+'</td><td class="mono">'+fmt(r.coc)+'</td><td class="mono">'+fmt(r.dh)
+     +'</td><td class="mono" style="opacity:.6">'+dec(ctR,1)
      +'</td><td class="mono"><span class="'+cls+'">'+(d>=0?"+":"")+dec(d,1)+"</span></td></tr>"}).join("")
    +"</tbody></table></div>"
    +(ktRows.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang kẹt — và không ai ghi vì sao</p>'
