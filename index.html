@@ -180,7 +180,7 @@ async function render(){
     (CP? sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").eq("campus",CP).order("im_lang",{ascending:false}).limit(1000)
        : sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").order("im_lang",{ascending:false}).limit(1000)),
     sb.from("v_su_co").select("ma_ticket,ngay_tao,campus,phan_loai,muc_do,trang_thai,tieu_de,nguoi_tao,nguoi_duoc_giao,so_ngay_mo,con_mo,he_trong,so_tre_lq").order("ngay_tao",{ascending:false}).limit(1000),
-    sb.from("v_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra").order("den_ngay",{ascending:false}).limit(1000),
+    sb.from("v_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra,chua_quay_lai,ngay_ke_tu_khi_nghi").order("den_ngay",{ascending:false}).limit(1000),
     sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
     sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
     sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000)
@@ -543,6 +543,7 @@ async function render(){
   // ----- THE: TRE NGHI LIEN TUC (Tomia, sheet diem danh chi tiet) -----
   const ngLoc=(nghi||[]).filter(r=>hopCP(r.campus));
   const ngDang=ngLoc.filter(r=>r.dang_dien_ra);
+  const ngMat=ngLoc.filter(r=>r.chua_quay_lai&&!r.dang_dien_ra).sort((a,b)=>(+a.ngay_ke_tu_khi_nghi||0)-(+b.ngay_ke_tu_khi_nghi||0));
   const ngCoLyDo=ngLoc.filter(r=>r.ly_do&&String(r.ly_do).trim());
   const ngTheoCampus={}; ngLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";
     const o=ngTheoCampus[k]||(ngTheoCampus[k]={n:0,dang:0,buoi:0,cly:0});
@@ -553,7 +554,8 @@ async function render(){
    +'<p class="sub">Từ Tomia · điểm danh chi tiết từng trẻ · '+nhanCP+'</p>'
    +'<p class="leg" style="margin-top:-6px">⏱ Chuỗi nghỉ tính theo <b>ngày học liên tiếp</b> — đã bỏ thứ Bảy, Chủ nhật và ngày nghỉ lễ. Gọi hỏi thăm <b>từ buổi thứ tư</b>.</p>'
    +'<div class="kpis">'
-   +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chuỗi còn kéo dài đến ngày gần nhất")
+   +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chưa quay lại, mới nghỉ trong vòng 7 ngày")
+   +kpi("Nghỉ lâu, chưa quay lại",fmt(ngMat.length),"","quá 7 ngày — nghi đã nghỉ hẳn")
    +kpi("Tổng chuỗi ≥3 buổi",fmt(ngLoc.length),"","toàn bộ dữ liệu điểm danh đã có")
    +kpi("Có ghi lý do",fmt(ngCoLyDo.length)+" / "+fmt(ngLoc.length),"","phần còn lại không ai biết vì sao")+"</div>"
    +(ngDang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang nghỉ dở — gọi hôm nay</p>'
@@ -564,12 +566,24 @@ async function render(){
        +'</td><td class="mono">'+((+r.so_buoi||0)>=4?'<span class="down">':"<span>")+fmt(r.so_buoi)+"</span>"
        +"</td><td>"+(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>").join("")
      +"</tbody></table></div>" : "")
+   +(ngMat.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghỉ lâu, chưa quay lại — đã ai gọi chưa?</p>'
+     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Buổi vắng đầu</th><th>Số buổi</th><th>Đã bao lâu</th><th>Lý do</th></tr></thead><tbody>'
+     +ngMat.slice(0,20).map(r=>
+       "<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
+       +"</td><td>"+(r.tu_ngay||"—")+'</td><td class="mono">'+fmt(r.so_buoi)
+       +'</td><td class="mono"><span class="down">'+fmt(r.ngay_ke_tu_khi_nghi)+" ngày</span></td><td>"
+       +(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>").join("")
+     +"</tbody></table></div>"
+     +(ngMat.length>20?'<p class="leg">Hiện 20 ca gần nhất trong '+fmt(ngMat.length)+'.</p>':"") : "")
    +(ngCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
      +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đang nghỉ dở</th><th>Tổng chuỗi</th><th>Buổi nghỉ TB/chuỗi</th><th>Có ghi lý do</th></tr></thead><tbody>'
      +ngCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+(v.dang?'<span class="down">'+v.dang+"</span>":"0")
        +'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+(v.n?(v.buoi/v.n).toFixed(1):"—")
        +'</td><td class="mono">'+fmt(v.cly)+" / "+fmt(v.n)+"</td></tr>").join("")+"</tbody></table></div>" : "")
-   +'<p class="leg"><b>Cách đọc:</b> một “chuỗi” là những buổi nghỉ liền nhau của cùng một bé. Nghỉ thứ Sáu rồi nghỉ tiếp thứ Hai là <b>chuỗi 2 buổi</b>, không phải 4 — cuối tuần không tính.</p>'
+   +'<p class="leg"><b>“Chuỗi” là gì:</b> những <b>buổi học liền nhau</b> mà bé vắng. Cuối tuần và ngày nghỉ lễ không phải buổi học — không cắt chuỗi, cũng không cộng vào. '
+   +'Nghỉ T6 rồi nghỉ tiếp T2 = <b>chuỗi 2 buổi</b>, không phải 4.<br>'
+   +'<b>“Đang nghỉ dở”</b> = sau chuỗi đó bé <b>chưa có buổi đi học nào</b>, và buổi vắng cuối cách ngày học gần nhất của campus <b>không quá 7 ngày</b>. Đây là danh sách gọi hôm nay.<br>'
+   +'<b>“Nghỉ lâu, chưa quay lại”</b> = cũng chưa đi học lại, nhưng đã quá 7 ngày. Một cuộc gọi không cứu được nữa — nhưng vẫn cần gọi để biết <b>vì sao</b>.</p>'
    +'<div class="q"><b>Câu hỏi:</b> trong danh sách “đang nghỉ dở” ở trên, bé nào đã có người gọi cho phụ huynh? '
    +'Nếu chưa có ai gọi và cũng không ai ghi lý do — thì ME School đang không biết bé đó ốm, đi du lịch, hay đã quyết định nghỉ.</div></div>';
 
