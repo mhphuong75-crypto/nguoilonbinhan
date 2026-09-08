@@ -74,6 +74,15 @@ background:var(--surface);color:var(--ink);margin-bottom:10px;text-align:center}
 @media(prefers-color-scheme:dark){.msg.err{background:#2E1815}}
 .chart{width:100%;height:auto;display:block}
 .hidden{display:none}
+/* ba che do */
+.seg{display:inline-flex;background:var(--sunk);border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg>button{border:0;background:transparent;border-radius:8px;padding:6px 11px;font-size:13px;
+color:var(--muted);font-weight:500;white-space:nowrap}
+.seg>button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);font-weight:600}
+.zone{display:none}.zone.on{display:block}
+.zone>.sub:first-child{margin:14px 0 0;font-size:12.5px;color:var(--muted)}
+td.bd{text-align:right;line-height:1.35;padding:8px}
+.bdg{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
 </style></head><body>
 
 <div id="login" class="login">
@@ -89,15 +98,22 @@ background:var(--surface);color:var(--ink);margin-bottom:10px;text-align:center}
 <header><div class="hin">
   <div class="brand"><span class="dot"></span><div>nguoilonbinhan.meschool<small id="who">—</small></div></div>
   <div class="row">
+    <span id="oTG" style="display:none;gap:8px;align-items:center">
     <select id="period">
       <option value="7">7 ngày gần nhất</option>
       <option value="28">28 ngày</option>
       <option value="90">90 ngày</option>
     </select>
-    <select id="camp"><option value="">Toàn hệ thống</option></select>
     <span style="font-size:11px;opacity:.55;margin-left:6px" title="Ô thời gian chỉ đổi các thẻ Website, Meta, Google và dòng “Lead mới trong kỳ”. Các thẻ khác có cửa sổ riêng, ghi ở dòng ⏱ của từng thẻ.">⏱ chỉ đổi Website · Meta · Google</span>
+    </span>
+    <select id="camp"><option value="">Toàn hệ thống</option></select>
     <button id="out" style="margin-left:auto">Đăng xuất</button>
   </div>
+  <div class="row"><div class="seg" id="che">
+    <button data-z="1" class="on">① Hôm nay cần làm gì</button>
+    <button data-z="2">② Tuần này ra sao</button>
+    <button data-z="3">③ Đào sâu</button>
+  </div></div>
 </div></header>
 <main class="wrap" id="body"></main>
 </div>
@@ -853,17 +869,105 @@ async function render(){
    +'Đối chiếu: file nhân sự ghi <b>768 học sinh / 161 giáo viên</b>.</div>'
    +'<div class="q"><b>Câu hỏi:</b> con số “đang đi học” này có khớp với sổ điểm danh sáng nay ở từng campus không — lệch ở đâu?</div></div>';
 
+  // ----- THE: BANG DIEM CAMPUS + DAI 3 KY -----
+  // "dai" = khoang giua thap nhat va cao nhat cua 3 ky truoc. Trong dai = binh thuong.
+  // Ra ngoai dai = tin hieu that, dang hoi. Khong dung benchmark nganh, chi dung so cua ME School.
+  const thuHai=d=>{const x=String(d||"").slice(0,10); if(!/^\d{4}-\d{2}-\d{2}$/.test(x))return null;
+    const t=new Date(x+"T00:00:00Z"); const w=(t.getUTCDay()+6)%7;
+    t.setUTCDate(t.getUTCDate()-w); return t.toISOString().slice(0,10);};
+  const tuanDangChay=thuHai(new Date().toISOString().slice(0,10));
+  const bdD={};
+  const oD=(c,t)=>{const a=bdD[c]||(bdD[c]={}); return a[t]||(a[t]={goi:0,sd:0,st:0,tq:0,lead:0,dh:0,ng:0,co:1});};
+  (tw||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.tuan); if(!t)return;
+    const o=oD(r.campus,t); o.goi+=+r.cuoc_goi||0; o.tq+=+r.da_tham_quan||0;
+    o.lead+=+r.lead_moi||0; o.dh+=+r.da_di_hoc||0;});
+  (supa||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.ngay); if(!t)return;
+    const o=oD(r.campus,t); o.sd+=+r.so_dat||0; o.st+=(+r.so_dat||0)+(+r.so_chua_dat||0);});
+  (nghi||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.tu_ngay); if(!t)return;
+    oD(r.campus,t).ng++;});
+  // truc tuan: bo tuan dang chay (chua xong -> luon thap gia) va lay 4 tuan da tron ven
+  const bdMoiTuan=[...new Set(Object.keys(bdD).reduce((a,c)=>a.concat(Object.keys(bdD[c])),[]))]
+    .filter(t=>t<tuanDangChay).sort();
+  const bd4=bdMoiTuan.slice(-4), bdKy=bd4.length?bd4[bd4.length-1]:null, bdTruoc=bd4.slice(0,-1);
+  const DO=[
+   {k:"goi", ten:"Cuộc gọi",      nhom:"Hành động", tot:1,  v:o=>o?o.goi:0},
+   {k:"supa",ten:"SUPA đạt",      nhom:"Hành động", tot:1, pc:1, v:o=>(o&&o.st)?100*o.sd/o.st:null},
+   {k:"tq",  ten:"Đã thăm quan",  nhom:"Hành động", tot:1,  v:o=>o?o.tq:0},
+   {k:"lead",ten:"Lead mới",      nhom:"Kết quả",   tot:1,  v:o=>o?o.lead:0},
+   {k:"dh",  ten:"Đi học mới",    nhom:"Kết quả",   tot:1,  v:o=>o?o.dh:0},
+   {k:"ng",  ten:"Nghỉ ≥3 buổi",  nhom:"Kết quả",   tot:-1, v:o=>o?o.ng:0}];
+  const oTuan=(c,t)=>(bdD[c]&&bdD[c][t])||null;
+  const bdO=(c,m)=>{
+    const cur=m.v(oTuan(c,bdKy));
+    const truoc=bdTruoc.map(t=>m.v(oTuan(c,t))).filter(x=>x!==null&&x!==undefined);
+    const tatCa=(cur===null?truoc:[cur].concat(truoc));
+    if(!tatCa.length||tatCa.every(x=>!x)) return {h:'<span style="opacity:.3">—</span>',tin:0,thieu:1};
+    if(cur===null) return {h:'<span style="opacity:.4">chưa kiểm</span>',tin:0,thieu:1};
+    const so=m.pc?dec(cur,0)+"%":fmt(cur);
+    if(truoc.length<2) return {h:'<b>'+so+'</b><br><span style="opacity:.4;font-size:10.5px">chưa đủ 3 kỳ</span>',tin:0,thieu:0};
+    const lo=Math.min.apply(null,truoc), hi=Math.max.apply(null,truoc);
+    let g="·", cls="flat", xau=0;
+    if(cur>hi){ xau=m.tot<0?1:0; g="▲"; cls=xau?"down":"up"; }
+    else if(cur<lo){ xau=m.tot>0?1:0; g="▼"; cls=xau?"down":"up"; }
+    const dl=m.pc?(dec(lo,0)+"–"+dec(hi,0)+"%"):(fmt(lo)+"–"+fmt(hi));
+    return {h:'<b>'+so+'</b> <span class="'+cls+'">'+g+'</span><br><span style="opacity:.4;font-size:10.5px">dải '+dl+"</span>",
+            tin:xau, thieu:0};};
+  const bdRows=Object.keys(bdD).filter(c=>c&&c!=="(chưa rõ)"&&c!=="TRUNG TÂM"&&c!=="(chưa gán campus)")
+    .map(c=>{const o=DO.map(m=>bdO(c,m));
+      return {c:c, o:o, tin:o.reduce((a,x)=>a+x.tin,0), thieu:o.reduce((a,x)=>a+x.thieu,0)};})
+    .sort((a,b)=>b.tin-a.tin||a.thieu-b.thieu||(a.c<b.c?-1:1));
+  const bdMu=bdRows.filter(r=>r.thieu>=2).length;
+  const bdCard = (!bdKy||!bdRows.length) ? "" :
+   '<div class="card"><h2>Bảng điểm campus — dải 3 kỳ</h2>'
+   +'<p class="sub">'+nhanCP+' · kỳ này <b>'+bdKy+'</b> · so với dải của 3 tuần trước ('+(bdTruoc[0]||"—")+" → "+(bdTruoc[bdTruoc.length-1]||"—")+")</p>"
+   +'<p class="leg" style="margin-top:-6px">⏱ Luôn là <b>tuần lịch đã trọn vẹn</b>. Tuần đang chạy bị bỏ ra — tuần chưa xong thì lúc nào cũng thấp, đó là ảo giác chứ không phải tín hiệu.</p>'
+   +'<div class="tw"><table style="min-width:920px"><thead>'
+   +'<tr><th rowspan="2">Campus</th><th rowspan="2">Tín hiệu</th>'
+   +'<th colspan="3" style="text-align:center;border-bottom:0" class="bdg">Hành động — mình kiểm soát được</th>'
+   +'<th colspan="3" style="text-align:center;border-bottom:0" class="bdg">Kết quả — đến sau</th></tr>'
+   +"<tr>"+DO.map(m=>"<th>"+m.ten+(m.tot<0?" ↓":"")+"</th>").join("")+"</tr></thead><tbody>"
+   +bdRows.map(r=>{
+      const bg=r.tin>=2?' style="background:rgba(220,38,38,.09)"':(r.thieu>=2?' style="opacity:.6"':"");
+      const dau=r.thieu>=2?'<span title="thiếu dữ liệu ≥2 ô — không xếp hạng">⚪</span>'
+              :r.tin>=2?'<span class="down"><b>'+r.tin+"</b></span>"
+              :r.tin===1?'<span class="down">1</span>':'<span style="opacity:.35">0</span>';
+      return "<tr"+bg+"><td>"+nhan(r.c)+'</td><td class="mono">'+dau+"</td>"
+        +r.o.map(x=>'<td class="bd mono">'+x.h+"</td>").join("")+"</tr>";}).join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Dải là gì:</b> lấy 3 tuần trước, dải chạy từ tuần thấp nhất đến tuần cao nhất. '
+   +'Con số tuần này rơi <b>trong dải</b> (·) nghĩa là bình thường — đừng họp về nó. '
+   +'Rơi <b>ngoài dải</b> (▲ ▼) nghĩa là tuần này khác hẳn ba tuần trước, và <i>đó</i> là chỗ đáng hỏi. '
+   +'Đây là số của chính ME School, không phải benchmark ngành.</p>'
+   +'<p class="leg"><b>Cột Tín hiệu</b> = có bao nhiêu ô ra ngoài dải <b>theo hướng xấu</b>. '
+   +'Cột “Nghỉ ≥3 buổi” đảo chiều: tăng là xấu. <b>⚪</b> = thiếu dữ liệu từ 2 ô trở lên, không xếp hạng — '
+   +(bdMu?'hiện có <b>'+bdMu+' campus</b> như vậy.':"hiện không có campus nào như vậy.")
+   +' Ô ghi “chưa kiểm” là SUPA chưa đi kiểm tuần đó, không phải đạt 0%.</p>'
+   +'<div class="q"><b>Cách dùng trong họp tuần:</b> chỉ đọc các dòng có Tín hiệu ≥ 1, từ trên xuống. '
+   +'Với mỗi ô ▲▼, hỏi đúng một câu: <i>tuần này campus làm khác gì so với ba tuần trước?</i> '
+   +'Nếu không ai trả lời được thì thay đổi đó là ngẫu nhiên — hoặc đang có việc xảy ra mà chưa ai nói ra.</div></div>';
+
   $("body").innerHTML=
-   scCard
+   '<div class="zone" id="z1">'
+   +'<p class="sub">Bốn thẻ. Mỗi thẻ trả lời được đúng một câu: <b>ai làm gì trong 48 giờ</b>. Thẻ nào không trả lời được thì nằm ở ③.</p>'
+   +scCard
+   +ngCard
    +viecCard
-   +ctCard
    +cohCard
+   +'</div>'
+
+   +'<div class="zone" id="z2">'
+   +'<p class="sub">Hai bảng, đọc trong 5 phút trước cuộc họp tuần. Bảng đầu hỏi <i>campus nào khác thường</i>; bảng sau hỏi <i>toàn hệ thống có kịp chỉ tiêu không</i>.</p>'
+   +bdCard
+   +ctCard
+   +'</div>'
+
+   +'<div class="zone" id="z3">'
+   +'<p class="sub">Mở khi cần điều tra một câu hỏi cụ thể — không đọc hằng tuần. Ô thời gian ở đầu trang chỉ đổi các thẻ Website · Meta · Google.</p>'
    +dsCard
    +hsCard
    +ddCard
-   +ngCard
-   +hrCard
    +spCard
+   +hrCard
    +moGap
    +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'
@@ -914,9 +1018,22 @@ async function render(){
      .map(([nm,d])=>{const lag=(d&&/^\d{4}-\d{2}-\d{2}$/.test(d))?Math.round((Date.now()-new Date(d))/864e5):null;
        return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
    +"</tbody></table></div>"
-   +'<p class="note">Chưa nối: Harasocial (hộp thư Messenger/Zalo) · SUPA checklist · giáo viên · tài chính.</p></div>'
-   +dongGap;
+   +'<p class="note">Chưa nối: giáo viên · tài chính.</p></div>'
+   +dongGap+'</div>';
+  apDungChe();
 }
+
+let CHE="1";
+function apDungChe(){
+  ["1","2","3"].forEach(z=>{const el=$("z"+z); if(el) el.className="zone"+(z===CHE?" on":"")});
+  document.querySelectorAll("#che > button").forEach(b=>{b.className=(b.dataset.z===CHE?"on":"")});
+  // o thoi gian chi co nghia o che do 3 -> an di cho khoi hieu nham
+  $("oTG").style.display = (CHE==="3") ? "inline-flex" : "none";
+}
+$("che").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b||!b.dataset.z)return;
+  CHE=b.dataset.z; apDungChe(); window.scrollTo(0,0);
+});
 
 sb.auth.onAuthStateChange(async(_e,session)=>{
   if(session){
