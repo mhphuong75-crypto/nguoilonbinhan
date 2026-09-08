@@ -123,7 +123,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-08 · b4 theo ngày";
+const BUILD="2026-09-08 · b5";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -545,13 +545,12 @@ async function render(){
 
   const sdt=v=>v?'<a href="tel:'+String(v).replace(/[^\d+]/g,"")+'" class="mono" style="color:inherit">'+v+"</a>":'<span style="opacity:.45">—</span>';
   // ----- ten vui theo campus -----
-  const CO={}; (nguoi||[]).forEach(r=>{CO[r.campus]={vui:r.ten_vui, that:r.ten_that, nguon:r.nguon_ten, vai:r.vai_tro}});
+  const CO={}; (nguoi||[]).forEach(r=>{CO[r.campus]={that:r.ten_that, nguon:r.nguon_ten, vai:r.vai_tro}});
   // ten that co the la nguoi phu trach that, hoac chi la nguoi ghi nhan nhieu nhat -> phai noi ro
-  const nhan=c=>{const t=CO[c]; if(!t) return c||"(chưa rõ)";
+  const nhan=c=>{const t=CO[c]; if(!t) return '<b>'+(c||"(chưa rõ)")+'</b>';
     const chac = t.nguon==="người phụ trách" || t.nguon==="QLVH";
-    return '<b>'+(t.vui||c)+'</b>'
-      +(t.that?' <span style="opacity:'+(chac?'.75':'.5')+'" title="'+(t.nguon||"")+'">· '+t.that+(chac?"":" ?")+'</span>':'')
-      +'<br><span style="opacity:.45;font-size:11px">'+c+'</span>';};
+    return '<b>'+c+'</b>'
+      +(t.that?'<br><span style="opacity:'+(chac?'.6':'.45')+';font-size:11px" title="'+(t.nguon||"")+'">'+t.that+(chac?"":" ?")+'</span>':'');};
 
   // ----- THE: AN TOAN & SU CO (Tomia, sheet Van hanh) -----
   const scLoc=(suCo||[]).filter(r=>hopCP(r.campus));
@@ -583,7 +582,7 @@ async function render(){
      +'<div class="tw"><table><thead><tr><th>Campus</th><th>Còn mở</th><th>Nghiêm trọng</th><th>Mở quá 30 ngày</th></tr></thead><tbody>'
      +scCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.mo)+'</td><td class="mono">'+(v.nang?'<span class="down">'+v.nang+"</span>":"0")
        +'</td><td class="mono">'+fmt(v.lau)+"</td></tr>").join("")+"</tbody></table></div>" : "")
-   +'<p class="leg"><b>Tên người bên cạnh tên campus:</b> chữ đậm là tên gọi cho dễ nhớ. Tên phía sau lấy từ hệ thống — '
+   +'<p class="leg"><b>Tên người dưới tên campus</b> lấy từ hệ thống — '
    +'<b>6 campus</b> là QLVH thật (ghi trong SUPA), <b>9 campus</b> có dấu <b>?</b> là <i>người ghi nhận nhiều nhất</i>, '
    +'không phải người chịu trách nhiệm. Muốn đúng thì gán người phụ trách vào bảng <code>nguoi_phu_trach</code> — dấu ? sẽ mất.</p>'
    +'<p class="leg"><b>“Nghiêm trọng”</b> = phân loại An toàn hoặc Hành vi, hoặc mức độ Cao. Đây là quy ước của app, không phải của Tomia — Tomia chỉ ghi phân loại và mức độ rời nhau.</p>'
