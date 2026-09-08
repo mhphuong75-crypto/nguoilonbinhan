@@ -95,6 +95,7 @@ background:var(--surface);color:var(--ink);margin-bottom:10px;text-align:center}
       <option value="90">90 ngày</option>
     </select>
     <select id="camp"><option value="">Toàn hệ thống</option></select>
+    <span style="font-size:11px;opacity:.55;margin-left:6px" title="Ô thời gian chỉ đổi các thẻ Website, Meta, Google và dòng “Lead mới trong kỳ”. Các thẻ khác có cửa sổ riêng, ghi ở dòng ⏱ của từng thẻ.">⏱ chỉ đổi Website · Meta · Google</span>
     <button id="out" style="margin-left:auto">Đăng xuất</button>
   </div>
 </div></header>
@@ -619,7 +620,10 @@ async function render(){
    +'ngoài việc thấy lead tuần ấy tự nhiên ít đi?</div></div>';
 
   // ----- THE: CHECKLIST SUPA -----
-  const spLoc=(supa||[]).filter(r=>hopCP(r.campus));
+  const spTatCa=(supa||[]).filter(r=>hopCP(r.campus));
+  const spMax=spTatCa.reduce((a,r)=>r.ngay>a?r.ngay:a,"");
+  const spMoc=spMax?new Date(new Date(spMax+"T00:00:00Z").getTime()-27*864e5).toISOString().slice(0,10):"";
+  const spLoc=spTatCa.filter(r=>r.ngay>=spMoc);   // 4 tuan gan nhat
   const spNgay=[...new Set(spLoc.map(r=>r.ngay))].sort();
   const spBo={}; spLoc.forEach(r=>{const k=r.bo_ma;
     const o=spBo[k]||(spBo[k]={ten:r.bo_ten||k,ph:0,dat:0,chua:0});
@@ -638,7 +642,7 @@ async function render(){
   const spCard = !spLoc.length ? "" :
    '<div class="card"><h2>Checklist SUPA</h2>'
    +'<p class="sub">Từ SUPA · '+nhanCP+' · '+(spNgay[0]||"—")+' → '+(spNgay[spNgay.length-1]||"—")+'</p>'
-   +'<p class="leg" style="margin-top:-6px">⏱ Toàn bộ phiếu đã kéo về, <b>không đổi theo ô chọn thời gian</b>. '
+   +'<p class="leg" style="margin-top:-6px">⏱ <b>4 tuần gần nhất</b> (kho có từ '+((spTatCa[0]&&spTatCa.reduce((a,r)=>r.ngay<a?r.ngay:a,"9999"))||"—")+'), <b>không đổi theo ô chọn thời gian</b>. '
    +'Câu trả lời “N/A” không tính vào tỷ lệ — chỉ đếm câu <b>đạt</b> và <b>chưa đạt</b>.</p>'
    +'<div class="kpis">'
    +kpi("Phiếu đã làm",fmt(spTongPh),"","mỗi phiếu là một lần đi kiểm")
