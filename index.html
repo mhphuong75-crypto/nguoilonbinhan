@@ -123,7 +123,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-08 · b3";
+const BUILD="2026-09-08 · b4 theo ngày";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -182,7 +182,11 @@ async function render(){
   const CP=$("camp").value||"";            // "" = toan he thong
   const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa}] = await Promise.all([
+  const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","meta_campaign_daily",
+    "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","v_lead_campus","v_diem_danh",
+    "v_siso (1 dòng)","v_web_tong","v_tuan_campus","chi_tieu","v_can_ly_do","v_cohort_tuan",
+    "v_viec_tuan","v_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa"];
+  const KQ = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
     sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
@@ -210,7 +214,25 @@ async function render(){
     sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
     sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
     sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000)
-  ]);
+  ].map(q=>Promise.resolve(q).then(r=>r,e=>({data:null,error:{message:String(e&&e.message||e)}}))));
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa}] = KQ;
+  // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
+  const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
+  const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
+  const cdCard =
+   '<div class="card"'+(nguonHong.length?' style="border-color:#7f1d1d"':"")+'><h2>Chẩn đoán nguồn dữ liệu</h2>'
+   +'<p class="sub">'+fmt(KQ.length-nguonHong.length)+"/"+fmt(KQ.length)+' nguồn trả về dữ liệu · bản dựng '+BUILD+'</p>'
+   +(nguonHong.length
+     ? '<div class="tw"><table><thead><tr><th>Nguồn</th><th>Dòng</th><th>Lỗi</th></tr></thead><tbody>'
+       +nguonHong.map(x=>'<tr><td><code>'+x.ten+'</code></td><td class="mono">'
+         +(x.n?fmt(x.n):'<span class="down">0</span>')+'</td><td style="text-align:left;white-space:normal">'
+         +(x.loi?'<span class="down">'+String(x.loi).replace(/</g,"&lt;")+"</span>":'<span style="opacity:.5">không lỗi — bảng rỗng hoặc chưa có quyền đọc</span>')+"</td></tr>").join("")
+       +"</tbody></table></div>"
+       +'<div class="q"><b>Đọc thế nào:</b> có <b>Lỗi</b> = câu truy vấn hỏng (thường do view đổi tên cột, hoặc view bị xoá). '
+       +'<b>0 dòng, không lỗi</b> = view còn sống nhưng rỗng, hoặc RLS chưa cho tài khoản này đọc. '
+       +'Hai loại này sửa ở hai chỗ khác nhau — chụp bảng này gửi tôi.</div>'
+     : '<p class="leg">Tất cả nguồn đều trả về dữ liệu.</p>')
+   +"</div>";
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
   const gq=newest(gqAll,"snapshot_on"), gp=newest(gpAll,"snapshot_on");
@@ -879,90 +901,116 @@ async function render(){
    +'Đối chiếu: file nhân sự ghi <b>768 học sinh / 161 giáo viên</b>.</div>'
    +'<div class="q"><b>Câu hỏi:</b> con số “đang đi học” này có khớp với sổ điểm danh sáng nay ở từng campus không — lệch ở đâu?</div></div>';
 
-  // ----- THE: BANG DIEM CAMPUS + DAI 3 KY -----
-  // "dai" = khoang giua thap nhat va cao nhat cua 3 ky truoc. Trong dai = binh thuong.
-  // Ra ngoai dai = tin hieu that, dang hoi. Khong dung benchmark nganh, chi dung so cua ME School.
-  const thuHai=d=>{const m=String(d||"").match(/\d{4}-\d{2}-\d{2}/); if(!m)return null;
-    const t=new Date(m[0]+"T00:00:00Z"); if(isNaN(t))return null; const w=(t.getUTCDay()+6)%7;
-    t.setUTCDate(t.getUTCDate()-w); return t.toISOString().slice(0,10);};
-  const tuanDangChay=thuHai(new Date().toISOString().slice(0,10));
-  const bdD={}, bdBo={tw:0,supa:0,nghi:0}, bdMau={};
-  const oD=(c,t)=>{const a=bdD[c]||(bdD[c]={}); return a[t]||(a[t]={goi:0,sd:0,st:0,tq:0,lead:0,dh:0,ng:0,co:1});};
-  (tw||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.tuan);
-    if(!t){bdBo.tw++; if(!bdMau.tw)bdMau.tw=String(r.tuan); return;}
-    const o=oD(r.campus,t); o.goi+=+r.cuoc_goi||0; o.tq+=+r.da_tham_quan||0;
-    o.lead+=+r.lead_moi||0; o.dh+=+r.da_di_hoc||0;});
-  (supa||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.ngay);
-    if(!t){bdBo.supa++; if(!bdMau.supa)bdMau.supa=String(r.ngay); return;}
-    const o=oD(r.campus,t); o.sd+=+r.so_dat||0; o.st+=(+r.so_dat||0)+(+r.so_chua_dat||0);});
-  (nghi||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.tu_ngay);
-    if(!t){bdBo.nghi++; if(!bdMau.nghi)bdMau.nghi=String(r.tu_ngay); return;}
-    oD(r.campus,t).ng++;});
-  // truc tuan: bo tuan dang chay (chua xong -> luon thap gia) va lay 4 tuan da tron ven
-  const bdCaTuan=[...new Set(Object.keys(bdD).reduce((a,c)=>a.concat(Object.keys(bdD[c])),[]))].sort();
-  const bdXong=bdCaTuan.filter(t=>t<tuanDangChay);
-  const bdChuaXong=!bdXong.length&&bdCaTuan.length>0;   // chi co tuan dang chay
-  const bdNguon=bdChuaXong?bdCaTuan:bdXong;
-  const bd4=bdNguon.slice(-4), bdKy=bd4.length?bd4[bd4.length-1]:null, bdTruoc=bd4.slice(0,-1);
+  // ----- THE: BANG DIEM CAMPUS THEO NGAY -----
+  // Don vi la NGAY HOC, khong phai tuan. Dai = 3 ngay CUNG THU truoc do (T3 nay vs 3 T3 truoc),
+  // vi thu Hai va thu Sau khong giong nhau — so cheo thu la tu tao bao dong gia.
+  const chiNgay=d=>{const m=String(d||"").match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:null;};
+  const luiNgay=(d,n)=>{const t=new Date(d+"T00:00:00Z"); t.setUTCDate(t.getUTCDate()-n); return t.toISOString().slice(0,10);};
+  const THU=["Chủ nhật","Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy"];
+  const tenThu=d=>THU[new Date(d+"T00:00:00Z").getUTCDay()];
+  const bdD={}, bdBo=0, bdMau={};
+  const oD=(c,d)=>{const a=bdD[c]||(bdD[c]={}); return a[d]||(a[d]={lead:0,dh:null,vang:null,ng:0,spc:0,spt:0,tk:0});};
+  const ghiBo=(k,v)=>{ if(!bdMau[k]) bdMau[k]=String(v); };
+  (tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&r.campus!=="TRUNG TÂM").forEach(r=>{
+    const d=chiNgay(r.ngay); if(!d){ghiBo("lead",r.ngay);return;} oD(r.campus,d).lead+=+r.so_lead||0;});
+  (dd||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+    const d=chiNgay(r.ngay); if(!d){ghiBo("diemdanh",r.ngay);return;}
+    const o=oD(r.campus,d); o.dh=(o.dh||0)+(+r.di_hoc||0); o.vang=(o.vang||0)+(+r.vang||0);});
+  (nghi||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+    const d=chiNgay(r.tu_ngay); if(!d){ghiBo("nghi",r.tu_ngay);return;} oD(r.campus,d).ng++;});
+  (supa||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+    const d=chiNgay(r.ngay); if(!d){ghiBo("supa",r.ngay);return;}
+    const o=oD(r.campus,d); o.spc+=+r.so_chua_dat||0; o.spt+=(+r.so_dat||0)+(+r.so_chua_dat||0);});
+  (suCo||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+    const d=chiNgay(r.ngay_tao); if(!d){ghiBo("suco",r.ngay_tao);return;} oD(r.campus,d).tk++;});
+
+  const bdCaNgay=[...new Set(Object.keys(bdD).reduce((a,c)=>a.concat(Object.keys(bdD[c])),[]))]
+    .filter(d=>d<=homNay).sort();
+  // "hom nay" = ngay hoc gan nhat CO DIEM DANH — do la su that van hanh, khong phai ngay he thong
+  const ngayCoMat=[...new Set((dd||[]).filter(r=>hopCP(r.campus)).map(r=>chiNgay(r.ngay)).filter(Boolean))]
+    .filter(d=>d<=homNay&&!cuoiTuan(d)).sort();
+  const bdNgay = ngayCoMat.length ? ngayCoMat[ngayCoMat.length-1]
+               : (bdCaNgay.filter(d=>!cuoiTuan(d)).slice(-1)[0]||null);
+  const bdTruoc = bdNgay ? [21,14,7].map(k=>luiNgay(bdNgay,k)) : [];
+
   const DO=[
-   {k:"goi", ten:"Cuộc gọi",      nhom:"Hành động", tot:1,  v:o=>o?o.goi:0},
-   {k:"supa",ten:"SUPA đạt",      nhom:"Hành động", tot:1, pc:1, v:o=>(o&&o.st)?100*o.sd/o.st:null},
-   {k:"tq",  ten:"Đã thăm quan",  nhom:"Hành động", tot:1,  v:o=>o?o.tq:0},
-   {k:"lead",ten:"Lead mới",      nhom:"Kết quả",   tot:1,  v:o=>o?o.lead:0},
-   {k:"dh",  ten:"Đi học mới",    nhom:"Kết quả",   tot:1,  v:o=>o?o.dh:0},
-   {k:"ng",  ten:"Nghỉ ≥3 buổi",  nhom:"Kết quả",   tot:-1, v:o=>o?o.ng:0}];
-  const oTuan=(c,t)=>(bdD[c]&&bdD[c][t])||null;
+   {ten:"Lead mới",      nhom:"Tuyển sinh", tot: 1, v:o=>o?o.lead:0},
+   {ten:"Trẻ có mặt",    nhom:"Vận hành",   tot: 1, v:o=>o?o.dh:null},
+   {ten:"Vắng",          nhom:"Vận hành",   tot:-1, v:o=>o?o.vang:null},
+   {ten:"Chuỗi nghỉ mới",nhom:"Rủi ro",     tot:-1, v:o=>o?o.ng:0},
+   {ten:"Câu SUPA hỏng", nhom:"Rủi ro",     tot:-1, v:o=>o?o.spc:0},
+   {ten:"Ticket mới",    nhom:"Rủi ro",     tot:-1, v:o=>o?o.tk:0}];
+  const oNgay=(c,d)=>(bdD[c]&&bdD[c][d])||null;
   const bdO=(c,m)=>{
-    const cur=m.v(oTuan(c,bdKy));
-    const truoc=bdTruoc.map(t=>m.v(oTuan(c,t))).filter(x=>x!==null&&x!==undefined);
-    const tatCa=(cur===null?truoc:[cur].concat(truoc));
-    if(!tatCa.length||tatCa.every(x=>!x)) return {h:'<span style="opacity:.3">—</span>',tin:0,thieu:1};
-    if(cur===null) return {h:'<span style="opacity:.4">chưa kiểm</span>',tin:0,thieu:1};
-    const so=m.pc?dec(cur,0)+"%":fmt(cur);
-    if(truoc.length<2) return {h:'<b>'+so+'</b><br><span style="opacity:.4;font-size:10.5px">chưa đủ 3 kỳ</span>',tin:0,thieu:0};
-    const lo=Math.min.apply(null,truoc), hi=Math.max.apply(null,truoc);
+    const cur=m.v(oNgay(c,bdNgay));
+    const tr=bdTruoc.map(d=>m.v(oNgay(c,d))).filter(x=>x!==null&&x!==undefined);
+    // null = that su chua co so (diem danh chua nhap). 0 = co so va bang 0 — KHONG phai thieu du lieu.
+    if(cur===null||cur===undefined) return {h:'<span style="opacity:.4">chưa có</span>',tin:0,thieu:1};
+    if([cur].concat(tr).every(x=>!x)) return {h:'<span style="opacity:.3">0</span>',tin:0,thieu:0};
+    const so=fmt(cur);
+    if(tr.length<2) return {h:'<b>'+so+'</b><br><span style="opacity:.4;font-size:10.5px">chưa đủ 3 kỳ</span>',tin:0,thieu:0};
+    const lo=Math.min.apply(null,tr), hi=Math.max.apply(null,tr);
     let g="·", cls="flat", xau=0;
     if(cur>hi){ xau=m.tot<0?1:0; g="▲"; cls=xau?"down":"up"; }
     else if(cur<lo){ xau=m.tot>0?1:0; g="▼"; cls=xau?"down":"up"; }
-    const dl=m.pc?(dec(lo,0)+"–"+dec(hi,0)+"%"):(fmt(lo)+"–"+fmt(hi));
-    return {h:'<b>'+so+'</b> <span class="'+cls+'">'+g+'</span><br><span style="opacity:.4;font-size:10.5px">dải '+dl+"</span>",
+    return {h:'<b>'+so+'</b> <span class="'+cls+'">'+g+'</span><br><span style="opacity:.4;font-size:10.5px">dải '+fmt(lo)+"–"+fmt(hi)+"</span>",
             tin:xau, thieu:0};};
   const bdRows=Object.keys(bdD).filter(c=>c&&c!=="(chưa rõ)"&&c!=="TRUNG TÂM"&&c!=="(chưa gán campus)")
     .map(c=>{const o=DO.map(m=>bdO(c,m));
       return {c:c, o:o, tin:o.reduce((a,x)=>a+x.tin,0), thieu:o.reduce((a,x)=>a+x.thieu,0)};})
     .sort((a,b)=>b.tin-a.tin||a.thieu-b.thieu||(a.c<b.c?-1:1));
   const bdMu=bdRows.filter(r=>r.thieu>=2).length;
+
+  // bang theo ngay cho toan he thong — de nhin thay tung ngay, khong phai truu tuong
+  const ngayHocGan=bdCaNgay.filter(d=>!cuoiTuan(d)).slice(-14);
+  const congNgay=d=>{const t={lead:0,dh:0,vang:0,ng:0,spc:0,tk:0,co:0};
+    Object.keys(bdD).forEach(c=>{const o=bdD[c][d]; if(!o)return; t.co=1;
+      t.lead+=o.lead||0; t.dh+=o.dh||0; t.vang+=o.vang||0; t.ng+=o.ng||0; t.spc+=o.spc||0; t.tk+=o.tk||0;});
+    return t;};
+  const ngayCard = !ngayHocGan.length ? "" :
+   '<div class="card"><h2>Từng ngày học — toàn cảnh</h2>'
+   +'<p class="sub">'+nhanCP+' · 14 ngày học gần nhất · bỏ thứ Bảy và Chủ nhật</p>'
+   +'<div class="tw"><table style="min-width:700px"><thead><tr><th>Ngày</th><th>Thứ</th><th>Lead mới</th>'
+   +'<th>Trẻ có mặt</th><th>Vắng</th><th>Chuỗi nghỉ mới</th><th>Câu SUPA hỏng</th><th>Ticket mới</th></tr></thead><tbody>'
+   +ngayHocGan.slice().reverse().map(d=>{const t=congNgay(d); const dam=d===bdNgay;
+     return "<tr"+(dam?' style="background:var(--soft)"':"")+"><td>"+(dam?"<b>"+d+"</b>":d)+"</td><td>"+tenThu(d)
+      +'</td><td class="mono">'+fmt(t.lead)+'</td><td class="mono">'+(t.dh?fmt(t.dh):'<span style="opacity:.3">—</span>')
+      +'</td><td class="mono">'+(t.vang?fmt(t.vang):'<span style="opacity:.3">—</span>')
+      +'</td><td class="mono">'+(t.ng?'<span class="down">'+fmt(t.ng)+"</span>":"0")
+      +'</td><td class="mono">'+(t.spc?'<span class="down">'+fmt(t.spc)+"</span>":"0")
+      +'</td><td class="mono">'+(t.tk?'<span class="down">'+fmt(t.tk)+"</span>":"0")+"</td></tr>";}).join("")
+   +"</tbody></table></div>"
+   +'<p class="leg">Dòng tô đậm là <b>ngày đang xét</b> ở bảng dưới — ngày học gần nhất có điểm danh. '
+   +'Ô “—” nghĩa là ngày đó chưa có số, không phải bằng 0.</p></div>';
+
   // khong bao gio tra ve rong im lang: neu thieu du lieu thi noi ro thieu gi
-  const bdThieu = (!bdKy||!bdRows.length) ?
-   '<div class="card"><h2>Bảng điểm campus — dải 3 kỳ</h2>'
+  const bdThieu = (!bdNgay||!bdRows.length) ?
+   '<div class="card"><h2>Bảng điểm campus theo ngày</h2>'
    +'<p class="sub">'+nhanCP+' · chưa dựng được bảng — đây là lý do</p>'
    +'<div class="tw"><table><thead><tr><th>Kiểm tra</th><th>Kết quả</th></tr></thead><tbody>'
-   +'<tr><td>Dòng tuyển sinh theo tuần (v_tuan_campus)</td><td class="mono">'+fmt((tw||[]).length)+"</td></tr>"
-   +'<tr><td>Dòng SUPA (v_supa)</td><td class="mono">'+fmt((supa||[]).length)+"</td></tr>"
-   +'<tr><td>Dòng chuỗi nghỉ (v_nghi_chuoi)</td><td class="mono">'+fmt((nghi||[]).length)+"</td></tr>"
-   +'<tr><td>Campus gom được</td><td class="mono">'+fmt(Object.keys(bdD).length)+"</td></tr>"
-   +'<tr><td>Tuần gom được</td><td class="mono">'+fmt(bdCaTuan.length)+(bdCaTuan.length?" ("+bdCaTuan.slice(-4).join(" · ")+")":"")+"</td></tr>"
-   +'<tr><td>Tuần đã trọn vẹn (trước '+tuanDangChay+")</td><td class=\"mono\">"+fmt(bdXong.length)+"</td></tr>"
-   +'<tr><td>Dòng bỏ vì không đọc được ngày</td><td class="mono">'
-     +(bdBo.tw+bdBo.supa+bdBo.nghi ? '<span class="down">'+fmt(bdBo.tw+bdBo.supa+bdBo.nghi)+"</span>" : "0")
-     +(bdMau.tw?' · ví dụ tuần: <code>'+bdMau.tw+"</code>":"")
-     +(bdMau.supa?' · ví dụ ngày SUPA: <code>'+bdMau.supa+"</code>":"")
-     +(bdMau.nghi?' · ví dụ ngày nghỉ: <code>'+bdMau.nghi+"</code>":"")+"</td></tr>"
+   +[["Lead theo ngày (v_lead_campus)",(tsi||[]).length],
+     ["Điểm danh (v_diem_danh)",(dd||[]).length],
+     ["Chuỗi nghỉ (v_nghi_chuoi)",(nghi||[]).length],
+     ["SUPA (v_supa)",(supa||[]).length],
+     ["Sự cố (v_su_co)",(suCo||[]).length],
+     ["Campus gom được",Object.keys(bdD).length],
+     ["Ngày gom được",bdCaNgay.length],
+     ["Ngày học có điểm danh",ngayCoMat.length]]
+     .map(x=>"<tr><td>"+x[0]+'</td><td class="mono">'+(x[1]?fmt(x[1]):'<span class="down">0</span>')+"</td></tr>").join("")
    +"</tbody></table></div>"
-   +'<div class="q"><b>Đọc bảng trên:</b> dòng nào bằng 0 chính là chỗ đứt. '
-   +'Nếu “dòng bỏ vì không đọc được ngày” lớn hơn 0, cột ngày trong view đang ở định dạng app chưa hiểu — '
-   +'gửi ví dụ ở trên cho tôi. Nếu “tuần gom được” bằng 0 thì ba view nguồn chưa có dữ liệu cho campus đang chọn.</div></div>' : "";
+   +'<div class="q">Dòng nào bằng 0 chính là chỗ đứt. Thẻ <b>Chẩn đoán nguồn dữ liệu</b> ở cuối chế độ ③ '
+   +'cho biết nguồn đó lỗi hay chỉ rỗng — hai thứ này sửa ở hai chỗ khác nhau.</div></div>' : "";
 
-  const bdCard = (!bdKy||!bdRows.length) ? bdThieu :
-   '<div class="card"><h2>Bảng điểm campus — dải 3 kỳ</h2>'
-   +'<p class="sub">'+nhanCP+' · kỳ này <b>'+bdKy+'</b> · so với dải của '+bdTruoc.length+' tuần trước ('+(bdTruoc[0]||"—")+" → "+(bdTruoc[bdTruoc.length-1]||"—")+")</p>"
-   +(bdChuaXong
-     ? '<p class="leg" style="margin-top:-6px;color:var(--warn)">⚠ Kho chỉ có <b>tuần đang chạy</b>, chưa có tuần nào trọn vẹn — số dưới đây là của một tuần chưa xong, sẽ còn tăng. Đọc để tham khảo, đừng ra quyết định.</p>'
-     : '<p class="leg" style="margin-top:-6px">⏱ Luôn là <b>tuần lịch đã trọn vẹn</b>. Tuần đang chạy bị bỏ ra — tuần chưa xong thì lúc nào cũng thấp, đó là ảo giác chứ không phải tín hiệu.</p>')
+  const bdCard = (!bdNgay||!bdRows.length) ? bdThieu :
+   '<div class="card"><h2>Bảng điểm campus theo ngày</h2>'
+   +'<p class="sub">'+nhanCP+' · <b>'+tenThu(bdNgay)+" "+bdNgay+'</b> · so với dải của 3 '+tenThu(bdNgay).toLowerCase()+" trước ("+bdTruoc.join(" · ")+")</p>"
+   +'<p class="leg" style="margin-top:-6px">⏱ Đơn vị là <b>một ngày học</b>. Chỉ so với <b>cùng thứ</b> trong 3 tuần trước — '
+   +'thứ Hai và thứ Sáu vốn không giống nhau, so chéo thứ là tự tạo báo động giả.</p>'
    +'<div class="tw"><table style="min-width:920px"><thead>'
    +'<tr><th rowspan="2">Campus</th><th rowspan="2">Tín hiệu</th>'
-   +'<th colspan="3" style="text-align:center;border-bottom:0" class="bdg">Hành động — mình kiểm soát được</th>'
-   +'<th colspan="3" style="text-align:center;border-bottom:0" class="bdg">Kết quả — đến sau</th></tr>'
+   +'<th style="text-align:center;border-bottom:0" class="bdg">Tuyển sinh</th>'
+   +'<th colspan="2" style="text-align:center;border-bottom:0" class="bdg">Vận hành</th>'
+   +'<th colspan="3" style="text-align:center;border-bottom:0" class="bdg">Rủi ro</th></tr>'
    +"<tr>"+DO.map(m=>"<th>"+m.ten+(m.tot<0?" ↓":"")+"</th>").join("")+"</tr></thead><tbody>"
    +bdRows.map(r=>{
       const bg=r.tin>=2?' style="background:rgba(220,38,38,.09)"':(r.thieu>=2?' style="opacity:.6"':"");
@@ -972,17 +1020,20 @@ async function render(){
       return "<tr"+bg+"><td>"+nhan(r.c)+'</td><td class="mono">'+dau+"</td>"
         +r.o.map(x=>'<td class="bd mono">'+x.h+"</td>").join("")+"</tr>";}).join("")
    +"</tbody></table></div>"
-   +'<p class="leg"><b>Dải là gì:</b> lấy 3 tuần trước, dải chạy từ tuần thấp nhất đến tuần cao nhất. '
-   +'Con số tuần này rơi <b>trong dải</b> (·) nghĩa là bình thường — đừng họp về nó. '
-   +'Rơi <b>ngoài dải</b> (▲ ▼) nghĩa là tuần này khác hẳn ba tuần trước, và <i>đó</i> là chỗ đáng hỏi. '
+   +'<p class="leg"><b>Dải là gì:</b> lấy 3 '+tenThu(bdNgay).toLowerCase()+' trước, dải chạy từ ngày thấp nhất đến ngày cao nhất. '
+   +'Con số hôm đó rơi <b>trong dải</b> (·) nghĩa là bình thường — đừng họp về nó. '
+   +'Rơi <b>ngoài dải</b> (▲ ▼) nghĩa là ngày này khác hẳn ba '+tenThu(bdNgay).toLowerCase()+' trước, và <i>đó</i> là chỗ đáng hỏi. '
    +'Đây là số của chính ME School, không phải benchmark ngành.</p>'
    +'<p class="leg"><b>Cột Tín hiệu</b> = có bao nhiêu ô ra ngoài dải <b>theo hướng xấu</b>. '
-   +'Cột “Nghỉ ≥3 buổi” đảo chiều: tăng là xấu. <b>⚪</b> = thiếu dữ liệu từ 2 ô trở lên, không xếp hạng — '
-   +(bdMu?'hiện có <b>'+bdMu+' campus</b> như vậy.':"hiện không có campus nào như vậy.")
-   +' Ô ghi “chưa kiểm” là SUPA chưa đi kiểm tuần đó, không phải đạt 0%.</p>'
-   +'<div class="q"><b>Cách dùng trong họp tuần:</b> chỉ đọc các dòng có Tín hiệu ≥ 1, từ trên xuống. '
-   +'Với mỗi ô ▲▼, hỏi đúng một câu: <i>tuần này campus làm khác gì so với ba tuần trước?</i> '
+   +'Bốn cột có dấu ↓ đảo chiều: tăng là xấu. <b>⚪</b> = thiếu dữ liệu từ 2 ô trở lên, không xếp hạng'
+   +(bdMu?' — hiện có <b>'+bdMu+" campus</b> như vậy.":".")
+   +' Ô ghi <b>“chưa có”</b> là ngày đó chưa nhập số; ô ghi <b>0</b> mờ là đã có số và bằng 0 suốt 4 ngày — bình thường, không phải lỗ hổng.</p>'
+   +(Object.keys(bdMau).length?'<p class="leg"><b>Có dòng bị bỏ vì không đọc được ngày:</b> '
+     +Object.keys(bdMau).map(k=>k+" → <code>"+bdMau[k]+"</code>").join(" · ")+"</p>":"")
+   +'<div class="q"><b>Cách dùng mỗi sáng:</b> chỉ đọc các dòng có Tín hiệu ≥ 1, từ trên xuống. '
+   +'Với mỗi ô ▲▼, hỏi đúng một câu: <i>hôm qua campus này có chuyện gì khác ba '+tenThu(bdNgay).toLowerCase()+' trước?</i> '
    +'Nếu không ai trả lời được thì thay đổi đó là ngẫu nhiên — hoặc đang có việc xảy ra mà chưa ai nói ra.</div></div>';
+
 
   $("body").innerHTML=
    '<div class="zone" id="z1">'
@@ -994,9 +1045,11 @@ async function render(){
    +'</div>'
 
    +'<div class="zone" id="z2">'
-   +'<p class="sub">Hai bảng, đọc trong 5 phút trước cuộc họp tuần. Bảng đầu hỏi <i>campus nào khác thường</i>; bảng sau hỏi <i>toàn hệ thống có kịp chỉ tiêu không</i>.</p>'
+   +'<p class="sub">Đọc trong 5 phút. Bảng đầu cho thấy <i>từng ngày học</i>; bảng giữa hỏi <i>campus nào khác thường hôm đó</i>; bảng cuối hỏi <i>toàn hệ thống có kịp chỉ tiêu không</i>.</p>'
+   +ngayCard
    +bdCard
    +ctCard
+   +(nguonHong.length?cdCard:"")
    +'</div>'
 
    +'<div class="zone" id="z3">'
@@ -1057,7 +1110,7 @@ async function render(){
        return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
    +"</tbody></table></div>"
    +'<p class="note">Chưa nối: giáo viên · tài chính.<br>Bản dựng: <b class="mono">'+BUILD+'</b> — nếu số này khác bản tôi nói, trình duyệt đang giữ bản cũ: bấm Ctrl+Shift+R (Windows) hoặc Cmd+Shift+R (Mac).</p></div>'
-   +dongGap+'</div>';
+   +dongGap+cdCard+'</div>';
   apDungChe();
 }
 
