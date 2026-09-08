@@ -124,7 +124,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-08 · b7 nhanh hơn";
+const BUILD="2026-09-08 · b8";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -1014,69 +1014,112 @@ async function render(){
    +'<p class="leg">Dòng tô đậm là <b>ngày đang xét</b> ở bảng dưới — ngày học gần nhất có điểm danh. '
    +'Ô “—” nghĩa là ngày đó chưa có số, không phải bằng 0.</p></div>';
 
-  // ----- THE: CHI TIEU TUYEN SINH THEO THANG / TUAN / NGAY -----
-  // Chi dua vao bang chi_tieu -> khong chet theo v_tuan_campus.
+  // ----- THE: MUC TIEU va THUC TE -----
+  // Quyet dinh: MUC TIEU chuan la THANG. Tuan/ngay chi la NHIP (pace), khong phai moc cham diem.
+  // Ly do: muc tieu thang / 15 campus / 4 tuan ~ 1,3 hoc sinh mot campus mot tuan.
+  // Mot tuan chot 0 roi tuan sau chot 3 khong noi len gi — do tuan cho lag measure nay la do nhieu.
   const ktLoc=(ct||[]).filter(r=>hopCP(r.campus));
   const ktT={}; ktLoc.forEach(r=>{const m=+r.thang; if(!m||m<1||m>12)return;
     const o=ktT[m]||(ktT[m]={thang:m,moi:0,si:0}); o.moi+=+r.tuyen_moi||0; o.si+=+r.si_so_kh||0;});
   const ktDs=Object.keys(ktT).map(k=>ktT[k]).sort((a,b)=>a.thang-b.thang);
   const namNay=+homNay.slice(0,4), thangHT=+homNay.slice(5,7);
   const soNgayThang=m=>new Date(Date.UTC(namNay,m,0)).getUTCDate();
-  const soTuanThang=m=>soNgayThang(m)/7;            // ~4,3 chu khong phai 4
-  // ngay hoc trong thang: dem thu 2-6 that su cua thang do
+  const soTuanThang=m=>soNgayThang(m)/7;
   const soNgayHoc=m=>{let n=0; const h=soNgayThang(m);
     for(let d=1;d<=h;d++){const w=new Date(Date.UTC(namNay,m-1,d)).getUTCDay(); if(w>=1&&w<=5)n++;} return n;};
+  const ngayHocDaQua=m=>{const het=(m===thangHT)? +homNay.slice(8,10) : soNgayThang(m); let n=0;
+    for(let d=1;d<=het;d++){const w=new Date(Date.UTC(namNay,m-1,d)).getUTCDay(); if(w>=1&&w<=5)n++;} return n;};
   const ktNay=ktT[thangHT]||null;
-  // thuc te chi lay duoc khi v_tuan_campus con song — khong bia
-  const ktCoThuc=(tw||[]).length>0;
-  const ktThuc={}; if(ktCoThuc) (tw||[]).filter(r=>hopCP(r.campus)).forEach(r=>{
-    const m=+String(r.tuan).slice(5,7); if(!m)return; ktThuc[m]=(ktThuc[m]||0)+(+r.da_di_hoc||0);});
+
+  // THUC TE: uu tien v_tuan_campus (dinh nghia goc). Neu view do chet -> dung tam v_lead_campus,
+  // nhung day la so COHORT (theo thang TAO lead), khong phai so nhap hoc trong thang -> phai ghi ro.
+  const ktCoTw=(tw||[]).length>0;
+  const CHOTX=/thành công/i;
+  const thucT={}, thucCam={};
+  if(ktCoTw){
+    (tw||[]).filter(r=>hopCP(r.campus)).forEach(r=>{const m=+String(r.tuan).slice(5,7); if(!m)return;
+      thucT[m]=(thucT[m]||0)+(+r.da_di_hoc||0);
+      if(m===thangHT) thucCam[r.campus]=(thucCam[r.campus]||0)+(+r.da_di_hoc||0);});
+  } else {
+    (tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).forEach(r=>{
+      const d=chiNgay(r.ngay); if(!d||+d.slice(0,4)!==namNay)return; const m=+d.slice(5,7);
+      thucT[m]=(thucT[m]||0)+(+r.so_lead||0);
+      if(m===thangHT) thucCam[r.campus]=(thucCam[r.campus]||0)+(+r.so_lead||0);});
+  }
+  const ktCoThuc=Object.keys(thucT).length>0;
+  const nhipNay=ktNay? ktNay.moi*ngayHocDaQua(thangHT)/soNgayHoc(thangHT) : null;
+  const thucNay=thucT[thangHT]||0;
   const ktCam=ktLoc.filter(r=>+r.thang===thangHT)
-    .map(r=>({c:r.campus,moi:+r.tuyen_moi||0,si:+r.si_so_kh||0}))
-    .filter(r=>r.moi||r.si).sort((a,b)=>b.moi-a.moi);
+    .map(r=>({c:r.campus,moi:+r.tuyen_moi||0,si:+r.si_so_kh||0,
+              thuc:(thucCam[r.campus]||0),
+              nhip:(+r.tuyen_moi||0)*ngayHocDaQua(thangHT)/soNgayHoc(thangHT)}))
+    .filter(r=>r.moi||r.si||r.thuc)
+    .sort((a,b)=>(a.thuc-a.nhip)-(b.thuc-b.nhip));   // tut nhip nhieu nhat len truoc
   const ktCard = !ktDs.length ?
-   '<div class="card"><h2>Chỉ tiêu tuyển sinh</h2>'
+   '<div class="card"><h2>Mục tiêu và thực tế</h2>'
    +'<p class="sub">'+nhanCP+' · bảng <code>chi_tieu</code> trả về <b class="down">0 dòng</b></p>'
-   +'<div class="q">Chưa có chỉ tiêu nào để chia theo tuần. Xem thẻ <b>Chẩn đoán nguồn dữ liệu</b> — '
+   +'<div class="q">Chưa có mục tiêu nào để so. Xem thẻ <b>Chẩn đoán nguồn dữ liệu</b> — '
    +'nếu <code>chi_tieu</code> báo lỗi thì bảng hỏng; nếu 0 dòng không lỗi thì file kế hoạch 2026 chưa được nạp lên.</div></div>'
    :
-   '<div class="card"><h2>Chỉ tiêu tuyển sinh — tháng · tuần · ngày</h2>'
-   +'<p class="sub">'+nhanCP+' · nguồn: bảng <code>chi_tieu</code> (file kế hoạch 2026) · tháng '+thangHT+"</p>"
+   '<div class="card"><h2>Mục tiêu và thực tế — tháng '+thangHT+'</h2>'
+   +'<p class="sub">'+nhanCP+' · mục tiêu từ bảng <code>chi_tieu</code> · thực tế từ <code>'+(ktCoTw?"v_tuan_campus":"v_lead_campus")+"</code></p>"
    +'<div class="kpis">'
-   +kpi("Chỉ tiêu tháng "+thangHT,ktNay?fmt(ktNay.moi):"—","","học sinh mới trong cả tháng")
-   +kpi("Mỗi tuần",ktNay?dec(ktNay.moi/4,1):"—","","chỉ tiêu tháng ÷ 4 — quy ước đang dùng")
-   +kpi("Mỗi tuần (theo lịch)",ktNay?dec(ktNay.moi/soTuanThang(thangHT),1):"—","","÷ "+dec(soTuanThang(thangHT),2)+" tuần thật của tháng")
-   +kpi("Mỗi ngày học",ktNay?dec(ktNay.moi/soNgayHoc(thangHT),2):"—","","÷ "+soNgayHoc(thangHT)+" ngày T2–T6")+"</div>"
-   +'<p class="leg" style="margin-top:12px"><b>Hai con số “mỗi tuần” khác nhau, và khác biệt này có hậu quả:</b> '
-   +'tháng '+thangHT+" có "+dec(soTuanThang(thangHT),2)+' tuần chứ không phải 4. Chia cho 4 thì cộng bốn tuần lại sẽ <b>vượt chỉ tiêu tháng ~'
-   +dec((soTuanThang(thangHT)/4-1)*100,0)+'%</b> — nghĩa là mỗi tuần đang bị chấm khắt khe hơn thực tế. '
-   +'App đang dùng <b>÷ 4</b> vì đó là quy ước cũ. Muốn đổi thì sửa trong <code>METRIC_DEFINITIONS.md</code>, tôi làm theo — '
-   +'không tự đổi mẫu số.</p>'
-   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tháng</th><th>Chỉ tiêu tháng</th><th>Mỗi tuần (÷4)</th>'
-   +'<th>Mỗi tuần (theo lịch)</th><th>Mỗi ngày học</th>'+(ktCoThuc?"<th>Đã đi học</th><th>vs chỉ tiêu</th>":"")+"</tr></thead><tbody>"
-   +ktDs.map(r=>{const th=ktThuc[r.thang], d=(th==null?null:th-r.moi);
+   +kpi("Mục tiêu tháng "+thangHT,ktNay?fmt(ktNay.moi):"—","","học sinh mới cả tháng")
+   +kpi("Nhịp đến hôm nay",nhipNay==null?"—":dec(nhipNay,1),"",
+        "đã qua "+ngayHocDaQua(thangHT)+"/"+soNgayHoc(thangHT)+" ngày học")
+   +kpi("Thực tế tháng này",ktCoThuc?fmt(thucNay):"—","",ktCoTw?"lead chuyển sang Kết thúc thành công":"tạm tính — xem ghi chú")
+   +kpi("So với nhịp",(!ktCoThuc||nhipNay==null)?"—":
+        '<span class="'+(thucNay-nhipNay>=0?"up":"down")+'">'+(thucNay-nhipNay>=0?"+":"")+dec(thucNay-nhipNay,1)+"</span>",
+        "","thực tế trừ nhịp — đây là con số cần nhìn")+"</div>"
+   +(ktCoTw ? "" : '<div class="gap"><b>Thực tế đang là số tạm, không phải số nhập học trong tháng.</b> '
+     +'Nguồn gốc <code>v_tuan_campus</code> đang trả 0 dòng, nên tôi đếm tạm từ <code>v_lead_campus</code>: '
+     +'<i>lead TẠO trong tháng đó và nay đã ở trạng thái “Kết thúc thành công”.</i> '
+     +'Một phụ huynh vào phễu tháng 8 và nhập học tháng 9 sẽ được tính vào <b>tháng 8</b>. '
+     +'Vì vậy các tháng gần đây luôn bị <b>thấp hơn thực tế</b> — lead vừa vào chưa kịp chốt. '
+     +'Sửa được <code>v_tuan_campus</code> thì số này tự đúng lại.</div>')
+   +'<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Cả năm — mục tiêu là mốc <b>tháng</b>, tuần chỉ là nhịp</p>'
+   +'<div class="tw"><table style="min-width:760px"><thead><tr><th>Tháng</th><th>Mục tiêu tháng</th><th>Thực tế</th><th>Chênh</th><th>% đạt</th>'
+   +'<th>Nhịp/tuần (÷4)</th><th>Nhịp/tuần (theo lịch)</th><th>Nhịp/ngày học</th></tr></thead><tbody>'
+   +ktDs.map(r=>{const th=(ktCoThuc&&thucT[r.thang]!=null)?thucT[r.thang]:null, d=(th==null?null:th-r.moi);
      return "<tr"+(r.thang===thangHT?' style="background:var(--soft)"':"")+"><td>"+(r.thang===thangHT?"<b>Tháng "+r.thang+"</b>":"Tháng "+r.thang)
-      +'</td><td class="mono">'+fmt(r.moi)+'</td><td class="mono">'+dec(r.moi/4,1)
-      +'</td><td class="mono">'+dec(r.moi/soTuanThang(r.thang),1)+'</td><td class="mono">'+dec(r.moi/soNgayHoc(r.thang),2)+"</td>"
-      +(ktCoThuc?'<td class="mono">'+(th==null?'<span style="opacity:.3">—</span>':fmt(th))
-        +'</td><td class="mono">'+(d==null?'<span style="opacity:.3">—</span>':'<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+fmt(d)+"</span>")+"</td>":"")
-      +"</tr>";}).join("")
-   +'<tr><td><b>Cả năm</b></td><td class="mono"><b>'+fmt(ktDs.reduce((a,r)=>a+r.moi,0))+"</b></td><td></td><td></td><td></td>"
-   +(ktCoThuc?"<td></td><td></td>":"")+"</tr>"
+      +'</td><td class="mono">'+fmt(r.moi)
+      +'</td><td class="mono">'+(th==null?'<span style="opacity:.3">—</span>':fmt(th))
+      +'</td><td class="mono">'+(d==null?'<span style="opacity:.3">—</span>':'<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+fmt(d)+"</span>")
+      +'</td><td class="mono">'+(d==null||!r.moi?'<span style="opacity:.3">—</span>':pct(th/r.moi,0))
+      +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/4,1)
+      +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/soTuanThang(r.thang),1)
+      +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/soNgayHoc(r.thang),2)+"</td></tr>";}).join("")
+   +'<tr><td><b>Cả năm</b></td><td class="mono"><b>'+fmt(ktDs.reduce((a,r)=>a+r.moi,0))+"</b></td>"
+   +'<td class="mono"><b>'+(ktCoThuc?fmt(ktDs.reduce((a,r)=>a+(thucT[r.thang]||0),0)):"—")+"</b></td>"
+   +"<td></td><td></td><td></td><td></td><td></td></tr>"
    +"</tbody></table></div>"
-   +(ktCam.length>1 ? '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng '+thangHT+' theo campus — cao nhất trước</p>'
-     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Chỉ tiêu tháng</th><th>Mỗi tuần (÷4)</th><th>Sĩ số kế hoạch</th></tr></thead><tbody>'
-     +ktCam.map(r=>"<tr><td>"+nhan(r.c)+'</td><td class="mono">'+fmt(r.moi)+'</td><td class="mono">'+dec(r.moi/4,1)
-       +'</td><td class="mono">'+(r.si?fmt(r.si):'<span style="opacity:.3">—</span>')+"</td></tr>").join("")
-     +'<tr><td><b>Tổng</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.moi,0))+'</b></td><td class="mono"><b>'
-     +dec(ktCam.reduce((a,r)=>a+r.moi,0)/4,1)+'</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.si,0))+"</b></td></tr>"
-     +"</tbody></table></div>" : "")
-   +(ktCoThuc ? "" : '<div class="gap"><b>Cột “đã đi học” đang trống.</b> Số thực tế theo tuần lấy từ <code>v_tuan_campus</code>, '
-     +'view đó hiện trả 0 dòng. Chỉ tiêu ở trên vẫn đúng vì nó đến từ bảng <code>chi_tieu</code> — hai nguồn khác nhau. '
-     +'Sửa được view kia thì cột thực tế và cột chênh tự hiện.</div>')
-   +'<div class="q"><b>Câu hỏi:</b> chỉ tiêu tháng này chia cho số campus ra bao nhiêu học sinh mỗi campus mỗi tuần? '
-   +'Nếu con số đó nhỏ hơn 1, thì chỉ tiêu tuần không phải thứ để họp hằng tuần — phải đo bằng <b>lead measure</b> '
-   +'(cuộc gọi, tham quan) chứ không phải lag measure.</div></div>';
+   +'<p class="leg"><b>Vì sao mục tiêu chấm theo tháng chứ không theo tuần:</b> mục tiêu tháng '+thangHT+" ("+(ktNay?fmt(ktNay.moi):"—")
+   +') chia cho '+(ktCam.length||1)+' campus rồi chia cho 4 tuần ra <b>'+(ktNay&&ktCam.length?dec(ktNay.moi/ktCam.length/4,1):"—")
+   +' học sinh</b> mỗi campus mỗi tuần. Ở mức đó, một tuần chốt 0 rồi tuần sau chốt 2 <i>không nói lên điều gì</i> — '
+   +'đó là nhiễu, không phải tín hiệu. Nên: <b>tuần dùng để xem nhịp</b> (đang đi kịp chưa), '
+   +'<b>tháng mới dùng để chấm</b>. Còn họp tuần thì đo <b>lead measure</b> — cuộc gọi, tham quan — ở bảng điểm theo ngày phía trên.</p>'
+   +'<p class="leg"><b>Ba cột nhịp khác nhau ở mẫu số:</b> ÷4 là quy ước cũ; “theo lịch” chia cho số tuần thật ('
+   +dec(soTuanThang(thangHT),2)+' tuần trong tháng '+thangHT+'). Cộng 4 tuần theo quy ước ÷4 sẽ <b>vượt mục tiêu tháng ~'
+   +dec((soTuanThang(thangHT)/4-1)*100,0)+'%</b>. Muốn đổi thì sửa <code>METRIC_DEFINITIONS.md</code> — tôi không tự đổi mẫu số.</p>'
+   +(ktCam.length ? '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng '+thangHT+' theo campus — tụt nhịp nhiều nhất trước</p>'
+     +'<div class="tw"><table style="min-width:640px"><thead><tr><th>Campus</th><th>Mục tiêu tháng</th><th>Nhịp đến hôm nay</th><th>Thực tế</th><th>So với nhịp</th><th>Sĩ số kế hoạch</th></tr></thead><tbody>'
+     +ktCam.map(r=>{const d=r.thuc-r.nhip;
+       return "<tr"+(d<-1?' style="background:rgba(220,38,38,.09)"':"")+"><td>"+nhan(r.c)
+       +'</td><td class="mono">'+fmt(r.moi)+'</td><td class="mono" style="opacity:.65">'+dec(r.nhip,1)
+       +'</td><td class="mono">'+(ktCoThuc?fmt(r.thuc):'<span style="opacity:.3">—</span>')
+       +'</td><td class="mono">'+(ktCoThuc?'<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+dec(d,1)+"</span>":'<span style="opacity:.3">—</span>')
+       +'</td><td class="mono">'+(r.si?fmt(r.si):'<span style="opacity:.3">—</span>')+"</td></tr>";}).join("")
+     +'<tr><td><b>Toàn hệ thống</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.moi,0))
+     +'</b></td><td class="mono"><b>'+dec(ktCam.reduce((a,r)=>a+r.nhip,0),1)
+     +'</b></td><td class="mono"><b>'+(ktCoThuc?fmt(ktCam.reduce((a,r)=>a+r.thuc,0)):"—")
+     +'</b></td><td class="mono"><b>'+(ktCoThuc?dec(ktCam.reduce((a,r)=>a+r.thuc-r.nhip,0),1):"—")
+     +'</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.si,0))+"</b></td></tr>"
+     +"</tbody></table></div>"
+     +'<p class="leg"><b>“Nhịp đến hôm nay”</b> = mục tiêu tháng × (số ngày học đã qua ÷ tổng ngày học của tháng). '
+     +'Nó trả lời: <i>đến giờ này lẽ ra phải có bao nhiêu?</i> — công bằng hơn so thẳng với mục tiêu cả tháng khi tháng chưa hết.</p>' : "")
+   +'<div class="q"><b>Câu hỏi cho campus đỏ:</b> tụt nhịp là do <b>ít lead vào</b>, hay <b>lead vào mà không ai chạm lần hai</b>? '
+   +'Hai nguyên nhân này sửa ở hai chỗ hoàn toàn khác nhau — bảng cohort ở chế độ ① phân biệt được.</div></div>';
+
 
   // khong bao gio tra ve rong im lang: neu thieu du lieu thi noi ro thieu gi
   const bdThieu = (!bdNgay||!bdRows.length) ?
