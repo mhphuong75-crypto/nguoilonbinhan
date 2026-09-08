@@ -182,7 +182,7 @@ async function render(){
     sb.from("v_su_co").select("ma_ticket,ngay_tao,campus,phan_loai,muc_do,trang_thai,tieu_de,nguoi_tao,nguoi_duoc_giao,so_ngay_mo,con_mo,he_trong,so_tre_lq").order("ngay_tao",{ascending:false}).limit(1000),
     sb.from("v_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra").order("den_ngay",{ascending:false}).limit(1000),
     sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
-    sb.from("v_nguoi").select("campus,ten_vui,ten_that,vai_tro").limit(50),
+    sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
     sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
@@ -494,10 +494,13 @@ async function render(){
 
   const sdt=v=>v?'<a href="tel:'+String(v).replace(/[^\d+]/g,"")+'" class="mono" style="color:inherit">'+v+"</a>":'<span style="opacity:.45">—</span>';
   // ----- ten vui theo campus -----
-  const CO={}; (nguoi||[]).forEach(r=>{CO[r.campus]={vui:r.ten_vui, that:r.ten_that, vai:r.vai_tro}});
+  const CO={}; (nguoi||[]).forEach(r=>{CO[r.campus]={vui:r.ten_vui, that:r.ten_that, nguon:r.nguon_ten, vai:r.vai_tro}});
+  // ten that co the la nguoi phu trach that, hoac chi la nguoi ghi nhan nhieu nhat -> phai noi ro
   const nhan=c=>{const t=CO[c]; if(!t) return c||"(chưa rõ)";
-    return '<b>'+(t.vui||c)+'</b>'+(t.that?' <span style="opacity:.6">· '+t.that+'</span>':'')
-         +'<br><span style="opacity:.45;font-size:11px">'+c+'</span>';};
+    const chac = t.nguon==="người phụ trách" || t.nguon==="QLVH";
+    return '<b>'+(t.vui||c)+'</b>'
+      +(t.that?' <span style="opacity:'+(chac?'.75':'.5')+'" title="'+(t.nguon||"")+'">· '+t.that+(chac?"":" ?")+'</span>':'')
+      +'<br><span style="opacity:.45;font-size:11px">'+c+'</span>';};
 
   // ----- THE: AN TOAN & SU CO (Tomia, sheet Van hanh) -----
   const scLoc=(suCo||[]).filter(r=>hopCP(r.campus));
@@ -529,6 +532,9 @@ async function render(){
      +'<div class="tw"><table><thead><tr><th>Campus</th><th>Còn mở</th><th>Nghiêm trọng</th><th>Mở quá 30 ngày</th></tr></thead><tbody>'
      +scCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.mo)+'</td><td class="mono">'+(v.nang?'<span class="down">'+v.nang+"</span>":"0")
        +'</td><td class="mono">'+fmt(v.lau)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Tên người bên cạnh tên campus:</b> chữ đậm là tên gọi cho dễ nhớ. Tên phía sau lấy từ hệ thống — '
+   +'<b>6 campus</b> là QLVH thật (ghi trong SUPA), <b>9 campus</b> có dấu <b>?</b> là <i>người ghi nhận nhiều nhất</i>, '
+   +'không phải người chịu trách nhiệm. Muốn đúng thì gán người phụ trách vào bảng <code>nguoi_phu_trach</code> — dấu ? sẽ mất.</p>'
    +'<p class="leg"><b>“Nghiêm trọng”</b> = phân loại An toàn hoặc Hành vi, hoặc mức độ Cao. Đây là quy ước của app, không phải của Tomia — Tomia chỉ ghi phân loại và mức độ rời nhau.</p>'
    +'<div class="q"><b>Nguyên tắc thứ nhất:</b> an toàn trẻ em không đứng sau tăng trưởng. '
    +'Một ticket mức Cao còn mở sau 48 giờ là một quyết định đã bị hoãn, không phải một việc đang chờ. '
