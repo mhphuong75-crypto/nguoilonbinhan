@@ -20,9 +20,15 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           META_TOKEN: ${{ secrets.NGUOILONBINHAN_META_TOKEN }}
-      - name: Boc file Tomia trong kho -> tomia_ngay
+      - name: Boc file Tomia trong kho
         if: always()
         run: python scripts/tomia.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      - name: Boc checklist SUPA trong kho
+        if: always()
+        run: python scripts/supa.py
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
