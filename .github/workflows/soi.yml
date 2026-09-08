@@ -1,6 +1,13 @@
 name: Soi cau truc file trong kho
 on:
   workflow_dispatch:
+    inputs:
+      prefix:
+        description: "Thu muc trong kho (tomia/ hoac supa/)"
+        default: "supa/"
+      so_dong:
+        description: "So dong dau moi sheet"
+        default: "16"
 jobs:
   soi:
     runs-on: ubuntu-latest
@@ -14,3 +21,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          CHI_PREFIX: ${{ inputs.prefix }}
+          SO_DONG: ${{ inputs.so_dong }}
