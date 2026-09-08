@@ -124,7 +124,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-08 · b8";
+const BUILD="2026-09-08 · b9";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -214,19 +214,40 @@ function taoTruyVan(CP){ return [
     sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
     sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000)
 ];}
-const boc=(q,i)=>{const t=performance.now();
-  return Promise.resolve(q).then(r=>r,e=>({data:null,error:{message:String(e&&e.message||e)}}))
-    .then(r=>{r.__ms=Math.round(performance.now()-t); r.__i=i; return r;});};
+// Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
+// "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
+const SONG_SONG=4;
+const THU_TU=TEN_NGUON.map((t,i)=>i)
+  .sort((a,b)=>(TEN_NGUON[b].indexOf("v_")===0?1:0)-(TEN_NGUON[a].indexOf("v_")===0?1:0));
+const HET_GIO=/timeout|canceling statement/i;
+const bocMot=async(CP,i)=>{
+  const t=performance.now(); let r=null, thu=0;
+  for(let lan=0;lan<2;lan++){
+    thu++;
+    try{ r=await taoTruyVan(CP)[i]; }
+    catch(e){ r={data:null,error:{message:String(e&&e.message||e)}}; }
+    if(!r||!r.error||!HET_GIO.test(r.error.message||"")) break;
+    await new Promise(s=>setTimeout(s,700));     // het gio -> nghi mot nhip roi thu lai dung 1 lan
+  }
+  r=r||{data:null,error:{message:"không rõ"}};
+  r.__ms=Math.round(performance.now()-t); r.__i=i; r.__thu=thu; return r;
+};
+async function chayTheoLo(CP, ds){
+  const kq={}; let k=0;
+  const tho=async()=>{ while(k<ds.length){ const i=ds[k++]; kq[i]=await bocMot(CP,i); } };
+  await Promise.all(Array.from({length:Math.min(SONG_SONG,ds.length)},tho));
+  return kq;
+}
 async function napKho(CP, ep){
   if(!ep && KHO){
     if(KHO.cp===CP) return KHO.kq;                     // khong doi gi -> dung lai het
-    const qs=taoTruyVan(CP);                            // doi campus -> chi goi lai 2 truy van
-    const moi=await Promise.all(LOC_CAMPUS.map(i=>boc(qs[i],i)));
-    const kq=KHO.kq.slice(); LOC_CAMPUS.forEach((i,k)=>{kq[i]=moi[k];});
+    const m=await chayTheoLo(CP, LOC_CAMPUS);           // doi campus -> chi goi lai 2 truy van
+    const kq=KHO.kq.slice(); LOC_CAMPUS.forEach(i=>{kq[i]=m[i];});
     KHO={t:KHO.t, tLoc:new Date(), cp:CP, kq:kq, tong:KHO.tong}; return kq;
   }
-  const t0=performance.now(); const qs=taoTruyVan(CP);
-  const kq=await Promise.all(qs.map((q,i)=>boc(q,i)));
+  const t0=performance.now();
+  const m=await chayTheoLo(CP, THU_TU);
+  const kq=TEN_NGUON.map((_,i)=>m[i]);
   KHO={t:new Date(), tLoc:new Date(), cp:CP, kq:kq, tong:Math.round(performance.now()-t0)};
   return kq;
 }
@@ -242,7 +263,7 @@ async function render(){
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
-  const nguonCham=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, ms:r&&r.__ms||0}))
+  const nguonCham=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, ms:r&&r.__ms||0, thu:r&&r.__thu||1}))
     .sort((a,b)=>b.ms-a.ms).slice(0,8);
   const tongDong=KQ.reduce((a,r)=>a+((r&&r.data)?r.data.length:0),0);
   const cdCard =
@@ -252,7 +273,8 @@ async function render(){
    +'<p class="sub" style="margin:-8px 0 12px;text-transform:none;letter-spacing:0">8 nguồn chậm nhất</p>'
    +'<div class="tw"><table><thead><tr><th>Nguồn</th><th>Dòng</th><th>Thời gian</th></tr></thead><tbody>'
    +nguonCham.map(x=>"<tr><td><code>"+x.ten+'</code></td><td class="mono">'+fmt(x.n)
-     +'</td><td class="mono">'+(x.ms>800?'<span class="down">':"<span>")+fmt(x.ms)+"ms</span></td></tr>").join("")
+     +'</td><td class="mono">'+(x.ms>3000?'<span class="down">':"<span>")+fmt(x.ms)+"ms</span>"
+     +(x.thu>1?' <span class="down" title="đã thử lại vì hết giờ">↻</span>':"")+"</td></tr>").join("")
    +"</tbody></table></div>'"
    +(nguonHong.length
      ? '<div class="tw"><table><thead><tr><th>Nguồn</th><th>Dòng</th><th>Lỗi</th></tr></thead><tbody>'
@@ -260,7 +282,7 @@ async function render(){
          +(x.n?fmt(x.n):'<span class="down">0</span>')+'</td><td style="text-align:left;white-space:normal">'
          +(x.loi?'<span class="down">'+String(x.loi).replace(/</g,"&lt;")+"</span>":'<span style="opacity:.5">không lỗi — bảng rỗng hoặc chưa có quyền đọc</span>')+"</td></tr>").join("")
        +"</tbody></table></div>"
-       +'<div class="q"><b>Đọc thế nào:</b> có <b>Lỗi</b> = câu truy vấn hỏng (thường do view đổi tên cột, hoặc view bị xoá). '
+       +'<div class="q"><b>Đọc thế nào:</b> <code>statement timeout</code> = view còn sống nhưng <b>chạy quá lâu</b>, Postgres cắt giữa chừng — phải làm view nhanh hơn, không phải sửa cột. '
        +'<b>0 dòng, không lỗi</b> = view còn sống nhưng rỗng, hoặc RLS chưa cho tài khoản này đọc. '
        +'Hai loại này sửa ở hai chỗ khác nhau — chụp bảng này gửi tôi.</div>'
      : '<p class="leg">Tất cả nguồn đều trả về dữ liệu.</p>')
@@ -968,9 +990,9 @@ async function render(){
    {ten:"Lead mới",      nhom:"Tuyển sinh", tot: 1, v:o=>o?o.lead:0},
    {ten:"Trẻ có mặt",    nhom:"Vận hành",   tot: 1, v:o=>o?o.dh:null},
    {ten:"Vắng",          nhom:"Vận hành",   tot:-1, v:o=>o?o.vang:null},
-   {ten:"Chuỗi nghỉ mới",nhom:"Rủi ro",     tot:-1, v:o=>o?o.ng:0},
-   {ten:"Câu SUPA hỏng", nhom:"Rủi ro",     tot:-1, v:o=>o?o.spc:0},
-   {ten:"Ticket mới",    nhom:"Rủi ro",     tot:-1, v:o=>o?o.tk:0}];
+   {ten:"Trẻ bắt đầu nghỉ dài",nhom:"Rủi ro", tot:-1, v:o=>o?o.ng:0},
+   {ten:"Việc chưa đạt khi kiểm", nhom:"Rủi ro", tot:-1, v:o=>o?o.spc:0},
+   {ten:"Sự cố mới",     nhom:"Rủi ro",     tot:-1, v:o=>o?o.tk:0}];
   const oNgay=(c,d)=>(bdD[c]&&bdD[c][d])||null;
   const bdO=(c,m)=>{
     const cur=m.v(oNgay(c,bdNgay));
@@ -1002,7 +1024,7 @@ async function render(){
    '<div class="card"><h2>Từng ngày học — toàn cảnh</h2>'
    +'<p class="sub">'+nhanCP+' · 7 ngày học gần nhất · bỏ thứ Bảy và Chủ nhật</p>'
    +'<div class="tw"><table style="min-width:700px"><thead><tr><th>Ngày</th><th>Thứ</th><th>Lead mới</th>'
-   +'<th>Trẻ có mặt</th><th>Vắng</th><th>Chuỗi nghỉ mới</th><th>Câu SUPA hỏng</th><th>Ticket mới</th></tr></thead><tbody>'
+   +'<th>Trẻ có mặt</th><th>Vắng</th><th>Trẻ bắt đầu nghỉ dài</th><th>Việc chưa đạt khi kiểm</th><th>Sự cố mới</th></tr></thead><tbody>'
    +ngayHocGan.slice().reverse().map(d=>{const t=congNgay(d); const dam=d===bdNgay;
      return "<tr"+(dam?' style="background:var(--soft)"':"")+"><td>"+(dam?"<b>"+d+"</b>":d)+"</td><td>"+tenThu(d)
       +'</td><td class="mono">'+fmt(t.lead)+'</td><td class="mono">'+(t.dh?fmt(t.dh):'<span style="opacity:.3">—</span>')
@@ -1011,6 +1033,12 @@ async function render(){
       +'</td><td class="mono">'+(t.spc?'<span class="down">'+fmt(t.spc)+"</span>":"0")
       +'</td><td class="mono">'+(t.tk?'<span class="down">'+fmt(t.tk)+"</span>":"0")+"</td></tr>";}).join("")
    +"</tbody></table></div>"
+   +'<p class="leg"><b>Ba cột cuối nghĩa là gì:</b><br>'
+   +'· <b>Trẻ bắt đầu nghỉ dài</b> — hôm đó có bao nhiêu bé <i>bắt đầu</i> một đợt nghỉ liền từ 3 buổi học trở lên. '
+   +'Đếm ở <b>buổi đầu tiên</b> của đợt nghỉ, đã bỏ thứ Bảy và Chủ nhật. Một bé nghỉ 5 buổi chỉ tính <b>một lần</b>, vào ngày bé nghỉ buổi đầu.<br>'
+   +'· <b>Việc chưa đạt khi kiểm</b> — hôm đó người đi kiểm SUPA trả lời “chưa đạt” bao nhiêu câu. '
+   +'Đây là số <i>câu</i>, không phải số lần đi kiểm; một lần kiểm có khoảng 7–10 câu.<br>'
+   +'· <b>Sự cố mới</b> — hôm đó có bao nhiêu ticket được mở mới (vận hành, hành vi, an toàn, sức khoẻ).</p>'
    +'<p class="leg">Dòng tô đậm là <b>ngày đang xét</b> ở bảng dưới — ngày học gần nhất có điểm danh. '
    +'Ô “—” nghĩa là ngày đó chưa có số, không phải bằng 0.</p></div>';
 
@@ -1077,10 +1105,10 @@ async function render(){
      +'Một phụ huynh vào phễu tháng 8 và nhập học tháng 9 sẽ được tính vào <b>tháng 8</b>. '
      +'Vì vậy các tháng gần đây luôn bị <b>thấp hơn thực tế</b> — lead vừa vào chưa kịp chốt. '
      +'Sửa được <code>v_tuan_campus</code> thì số này tự đúng lại.</div>')
-   +'<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Cả năm — mục tiêu là mốc <b>tháng</b>, tuần chỉ là nhịp</p>'
+   +'<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng 7 → 12 — mục tiêu là mốc <b>tháng</b>, tuần chỉ là nhịp</p>'
    +'<div class="tw"><table style="min-width:760px"><thead><tr><th>Tháng</th><th>Mục tiêu tháng</th><th>Thực tế</th><th>Chênh</th><th>% đạt</th>'
    +'<th>Nhịp/tuần (÷4)</th><th>Nhịp/tuần (theo lịch)</th><th>Nhịp/ngày học</th></tr></thead><tbody>'
-   +ktDs.map(r=>{const th=(ktCoThuc&&thucT[r.thang]!=null)?thucT[r.thang]:null, d=(th==null?null:th-r.moi);
+   +ktDs.filter(r=>r.thang>=7).map(r=>{const th=(ktCoThuc&&thucT[r.thang]!=null)?thucT[r.thang]:null, d=(th==null?null:th-r.moi);
      return "<tr"+(r.thang===thangHT?' style="background:var(--soft)"':"")+"><td>"+(r.thang===thangHT?"<b>Tháng "+r.thang+"</b>":"Tháng "+r.thang)
       +'</td><td class="mono">'+fmt(r.moi)
       +'</td><td class="mono">'+(th==null?'<span style="opacity:.3">—</span>':fmt(th))
@@ -1089,8 +1117,8 @@ async function render(){
       +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/4,1)
       +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/soTuanThang(r.thang),1)
       +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/soNgayHoc(r.thang),2)+"</td></tr>";}).join("")
-   +'<tr><td><b>Cả năm</b></td><td class="mono"><b>'+fmt(ktDs.reduce((a,r)=>a+r.moi,0))+"</b></td>"
-   +'<td class="mono"><b>'+(ktCoThuc?fmt(ktDs.reduce((a,r)=>a+(thucT[r.thang]||0),0)):"—")+"</b></td>"
+   +'<tr><td><b>Tháng 7–12</b></td><td class="mono"><b>'+fmt(ktDs.filter(r=>r.thang>=7).reduce((a,r)=>a+r.moi,0))+"</b></td>"
+   +'<td class="mono"><b>'+(ktCoThuc?fmt(ktDs.filter(r=>r.thang>=7).reduce((a,r)=>a+(thucT[r.thang]||0),0)):"—")+"</b></td>"
    +"<td></td><td></td><td></td><td></td><td></td></tr>"
    +"</tbody></table></div>"
    +'<p class="leg"><b>Vì sao mục tiêu chấm theo tháng chứ không theo tuần:</b> mục tiêu tháng '+thangHT+" ("+(ktNay?fmt(ktNay.moi):"—")
