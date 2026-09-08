@@ -183,7 +183,7 @@ async function render(){
     sb.from("v_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra").order("den_ngay",{ascending:false}).limit(1000),
     sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
     sb.from("v_nguoi").select("campus,ten_vui,ten_that,vai_tro").limit(50),
-    sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,ty_le_dat").order("ngay",{ascending:false}).limit(2000)
+    sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -598,6 +598,49 @@ async function render(){
    +'<div class="q"><b>Câu hỏi:</b> tuần Hiền nghỉ phép thì ai trả lời? Và ai biết được điều đó đã xảy ra — '
    +'ngoài việc thấy lead tuần ấy tự nhiên ít đi?</div></div>';
 
+  // ----- THE: CHECKLIST SUPA -----
+  const spLoc=(supa||[]).filter(r=>hopCP(r.campus));
+  const spNgay=[...new Set(spLoc.map(r=>r.ngay))].sort();
+  const spBo={}; spLoc.forEach(r=>{const k=r.bo_ma;
+    const o=spBo[k]||(spBo[k]={ten:r.bo_ten||k,ph:0,dat:0,chua:0});
+    o.ph+=+r.so_phieu||0; o.dat+=+r.so_dat||0; o.chua+=+r.so_chua_dat||0; if(r.bo_ten)o.ten=r.bo_ten});
+  const spCam={}; spLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";
+    const o=spCam[k]||(spCam[k]={ph:0,dat:0,chua:0,cuoi:""});
+    o.ph+=+r.so_phieu||0; o.dat+=+r.so_dat||0; o.chua+=+r.so_chua_dat||0;
+    if(r.ngay>o.cuoi)o.cuoi=r.ngay});
+  const spCamRows=Object.entries(spCam).sort((a,b)=>{
+    const ta=a[1].dat+a[1].chua?a[1].dat/(a[1].dat+a[1].chua):1;
+    const tb=b[1].dat+b[1].chua?b[1].dat/(b[1].dat+b[1].chua):1; return ta-tb});
+  const spTongPh=spLoc.reduce((a,r)=>a+(+r.so_phieu||0),0);
+  const spTongDat=spLoc.reduce((a,r)=>a+(+r.so_dat||0),0);
+  const spTongChua=spLoc.reduce((a,r)=>a+(+r.so_chua_dat||0),0);
+  const spTL=(spTongDat+spTongChua)?100*spTongDat/(spTongDat+spTongChua):null;
+  const spCard = !spLoc.length ? "" :
+   '<div class="card"><h2>Checklist SUPA</h2>'
+   +'<p class="sub">Từ SUPA · '+nhanCP+' · '+(spNgay[0]||"—")+' → '+(spNgay[spNgay.length-1]||"—")+'</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Toàn bộ phiếu đã kéo về, <b>không đổi theo ô chọn thời gian</b>. '
+   +'Câu trả lời “N/A” không tính vào tỷ lệ — chỉ đếm câu <b>đạt</b> và <b>chưa đạt</b>.</p>'
+   +'<div class="kpis">'
+   +kpi("Phiếu đã làm",fmt(spTongPh),"","mỗi phiếu là một lần đi kiểm")
+   +kpi("Tỷ lệ đạt",dec(spTL,1)+"%","","đạt ÷ (đạt + chưa đạt)")
+   +kpi("Câu chưa đạt",fmt(spTongChua),"","việc thật sự cần sửa")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Bộ checklist</th><th>Phiếu</th><th>Chưa đạt</th><th>Tỷ lệ đạt</th></tr></thead><tbody>'
+   +Object.entries(spBo).sort((a,b)=>b[1].ph-a[1].ph).map(([k,v])=>{
+     const tl=(v.dat+v.chua)?100*v.dat/(v.dat+v.chua):null;
+     return "<tr><td>"+v.ten+'</td><td class="mono">'+fmt(v.ph)+'</td><td class="mono">'+fmt(v.chua)
+       +'</td><td class="mono">'+dec(tl,1)+"%</td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +(spCamRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus — thấp nhất trước</p>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Phiếu</th><th>Chưa đạt</th><th>Tỷ lệ đạt</th><th>Lần kiểm gần nhất</th></tr></thead><tbody>'
+     +spCamRows.map(([k,v])=>{const tl=(v.dat+v.chua)?100*v.dat/(v.dat+v.chua):null;
+       return "<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.ph)+'</td><td class="mono">'+fmt(v.chua)
+       +'</td><td class="mono">'+(tl!==null&&tl<85?'<span class="down">':"<span>")+dec(tl,1)+"%</span></td><td>"+(v.cuoi||"—")+"</td></tr>"}).join("")
+     +"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Cách đọc:</b> tỷ lệ đạt cao không có nghĩa là an toàn — nó có nghĩa là <b>người đi kiểm đã trả lời “đã hoàn thành”</b>. '
+   +'Đối chiếu campus có tỷ lệ đạt cao nhưng vẫn có ticket sự cố ở thẻ trên: đó là chỗ checklist đang không nhìn thấy thứ cần nhìn.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> campus nào lâu nhất chưa có lần kiểm nào? Và trong số câu “chưa đạt”, câu nào lặp lại nhiều lần — '
+   +'vì một câu trượt liên tục không phải lỗi người làm, mà là lỗi thiết kế quy trình.</div></div>';
+
   // ----- THE: VIEC CUA TUAN NAY (danh sach hanh dong) -----
   const RO=["Chưa ai chạm","Đã thăm chưa chốt","Hẹn rồi, chưa thấy kết quả","Im lặng trên 14 ngày"];
   const LUAT={"Chưa ai chạm":"Chạm lần đầu trong 24h. Nếu khách chỉ nhắn tin, nhắn — đừng gọi.",
@@ -788,6 +831,7 @@ async function render(){
    +ddCard
    +ngCard
    +hrCard
+   +spCard
    +moGap
    +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'
