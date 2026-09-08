@@ -123,6 +123,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
+const BUILD="2026-09-08 · b3";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -142,8 +143,16 @@ $("send").onclick=async()=>{
 };
 $("email").addEventListener("keydown",e=>{if(e.key==="Enter")$("send").click()});
 $("out").onclick=async()=>{await sb.auth.signOut();location.reload()};
-$("period").onchange=render;
-$("camp").onchange=render;
+function chay(){
+  Promise.resolve().then(render).catch(e=>{
+    $("body").innerHTML='<div class="card" style="border-color:#7f1d1d"><h2>App gặp lỗi</h2>'
+     +'<p class="sub">Trang dừng giữa chừng. Bản dựng '+BUILD+'. Chụp khối dưới gửi cho tôi là đủ để sửa.</p>'
+     +'<pre style="white-space:pre-wrap;font-size:12px;background:var(--sunk);padding:12px;border-radius:10px;overflow:auto">'
+     +String((e&&e.stack)||e).replace(/</g,"&lt;")+'</pre></div>';
+  });
+}
+$("period").onchange=chay;
+$("camp").onchange=chay;
 
 function spark(series){
   if(!series.length) return '<div class="note">Không có dữ liệu trong khoảng này</div>';
@@ -641,7 +650,8 @@ async function render(){
   // ----- THE: CHECKLIST SUPA -----
   const spTatCa=(supa||[]).filter(r=>hopCP(r.campus));
   const spMax=spTatCa.reduce((a,r)=>r.ngay>a?r.ngay:a,"");
-  const spMoc=spMax?new Date(new Date(spMax+"T00:00:00Z").getTime()-27*864e5).toISOString().slice(0,10):"";
+  const spT0=spMax?new Date(String(spMax).slice(0,10)+"T00:00:00Z").getTime():NaN;
+  const spMoc=isNaN(spT0)?"":new Date(spT0-27*864e5).toISOString().slice(0,10);
   const spLoc=spTatCa.filter(r=>r.ngay>=spMoc);   // 4 tuan gan nhat
   const spNgay=[...new Set(spLoc.map(r=>r.ngay))].sort();
   const spBo={}; spLoc.forEach(r=>{const k=r.bo_ma;
@@ -872,23 +882,28 @@ async function render(){
   // ----- THE: BANG DIEM CAMPUS + DAI 3 KY -----
   // "dai" = khoang giua thap nhat va cao nhat cua 3 ky truoc. Trong dai = binh thuong.
   // Ra ngoai dai = tin hieu that, dang hoi. Khong dung benchmark nganh, chi dung so cua ME School.
-  const thuHai=d=>{const x=String(d||"").slice(0,10); if(!/^\d{4}-\d{2}-\d{2}$/.test(x))return null;
-    const t=new Date(x+"T00:00:00Z"); const w=(t.getUTCDay()+6)%7;
+  const thuHai=d=>{const m=String(d||"").match(/\d{4}-\d{2}-\d{2}/); if(!m)return null;
+    const t=new Date(m[0]+"T00:00:00Z"); if(isNaN(t))return null; const w=(t.getUTCDay()+6)%7;
     t.setUTCDate(t.getUTCDate()-w); return t.toISOString().slice(0,10);};
   const tuanDangChay=thuHai(new Date().toISOString().slice(0,10));
-  const bdD={};
+  const bdD={}, bdBo={tw:0,supa:0,nghi:0}, bdMau={};
   const oD=(c,t)=>{const a=bdD[c]||(bdD[c]={}); return a[t]||(a[t]={goi:0,sd:0,st:0,tq:0,lead:0,dh:0,ng:0,co:1});};
-  (tw||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.tuan); if(!t)return;
+  (tw||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.tuan);
+    if(!t){bdBo.tw++; if(!bdMau.tw)bdMau.tw=String(r.tuan); return;}
     const o=oD(r.campus,t); o.goi+=+r.cuoc_goi||0; o.tq+=+r.da_tham_quan||0;
     o.lead+=+r.lead_moi||0; o.dh+=+r.da_di_hoc||0;});
-  (supa||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.ngay); if(!t)return;
+  (supa||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.ngay);
+    if(!t){bdBo.supa++; if(!bdMau.supa)bdMau.supa=String(r.ngay); return;}
     const o=oD(r.campus,t); o.sd+=+r.so_dat||0; o.st+=(+r.so_dat||0)+(+r.so_chua_dat||0);});
-  (nghi||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.tu_ngay); if(!t)return;
+  (nghi||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{const t=thuHai(r.tu_ngay);
+    if(!t){bdBo.nghi++; if(!bdMau.nghi)bdMau.nghi=String(r.tu_ngay); return;}
     oD(r.campus,t).ng++;});
   // truc tuan: bo tuan dang chay (chua xong -> luon thap gia) va lay 4 tuan da tron ven
-  const bdMoiTuan=[...new Set(Object.keys(bdD).reduce((a,c)=>a.concat(Object.keys(bdD[c])),[]))]
-    .filter(t=>t<tuanDangChay).sort();
-  const bd4=bdMoiTuan.slice(-4), bdKy=bd4.length?bd4[bd4.length-1]:null, bdTruoc=bd4.slice(0,-1);
+  const bdCaTuan=[...new Set(Object.keys(bdD).reduce((a,c)=>a.concat(Object.keys(bdD[c])),[]))].sort();
+  const bdXong=bdCaTuan.filter(t=>t<tuanDangChay);
+  const bdChuaXong=!bdXong.length&&bdCaTuan.length>0;   // chi co tuan dang chay
+  const bdNguon=bdChuaXong?bdCaTuan:bdXong;
+  const bd4=bdNguon.slice(-4), bdKy=bd4.length?bd4[bd4.length-1]:null, bdTruoc=bd4.slice(0,-1);
   const DO=[
    {k:"goi", ten:"Cuộc gọi",      nhom:"Hành động", tot:1,  v:o=>o?o.goi:0},
    {k:"supa",ten:"SUPA đạt",      nhom:"Hành động", tot:1, pc:1, v:o=>(o&&o.st)?100*o.sd/o.st:null},
@@ -917,10 +932,33 @@ async function render(){
       return {c:c, o:o, tin:o.reduce((a,x)=>a+x.tin,0), thieu:o.reduce((a,x)=>a+x.thieu,0)};})
     .sort((a,b)=>b.tin-a.tin||a.thieu-b.thieu||(a.c<b.c?-1:1));
   const bdMu=bdRows.filter(r=>r.thieu>=2).length;
-  const bdCard = (!bdKy||!bdRows.length) ? "" :
+  // khong bao gio tra ve rong im lang: neu thieu du lieu thi noi ro thieu gi
+  const bdThieu = (!bdKy||!bdRows.length) ?
    '<div class="card"><h2>Bảng điểm campus — dải 3 kỳ</h2>'
-   +'<p class="sub">'+nhanCP+' · kỳ này <b>'+bdKy+'</b> · so với dải của 3 tuần trước ('+(bdTruoc[0]||"—")+" → "+(bdTruoc[bdTruoc.length-1]||"—")+")</p>"
-   +'<p class="leg" style="margin-top:-6px">⏱ Luôn là <b>tuần lịch đã trọn vẹn</b>. Tuần đang chạy bị bỏ ra — tuần chưa xong thì lúc nào cũng thấp, đó là ảo giác chứ không phải tín hiệu.</p>'
+   +'<p class="sub">'+nhanCP+' · chưa dựng được bảng — đây là lý do</p>'
+   +'<div class="tw"><table><thead><tr><th>Kiểm tra</th><th>Kết quả</th></tr></thead><tbody>'
+   +'<tr><td>Dòng tuyển sinh theo tuần (v_tuan_campus)</td><td class="mono">'+fmt((tw||[]).length)+"</td></tr>"
+   +'<tr><td>Dòng SUPA (v_supa)</td><td class="mono">'+fmt((supa||[]).length)+"</td></tr>"
+   +'<tr><td>Dòng chuỗi nghỉ (v_nghi_chuoi)</td><td class="mono">'+fmt((nghi||[]).length)+"</td></tr>"
+   +'<tr><td>Campus gom được</td><td class="mono">'+fmt(Object.keys(bdD).length)+"</td></tr>"
+   +'<tr><td>Tuần gom được</td><td class="mono">'+fmt(bdCaTuan.length)+(bdCaTuan.length?" ("+bdCaTuan.slice(-4).join(" · ")+")":"")+"</td></tr>"
+   +'<tr><td>Tuần đã trọn vẹn (trước '+tuanDangChay+")</td><td class=\"mono\">"+fmt(bdXong.length)+"</td></tr>"
+   +'<tr><td>Dòng bỏ vì không đọc được ngày</td><td class="mono">'
+     +(bdBo.tw+bdBo.supa+bdBo.nghi ? '<span class="down">'+fmt(bdBo.tw+bdBo.supa+bdBo.nghi)+"</span>" : "0")
+     +(bdMau.tw?' · ví dụ tuần: <code>'+bdMau.tw+"</code>":"")
+     +(bdMau.supa?' · ví dụ ngày SUPA: <code>'+bdMau.supa+"</code>":"")
+     +(bdMau.nghi?' · ví dụ ngày nghỉ: <code>'+bdMau.nghi+"</code>":"")+"</td></tr>"
+   +"</tbody></table></div>"
+   +'<div class="q"><b>Đọc bảng trên:</b> dòng nào bằng 0 chính là chỗ đứt. '
+   +'Nếu “dòng bỏ vì không đọc được ngày” lớn hơn 0, cột ngày trong view đang ở định dạng app chưa hiểu — '
+   +'gửi ví dụ ở trên cho tôi. Nếu “tuần gom được” bằng 0 thì ba view nguồn chưa có dữ liệu cho campus đang chọn.</div></div>' : "";
+
+  const bdCard = (!bdKy||!bdRows.length) ? bdThieu :
+   '<div class="card"><h2>Bảng điểm campus — dải 3 kỳ</h2>'
+   +'<p class="sub">'+nhanCP+' · kỳ này <b>'+bdKy+'</b> · so với dải của '+bdTruoc.length+' tuần trước ('+(bdTruoc[0]||"—")+" → "+(bdTruoc[bdTruoc.length-1]||"—")+")</p>"
+   +(bdChuaXong
+     ? '<p class="leg" style="margin-top:-6px;color:var(--warn)">⚠ Kho chỉ có <b>tuần đang chạy</b>, chưa có tuần nào trọn vẹn — số dưới đây là của một tuần chưa xong, sẽ còn tăng. Đọc để tham khảo, đừng ra quyết định.</p>'
+     : '<p class="leg" style="margin-top:-6px">⏱ Luôn là <b>tuần lịch đã trọn vẹn</b>. Tuần đang chạy bị bỏ ra — tuần chưa xong thì lúc nào cũng thấp, đó là ảo giác chứ không phải tín hiệu.</p>')
    +'<div class="tw"><table style="min-width:920px"><thead>'
    +'<tr><th rowspan="2">Campus</th><th rowspan="2">Tín hiệu</th>'
    +'<th colspan="3" style="text-align:center;border-bottom:0" class="bdg">Hành động — mình kiểm soát được</th>'
@@ -1018,7 +1056,7 @@ async function render(){
      .map(([nm,d])=>{const lag=(d&&/^\d{4}-\d{2}-\d{2}$/.test(d))?Math.round((Date.now()-new Date(d))/864e5):null;
        return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
    +"</tbody></table></div>"
-   +'<p class="note">Chưa nối: giáo viên · tài chính.</p></div>'
+   +'<p class="note">Chưa nối: giáo viên · tài chính.<br>Bản dựng: <b class="mono">'+BUILD+'</b> — nếu số này khác bản tôi nói, trình duyệt đang giữ bản cũ: bấm Ctrl+Shift+R (Windows) hoặc Cmd+Shift+R (Mac).</p></div>'
    +dongGap+'</div>';
   apDungChe();
 }
@@ -1039,10 +1077,10 @@ sb.auth.onAuthStateChange(async(_e,session)=>{
   if(session){
     $("login").classList.add("hidden"); $("app").classList.remove("hidden");
     $("who").textContent=session.user.email;
-    render();
+    chay();
   }
 });
 (async()=>{const {data:{session}}=await sb.auth.getSession();
  if(session){$("login").classList.add("hidden");$("app").classList.remove("hidden");
- $("who").textContent=session.user.email;render();}})();
+ $("who").textContent=session.user.email;chay();}})();
 </script></body></html>
