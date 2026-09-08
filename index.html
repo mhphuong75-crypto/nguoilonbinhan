@@ -156,7 +156,7 @@ async function render(){
   const CP=$("camp").value||"";            // "" = toan he thong
   const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds}] = await Promise.all([
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa}] = await Promise.all([
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
     sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
@@ -178,7 +178,12 @@ async function render(){
     (CP? sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").eq("campus",CP).not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)
        : sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)),
     (CP? sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").eq("campus",CP).order("im_lang",{ascending:false}).limit(1000)
-       : sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").order("im_lang",{ascending:false}).limit(1000))
+       : sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").order("im_lang",{ascending:false}).limit(1000)),
+    sb.from("v_su_co").select("ma_ticket,ngay_tao,campus,phan_loai,muc_do,trang_thai,tieu_de,nguoi_tao,nguoi_duoc_giao,so_ngay_mo,con_mo,he_trong,so_tre_lq").order("ngay_tao",{ascending:false}).limit(1000),
+    sb.from("v_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra").order("den_ngay",{ascending:false}).limit(1000),
+    sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
+    sb.from("v_nguoi").select("campus,ten_vui,ten_that,vai_tro").limit(50),
+    sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,ty_le_dat").order("ngay",{ascending:false}).limit(2000)
   ]);
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
@@ -488,6 +493,111 @@ async function render(){
    +'<div class="q"><b>Câu hỏi:</b> ngày có tỷ lệ có mặt thấp nhất trong 14 ngày trên — hôm đó xảy ra chuyện gì, và ai là người đầu tiên biết?</div></div>';
 
   const sdt=v=>v?'<a href="tel:'+String(v).replace(/[^\d+]/g,"")+'" class="mono" style="color:inherit">'+v+"</a>":'<span style="opacity:.45">—</span>';
+  // ----- ten vui theo campus -----
+  const CO={}; (nguoi||[]).forEach(r=>{CO[r.campus]={vui:r.ten_vui, that:r.ten_that, vai:r.vai_tro}});
+  const nhan=c=>{const t=CO[c]; if(!t) return c||"(chưa rõ)";
+    return '<b>'+(t.vui||c)+'</b>'+(t.that?' <span style="opacity:.6">· '+t.that+'</span>':'')
+         +'<br><span style="opacity:.45;font-size:11px">'+c+'</span>';};
+
+  // ----- THE: AN TOAN & SU CO (Tomia, sheet Van hanh) -----
+  const scLoc=(suCo||[]).filter(r=>hopCP(r.campus));
+  const scMo=scLoc.filter(r=>r.con_mo), scNang=scMo.filter(r=>r.he_trong);
+  const scChuaGiao=scMo.filter(r=>!r.nguoi_duoc_giao);
+  const scTBngay=scMo.length?Math.round(scMo.reduce((a,r)=>a+(+r.so_ngay_mo||0),0)/scMo.length):0;
+  const scTheoCampus={}; scMo.forEach(r=>{const k=r.campus||"(chưa rõ)";
+    const o=scTheoCampus[k]||(scTheoCampus[k]={mo:0,nang:0,lau:0}); o.mo++; if(r.he_trong)o.nang++;
+    if((+r.so_ngay_mo||0)>30)o.lau++});
+  const scCampusRows=Object.entries(scTheoCampus).sort((a,b)=>b[1].nang-a[1].nang||b[1].mo-a[1].mo);
+  const scCard = !scLoc.length ? "" :
+   '<div class="card" style="border-color:#7f1d1d"><h2>🚨 An toàn &amp; sự cố</h2>'
+   +'<p class="sub">Từ Tomia · '+nhanCP+' · ticket vận hành, hành vi, an toàn, sức khoẻ</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Toàn bộ ticket có trong các kỳ báo cáo đã kéo về. <b>Không đổi theo ô chọn thời gian</b> — sự cố chưa đóng thì không có hạn.</p>'
+   +'<div class="kpis">'
+   +kpi("Còn mở",fmt(scMo.length),"","chưa đóng, chưa hoàn tất")
+   +kpi("Nghiêm trọng còn mở",fmt(scNang.length),"","An toàn · Hành vi · hoặc mức Cao")
+   +kpi("Chưa giao cho ai",fmt(scChuaGiao.length),"","không có người được giao")
+   +kpi("Mở trung bình",fmt(scTBngay)+" ngày","","tính đến hôm nay")+"</div>"
+   +(scNang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghiêm trọng &amp; còn mở — đọc từng dòng</p>'
+     +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Campus</th><th>Việc gì</th><th>Loại</th><th>Mức</th><th>Trạng thái</th><th>Đã mở</th><th>Giao cho</th></tr></thead><tbody>'
+     +scNang.sort((a,b)=>(+b.so_ngay_mo||0)-(+a.so_ngay_mo||0)).map(r=>
+       '<tr style="background:rgba(220,38,38,.10)"><td>'+(r.ngay_tao||"—")+'</td><td>'+nhan(r.campus)+'</td><td>'+(r.tieu_de||"—")
+       +'</td><td>'+(r.phan_loai||"—")+'</td><td>'+(r.muc_do||"—")+'</td><td>'+(r.trang_thai||"—")
+       +'</td><td class="mono"><span class="down">'+fmt(r.so_ngay_mo)+' ngày</span></td><td>'
+       +(r.nguoi_duoc_giao||'<span style="color:#f87171">chưa giao</span>')+"</td></tr>").join("")
+     +"</tbody></table></div>" : '<p class="leg">Không có sự cố nghiêm trọng nào đang mở.</p>')
+   +(scCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Ticket còn mở, theo campus</p>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Còn mở</th><th>Nghiêm trọng</th><th>Mở quá 30 ngày</th></tr></thead><tbody>'
+     +scCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.mo)+'</td><td class="mono">'+(v.nang?'<span class="down">'+v.nang+"</span>":"0")
+       +'</td><td class="mono">'+fmt(v.lau)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +'<p class="leg"><b>“Nghiêm trọng”</b> = phân loại An toàn hoặc Hành vi, hoặc mức độ Cao. Đây là quy ước của app, không phải của Tomia — Tomia chỉ ghi phân loại và mức độ rời nhau.</p>'
+   +'<div class="q"><b>Nguyên tắc thứ nhất:</b> an toàn trẻ em không đứng sau tăng trưởng. '
+   +'Một ticket mức Cao còn mở sau 48 giờ là một quyết định đã bị hoãn, không phải một việc đang chờ. '
+   +'Dòng nào ghi <i>chưa giao</i> — ai là người nhận nó trước khi hết ngày hôm nay?</div></div>';
+
+  // ----- THE: TRE NGHI LIEN TUC (Tomia, sheet diem danh chi tiet) -----
+  const ngLoc=(nghi||[]).filter(r=>hopCP(r.campus));
+  const ngDang=ngLoc.filter(r=>r.dang_dien_ra);
+  const ngCoLyDo=ngLoc.filter(r=>r.ly_do&&String(r.ly_do).trim());
+  const ngTheoCampus={}; ngLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";
+    const o=ngTheoCampus[k]||(ngTheoCampus[k]={n:0,dang:0,buoi:0,cly:0});
+    o.n++; if(r.dang_dien_ra)o.dang++; o.buoi+=+r.so_buoi||0; if(r.ly_do)o.cly++});
+  const ngCampusRows=Object.entries(ngTheoCampus).sort((a,b)=>b[1].dang-a[1].dang||b[1].n-a[1].n);
+  const ngCard = !ngLoc.length ? "" :
+   '<div class="card"><h2>Trẻ nghỉ liên tục từ 3 buổi</h2>'
+   +'<p class="sub">Từ Tomia · điểm danh chi tiết từng trẻ · '+nhanCP+'</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Chuỗi nghỉ tính theo <b>ngày học liên tiếp</b> — đã bỏ thứ Bảy, Chủ nhật và ngày nghỉ lễ. Gọi hỏi thăm <b>từ buổi thứ tư</b>.</p>'
+   +'<div class="kpis">'
+   +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chuỗi còn kéo dài đến ngày gần nhất")
+   +kpi("Tổng chuỗi ≥3 buổi",fmt(ngLoc.length),"","toàn bộ dữ liệu điểm danh đã có")
+   +kpi("Có ghi lý do",fmt(ngCoLyDo.length)+" / "+fmt(ngLoc.length),"","phần còn lại không ai biết vì sao")+"</div>"
+   +(ngDang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang nghỉ dở — gọi hôm nay</p>'
+     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Đến</th><th>Số buổi</th><th>Lý do</th></tr></thead><tbody>'
+     +ngDang.sort((a,b)=>(+b.so_buoi||0)-(+a.so_buoi||0)).slice(0,25).map(r=>
+       "<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
+       +"</td><td>"+(r.tu_ngay||"—")+"</td><td>"+(r.den_ngay||"—")
+       +'</td><td class="mono">'+((+r.so_buoi||0)>=4?'<span class="down">':"<span>")+fmt(r.so_buoi)+"</span>"
+       +"</td><td>"+(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>").join("")
+     +"</tbody></table></div>" : "")
+   +(ngCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đang nghỉ dở</th><th>Tổng chuỗi</th><th>Buổi nghỉ TB/chuỗi</th><th>Có ghi lý do</th></tr></thead><tbody>'
+     +ngCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+(v.dang?'<span class="down">'+v.dang+"</span>":"0")
+       +'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+(v.n?(v.buoi/v.n).toFixed(1):"—")
+       +'</td><td class="mono">'+fmt(v.cly)+" / "+fmt(v.n)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Cách đọc:</b> một “chuỗi” là những buổi nghỉ liền nhau của cùng một bé. Nghỉ thứ Sáu rồi nghỉ tiếp thứ Hai là <b>chuỗi 2 buổi</b>, không phải 4 — cuối tuần không tính.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> trong danh sách “đang nghỉ dở” ở trên, bé nào đã có người gọi cho phụ huynh? '
+   +'Nếu chưa có ai gọi và cũng không ai ghi lý do — thì ME School đang không biết bé đó ốm, đi du lịch, hay đã quyết định nghỉ.</div></div>';
+
+  // ----- THE: MESSENGER / ZALO (Harasocial) -----
+  const hrLoc=(hara||[]);
+  const hrNguoi={}; hrLoc.forEach(r=>{const k=r.nguoi||"(không rõ)";
+    const o=hrNguoi[k]||(hrNguoi[k]={n:0,tin:0,tl:[]}); o.n++; o.tin+=+r.so_tin||0;
+    if(+r.tra_loi_dau_giay>0) o.tl.push(+r.tra_loi_dau_giay)});
+  const trungVi=a=>{if(!a.length)return null;const b=a.slice().sort((x,y)=>x-y);return b[Math.floor((b.length-1)/2)]};
+  const hrTLall=hrLoc.map(r=>+r.tra_loi_dau_giay||0).filter(x=>x>0);
+  const hrTV=trungVi(hrTLall);
+  const hrKhongTL=hrLoc.filter(r=>!(+r.tra_loi_dau_giay>0)).length;
+  const hrNgay=[...new Set(hrLoc.map(r=>r.ngay))].sort();
+  const phut=g=>g==null?"—":(g<3600?Math.round(g/60)+" phút":(g/3600).toFixed(1)+" giờ");
+  const hrCard = !hrLoc.length ? "" :
+   '<div class="card"><h2>Messenger &amp; Zalo</h2>'
+   +'<p class="sub">Từ Harasocial · phiên hội thoại trên các trang Facebook của ME School</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Harasocial chỉ giữ khoảng <b>7 ngày gần nhất</b> và bỏ qua bộ lọc ngày — '
+   +'dữ liệu hiện có: <b>'+(hrNgay[0]||"—")+' → '+(hrNgay[hrNgay.length-1]||"—")+'</b>. Tuần nào không bấm dấu trang là mất vĩnh viễn tuần đó.</p>'
+   +'<div class="kpis">'
+   +kpi("Phiên hội thoại",fmt(hrLoc.length),"","trong cửa sổ Harasocial trả về")
+   +kpi("Người xử lý",fmt(Object.keys(hrNguoi).length),"","kể cả trợ lý AI")
+   +kpi("Trả lời lần đầu",phut(hrTV),"","trung vị — không phải trung bình")
+   +kpi("Không ai trả lời",fmt(hrKhongTL),"","phiên không có phản hồi nào")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Người xử lý</th><th>Phiên</th><th>Tin đã gửi</th><th>Trả lời lần đầu (trung vị)</th></tr></thead><tbody>'
+   +Object.entries(hrNguoi).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>
+     "<tr><td>"+k+'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+fmt(v.tin)
+     +'</td><td class="mono">'+phut(trungVi(v.tl))+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<div class="gap"><b>Không có campus nào trong bảng này.</b> Toàn bộ tin nhắn của các trang Facebook đang do một người tiếp nhận, '
+   +'sau đó mới chuyển về campus. Nghĩa là năng lực phản hồi mạng xã hội của ME School bằng đúng năng lực của một người.</div>'
+   +'<div class="q"><b>Câu hỏi:</b> tuần Hiền nghỉ phép thì ai trả lời? Và ai biết được điều đó đã xảy ra — '
+   +'ngoài việc thấy lead tuần ấy tự nhiên ít đi?</div></div>';
+
   // ----- THE: VIEC CUA TUAN NAY (danh sach hanh dong) -----
   const RO=["Chưa ai chạm","Đã thăm chưa chốt","Hẹn rồi, chưa thấy kết quả","Im lặng trên 14 ngày"];
   const LUAT={"Chưa ai chạm":"Chạm lần đầu trong 24h. Nếu khách chỉ nhắn tin, nhắn — đừng gọi.",
@@ -669,12 +779,15 @@ async function render(){
    +'<div class="q"><b>Câu hỏi:</b> con số “đang đi học” này có khớp với sổ điểm danh sáng nay ở từng campus không — lệch ở đâu?</div></div>';
 
   $("body").innerHTML=
-   viecCard
+   scCard
+   +viecCard
    +ctCard
    +cohCard
    +dsCard
    +hsCard
    +ddCard
+   +ngCard
+   +hrCard
    +moGap
    +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'
