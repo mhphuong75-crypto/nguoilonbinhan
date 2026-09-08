@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Soi cau truc file trong kho: liet ke sheet, kich thuoc, vai dong dau.
-Chay 1 lan de biet Tomia/SUPA co du lieu o muc hoc sinh hay khong."""
+"""Soi cau truc file trong kho. Chay bang tay khi mot nguon doi dinh dang."""
 import io, os, json, urllib.request
 
 import openpyxl
@@ -8,6 +7,8 @@ import openpyxl
 SB = os.environ["SUPABASE_URL"].rstrip("/")
 KEY = os.environ["SUPABASE_KEY"]
 BUCKET = "kho-tho"
+CHI = os.environ.get("CHI_PREFIX", "supa/")
+SO_DONG = int(os.environ.get("SO_DONG", "16"))
 
 
 def goi(url, method="GET", body=None, raw=False):
@@ -34,21 +35,21 @@ def soi(ten):
     b = goi(f"{SB}/storage/v1/object/{BUCKET}/{ten}", raw=True)
     print(f"  kich thuoc: {len(b)//1024} KB")
     wb = openpyxl.load_workbook(io.BytesIO(b), read_only=True, data_only=True)
-    print(f"  SO SHEET: {len(wb.sheetnames)}")
+    print(f"  SO SHEET: {len(wb.sheetnames)} -> {wb.sheetnames}")
     for s in wb.sheetnames:
         ws = wb[s]
-        print(f"\n  --- SHEET: {s}  ({ws.max_row} dong x {ws.max_column} cot)")
+        print(f"\n  ### SHEET {s}  ({ws.max_row} dong x {ws.max_column} cot)")
         for i, row in enumerate(ws.iter_rows(values_only=True)):
-            if i >= 6:
+            if i >= SO_DONG:
                 break
-            v = [("" if c is None else str(c))[:28] for c in row[:14]]
-            print("      " + " | ".join(v))
+            v = [("" if c is None else str(c))[:30] for c in row[:20]]
+            if any(x.strip() for x in v):
+                print(f"    r{i}: " + " ~ ".join(v))
     wb.close()
 
 
-for pre in ("tomia/", "supa/"):
+for t in moi_nhat(CHI, 2):
     try:
-        for t in moi_nhat(pre, 2 if pre == "supa/" else 1):
-            soi(t)
+        soi(t)
     except Exception as e:
-        print(f"{pre}: LOI {type(e).__name__} {e}")
+        print(f"{t}: LOI {type(e).__name__} {e}")
