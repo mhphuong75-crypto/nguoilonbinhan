@@ -107,13 +107,14 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
     <span style="font-size:11px;opacity:.55;margin-left:6px" title="Ô thời gian chỉ đổi các thẻ Website, Meta, Google và dòng “Lead mới trong kỳ”. Các thẻ khác có cửa sổ riêng, ghi ở dòng ⏱ của từng thẻ.">⏱ chỉ đổi Website · Meta · Google</span>
     </span>
     <select id="camp"><option value="">Toàn hệ thống</option></select>
-    <button id="out" style="margin-left:auto">Đăng xuất</button>
+    <button id="lai" title="Gọi lại toàn bộ dữ liệu từ máy chủ" style="margin-left:auto">↻ Tải lại số</button>
+    <button id="out">Đăng xuất</button>
   </div>
   <div class="row"><div class="seg" id="che">
     <button data-z="1" class="on">① Hôm nay cần làm gì</button>
     <button data-z="2">② Tuần này ra sao</button>
     <button data-z="3">③ Đào sâu</button>
-  </div></div>
+  </div><span id="tuoi" style="font-size:11px;color:var(--muted)"></span></div>
 </div></header>
 <main class="wrap" id="body"></main>
 </div>
@@ -123,7 +124,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-08 · b6";
+const BUILD="2026-09-08 · b7 nhanh hơn";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -153,6 +154,7 @@ function chay(){
 }
 $("period").onchange=chay;
 $("camp").onchange=chay;
+$("lai").onclick=()=>{ buocLai=true; chay(); };
 
 function spark(series){
   if(!series.length) return '<div class="note">Không có dữ liệu trong khoảng này</div>';
@@ -177,25 +179,22 @@ function delta(cur,prev,goodUp=true){
 const kpi=(l,v,d,h)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v mono">'+v+"</div>"+(d||"")
  +(h?'<div class="hint">'+h+"</div>":"")+"</div>";
 
-async function render(){
-  const n=+$("period").value;
-  const CP=$("camp").value||"";            // "" = toan he thong
-  const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
-  $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
-  const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","meta_campaign_daily",
-    "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","v_lead_campus","v_diem_danh",
-    "v_siso (1 dòng)","v_web_tong","v_tuan_campus","chi_tieu","v_can_ly_do","v_cohort_tuan",
-    "v_viec_tuan","v_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa"];
-  const KQ = await Promise.all([
-    sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day"),
-    sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day"),
+let KHO=null, buocLai=false;   // kho tam trong bo nho: doi campus/thoi gian khong goi lai 25 truy van
+const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","meta_campaign_daily",
+  "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","v_lead_campus","v_diem_danh",
+  "v_siso (1 dòng)","v_web_tong","v_tuan_campus","chi_tieu","v_can_ly_do","v_cohort_tuan",
+  "v_viec_tuan","v_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa"];
+const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
+function taoTruyVan(CP){ return [
+    sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
+    sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day",{ascending:false}).limit(400),
     sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
-    sb.from("meta_ad_daily").select("day,account_name,spend,impressions,reach,clicks").order("day"),
-    sb.from("meta_campaign_daily").select("day,account_name,campaign_name,objective,spend,impressions,reach,clicks,link_clicks,results,result_type").order("day"),
-    sb.from("gsc_page").select("snapshot_on,page,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("clicks",{ascending:false}).limit(1200),
+    sb.from("meta_ad_daily").select("day,account_name,spend,impressions,reach,clicks").order("day",{ascending:false}).limit(1200),
+    sb.from("meta_campaign_daily").select("day,account_name,campaign_name,objective,spend,impressions,reach,clicks,link_clicks,results,result_type").order("day",{ascending:false}).limit(2000),
+    sb.from("gsc_page").select("snapshot_on,page,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("clicks",{ascending:false}).limit(600),
     sb.from("v_web_su_kien").select("cua_so,event_name,so_lan,nguoi").limit(500),
     sb.from("v_web_trang").select("cua_so,landing_page,phien,gan_ket,giay_tong,su_kien").limit(500),
-    sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(20000),
+    sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(4000),
     sb.from("v_siso").select("nhom,campus,so_hs,so_lop").limit(2000),
     sb.from("v_lead_campus").select("ngay,campus,giai_doan,nguon,so_lead").limit(2000),
     sb.from("v_diem_danh").select("ngay,campus,di_hoc,vang,dan_thuoc").order("ngay",{ascending:false}).limit(2000),
@@ -214,14 +213,47 @@ async function render(){
     sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
     sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
     sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000)
-  ].map(q=>Promise.resolve(q).then(r=>r,e=>({data:null,error:{message:String(e&&e.message||e)}}))));
+];}
+const boc=(q,i)=>{const t=performance.now();
+  return Promise.resolve(q).then(r=>r,e=>({data:null,error:{message:String(e&&e.message||e)}}))
+    .then(r=>{r.__ms=Math.round(performance.now()-t); r.__i=i; return r;});};
+async function napKho(CP, ep){
+  if(!ep && KHO){
+    if(KHO.cp===CP) return KHO.kq;                     // khong doi gi -> dung lai het
+    const qs=taoTruyVan(CP);                            // doi campus -> chi goi lai 2 truy van
+    const moi=await Promise.all(LOC_CAMPUS.map(i=>boc(qs[i],i)));
+    const kq=KHO.kq.slice(); LOC_CAMPUS.forEach((i,k)=>{kq[i]=moi[k];});
+    KHO={t:KHO.t, tLoc:new Date(), cp:CP, kq:kq, tong:KHO.tong}; return kq;
+  }
+  const t0=performance.now(); const qs=taoTruyVan(CP);
+  const kq=await Promise.all(qs.map((q,i)=>boc(q,i)));
+  KHO={t:new Date(), tLoc:new Date(), cp:CP, kq:kq, tong:Math.round(performance.now()-t0)};
+  return kq;
+}
+
+async function render(){
+  const n=+$("period").value;
+  const CP=$("camp").value||"";            // "" = toan he thong
+  const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
+  $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
+  const KQ = await napKho(CP, buocLai);
+  buocLai=false;
   const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
+  const nguonCham=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, ms:r&&r.__ms||0}))
+    .sort((a,b)=>b.ms-a.ms).slice(0,8);
+  const tongDong=KQ.reduce((a,r)=>a+((r&&r.data)?r.data.length:0),0);
   const cdCard =
    '<div class="card"'+(nguonHong.length?' style="border-color:#7f1d1d"':"")+'><h2>Chẩn đoán nguồn dữ liệu</h2>'
-   +'<p class="sub">'+fmt(KQ.length-nguonHong.length)+"/"+fmt(KQ.length)+' nguồn trả về dữ liệu · bản dựng '+BUILD+'</p>'
+   +'<p class="sub">'+fmt(KQ.length-nguonHong.length)+"/"+fmt(KQ.length)+' nguồn trả về dữ liệu · '
+   +fmt(tongDong)+' dòng · '+(KHO&&KHO.tong?fmt(KHO.tong)+"ms lần tải đầu":"—")+' · bản dựng '+BUILD+'</p>'
+   +'<p class="sub" style="margin:-8px 0 12px;text-transform:none;letter-spacing:0">8 nguồn chậm nhất</p>'
+   +'<div class="tw"><table><thead><tr><th>Nguồn</th><th>Dòng</th><th>Thời gian</th></tr></thead><tbody>'
+   +nguonCham.map(x=>"<tr><td><code>"+x.ten+'</code></td><td class="mono">'+fmt(x.n)
+     +'</td><td class="mono">'+(x.ms>800?'<span class="down">':"<span>")+fmt(x.ms)+"ms</span></td></tr>").join("")
+   +"</tbody></table></div>'"
    +(nguonHong.length
      ? '<div class="tw"><table><thead><tr><th>Nguồn</th><th>Dòng</th><th>Lỗi</th></tr></thead><tbody>'
        +nguonHong.map(x=>'<tr><td><code>'+x.ten+'</code></td><td class="mono">'
@@ -1164,7 +1196,7 @@ async function render(){
 
    +'<div class="card"><h2>Nguồn dữ liệu</h2><p class="sub">Số nào không có thì để trống, không bịa</p>'
    +'<div class="tw"><table><thead><tr><th>Nguồn</th><th>Đến ngày</th><th>Số ngày trễ</th></tr></thead><tbody>'
-   +[["GA4",days[days.length-1]],["Search Console",gs.length?gs[gs.length-1].day:null],
+   +[["GA4",days[days.length-1]],["Search Console",gs.length?gs.reduce((a2,r)=>r.day>a2?r.day:a2,gs[0].day):null],
      ["Sự kiện + trang đích GA4",end],
      ["Meta Ads",mDays.length?mDays[mDays.length-1]:null],
      ["Điểm danh Tomia",ddNay?ddNay.ngay:null],
@@ -1175,6 +1207,10 @@ async function render(){
    +"</tbody></table></div>"
    +'<p class="note">Chưa nối: giáo viên · tài chính.<br>Bản dựng: <b class="mono">'+BUILD+'</b> — nếu số này khác bản tôi nói, trình duyệt đang giữ bản cũ: bấm Ctrl+Shift+R (Windows) hoặc Cmd+Shift+R (Mac).</p></div>'
    +dongGap+cdCard+'</div>';
+  if(KHO&&KHO.t){const gio=KHO.t.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+    const phut=Math.round((Date.now()-KHO.t.getTime())/60000);
+    $("tuoi").innerHTML='Số liệu lấy lúc <b>'+gio+'</b>'+(phut>0?" · "+phut+" phút trước":"")
+      +' · đổi thời gian <b>không</b> gọi lại máy chủ, đổi campus chỉ gọi lại <b>2</b>/25 nguồn.';}
   apDungChe();
 }
 
