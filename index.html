@@ -645,21 +645,26 @@ async function render(){
    +'<p class="leg" style="margin-top:-6px">⏱ <b>4 tuần gần nhất</b> (kho có từ '+((spTatCa[0]&&spTatCa.reduce((a,r)=>r.ngay<a?r.ngay:a,"9999"))||"—")+'), <b>không đổi theo ô chọn thời gian</b>. '
    +'Câu trả lời “N/A” không tính vào tỷ lệ — chỉ đếm câu <b>đạt</b> và <b>chưa đạt</b>.</p>'
    +'<div class="kpis">'
-   +kpi("Phiếu đã làm",fmt(spTongPh),"","mỗi phiếu là một lần đi kiểm")
-   +kpi("Tỷ lệ đạt",dec(spTL,1)+"%","","đạt ÷ (đạt + chưa đạt)")
-   +kpi("Câu chưa đạt",fmt(spTongChua),"","việc thật sự cần sửa")+"</div>"
-   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Bộ checklist</th><th>Phiếu</th><th>Chưa đạt</th><th>Tỷ lệ đạt</th></tr></thead><tbody>'
+   +kpi("Lần đi kiểm",fmt(spTongPh),"","mỗi lần là một phiếu, gồm nhiều câu")
+   +kpi("Câu đã trả lời",fmt(spTongDat+spTongChua),"",(spTongPh?dec((spTongDat+spTongChua)/spTongPh,1):"—")+" câu mỗi lần kiểm")
+   +kpi("Câu chưa đạt",fmt(spTongChua),"","việc thật sự cần sửa")
+   +kpi("Tỷ lệ đạt",dec(spTL,1)+"%","","câu đạt ÷ câu đã trả lời")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Bộ checklist</th><th>Lần kiểm</th><th>Câu đã trả lời</th><th>Câu chưa đạt</th><th>Tỷ lệ đạt</th></tr></thead><tbody>'
    +Object.entries(spBo).sort((a,b)=>b[1].ph-a[1].ph).map(([k,v])=>{
      const tl=(v.dat+v.chua)?100*v.dat/(v.dat+v.chua):null;
-     return "<tr><td>"+v.ten+'</td><td class="mono">'+fmt(v.ph)+'</td><td class="mono">'+fmt(v.chua)
+     return "<tr><td>"+v.ten+'</td><td class="mono">'+fmt(v.ph)+'</td><td class="mono">'+fmt(v.dat+v.chua)
+       +'</td><td class="mono">'+(v.chua?'<span class="down">'+fmt(v.chua)+"</span>":"0")
        +'</td><td class="mono">'+dec(tl,1)+"%</td></tr>"}).join("")
    +"</tbody></table></div>"
    +(spCamRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus — thấp nhất trước</p>'
-     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Phiếu</th><th>Chưa đạt</th><th>Tỷ lệ đạt</th><th>Lần kiểm gần nhất</th></tr></thead><tbody>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Lần kiểm</th><th>Câu chưa đạt / tổng câu</th><th>Tỷ lệ đạt</th><th>Kiểm gần nhất</th></tr></thead><tbody>'
      +spCamRows.map(([k,v])=>{const tl=(v.dat+v.chua)?100*v.dat/(v.dat+v.chua):null;
-       return "<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.ph)+'</td><td class="mono">'+fmt(v.chua)
+       return "<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.ph)+'</td><td class="mono">'+fmt(v.chua)+" / "+fmt(v.dat+v.chua)
        +'</td><td class="mono">'+(tl!==null&&tl<85?'<span class="down">':"<span>")+dec(tl,1)+"%</span></td><td>"+(v.cuoi||"—")+"</td></tr>"}).join("")
      +"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Hai đơn vị khác nhau, đừng so trực tiếp:</b> <b>lần kiểm</b> là một lượt người đi kiểm; '
+   +'<b>câu</b> là từng dòng trong checklist đó. Một lần kiểm chứa khoảng 7–10 câu, nên số câu chưa đạt hoàn toàn có thể lớn hơn số lần kiểm.<br>'
+   +'Ví dụ Thảo Điền, checklist an toàn lớp học: <b>48 lần kiểm</b> → <b>324 câu</b> → <b>48 câu chưa đạt</b>. Hai số 48 bằng nhau là trùng hợp, không liên quan.</p>'
    +'<p class="leg"><b>Cách đọc:</b> tỷ lệ đạt cao không có nghĩa là an toàn — nó có nghĩa là <b>người đi kiểm đã trả lời “đã hoàn thành”</b>. '
    +'Đối chiếu campus có tỷ lệ đạt cao nhưng vẫn có ticket sự cố ở thẻ trên: đó là chỗ checklist đang không nhìn thấy thứ cần nhìn.</p>'
    +'<div class="q"><b>Câu hỏi:</b> campus nào lâu nhất chưa có lần kiểm nào? Và trong số câu “chưa đạt”, câu nào lặp lại nhiều lần — '
