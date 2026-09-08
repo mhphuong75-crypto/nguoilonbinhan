@@ -123,7 +123,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-08 · b5";
+const BUILD="2026-09-08 · b6";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -930,7 +930,7 @@ async function render(){
     .filter(d=>d<=homNay&&!cuoiTuan(d)).sort();
   const bdNgay = ngayCoMat.length ? ngayCoMat[ngayCoMat.length-1]
                : (bdCaNgay.filter(d=>!cuoiTuan(d)).slice(-1)[0]||null);
-  const bdTruoc = bdNgay ? [21,14,7].map(k=>luiNgay(bdNgay,k)) : [];
+  const bdTruoc = bdNgay ? [28,21,14,7].map(k=>luiNgay(bdNgay,k)) : [];
 
   const DO=[
    {ten:"Lead mới",      nhom:"Tuyển sinh", tot: 1, v:o=>o?o.lead:0},
@@ -947,7 +947,7 @@ async function render(){
     if(cur===null||cur===undefined) return {h:'<span style="opacity:.4">chưa có</span>',tin:0,thieu:1};
     if([cur].concat(tr).every(x=>!x)) return {h:'<span style="opacity:.3">0</span>',tin:0,thieu:0};
     const so=fmt(cur);
-    if(tr.length<2) return {h:'<b>'+so+'</b><br><span style="opacity:.4;font-size:10.5px">chưa đủ 3 kỳ</span>',tin:0,thieu:0};
+    if(tr.length<2) return {h:'<b>'+so+'</b><br><span style="opacity:.4;font-size:10.5px">chưa đủ dữ liệu</span>',tin:0,thieu:0};
     const lo=Math.min.apply(null,tr), hi=Math.max.apply(null,tr);
     let g="·", cls="flat", xau=0;
     if(cur>hi){ xau=m.tot<0?1:0; g="▲"; cls=xau?"down":"up"; }
@@ -961,14 +961,14 @@ async function render(){
   const bdMu=bdRows.filter(r=>r.thieu>=2).length;
 
   // bang theo ngay cho toan he thong — de nhin thay tung ngay, khong phai truu tuong
-  const ngayHocGan=bdCaNgay.filter(d=>!cuoiTuan(d)).slice(-14);
+  const ngayHocGan=bdCaNgay.filter(d=>!cuoiTuan(d)).slice(-7);
   const congNgay=d=>{const t={lead:0,dh:0,vang:0,ng:0,spc:0,tk:0,co:0};
     Object.keys(bdD).forEach(c=>{const o=bdD[c][d]; if(!o)return; t.co=1;
       t.lead+=o.lead||0; t.dh+=o.dh||0; t.vang+=o.vang||0; t.ng+=o.ng||0; t.spc+=o.spc||0; t.tk+=o.tk||0;});
     return t;};
   const ngayCard = !ngayHocGan.length ? "" :
    '<div class="card"><h2>Từng ngày học — toàn cảnh</h2>'
-   +'<p class="sub">'+nhanCP+' · 14 ngày học gần nhất · bỏ thứ Bảy và Chủ nhật</p>'
+   +'<p class="sub">'+nhanCP+' · 7 ngày học gần nhất · bỏ thứ Bảy và Chủ nhật</p>'
    +'<div class="tw"><table style="min-width:700px"><thead><tr><th>Ngày</th><th>Thứ</th><th>Lead mới</th>'
    +'<th>Trẻ có mặt</th><th>Vắng</th><th>Chuỗi nghỉ mới</th><th>Câu SUPA hỏng</th><th>Ticket mới</th></tr></thead><tbody>'
    +ngayHocGan.slice().reverse().map(d=>{const t=congNgay(d); const dam=d===bdNgay;
@@ -981,6 +981,70 @@ async function render(){
    +"</tbody></table></div>"
    +'<p class="leg">Dòng tô đậm là <b>ngày đang xét</b> ở bảng dưới — ngày học gần nhất có điểm danh. '
    +'Ô “—” nghĩa là ngày đó chưa có số, không phải bằng 0.</p></div>';
+
+  // ----- THE: CHI TIEU TUYEN SINH THEO THANG / TUAN / NGAY -----
+  // Chi dua vao bang chi_tieu -> khong chet theo v_tuan_campus.
+  const ktLoc=(ct||[]).filter(r=>hopCP(r.campus));
+  const ktT={}; ktLoc.forEach(r=>{const m=+r.thang; if(!m||m<1||m>12)return;
+    const o=ktT[m]||(ktT[m]={thang:m,moi:0,si:0}); o.moi+=+r.tuyen_moi||0; o.si+=+r.si_so_kh||0;});
+  const ktDs=Object.keys(ktT).map(k=>ktT[k]).sort((a,b)=>a.thang-b.thang);
+  const namNay=+homNay.slice(0,4), thangHT=+homNay.slice(5,7);
+  const soNgayThang=m=>new Date(Date.UTC(namNay,m,0)).getUTCDate();
+  const soTuanThang=m=>soNgayThang(m)/7;            // ~4,3 chu khong phai 4
+  // ngay hoc trong thang: dem thu 2-6 that su cua thang do
+  const soNgayHoc=m=>{let n=0; const h=soNgayThang(m);
+    for(let d=1;d<=h;d++){const w=new Date(Date.UTC(namNay,m-1,d)).getUTCDay(); if(w>=1&&w<=5)n++;} return n;};
+  const ktNay=ktT[thangHT]||null;
+  // thuc te chi lay duoc khi v_tuan_campus con song — khong bia
+  const ktCoThuc=(tw||[]).length>0;
+  const ktThuc={}; if(ktCoThuc) (tw||[]).filter(r=>hopCP(r.campus)).forEach(r=>{
+    const m=+String(r.tuan).slice(5,7); if(!m)return; ktThuc[m]=(ktThuc[m]||0)+(+r.da_di_hoc||0);});
+  const ktCam=ktLoc.filter(r=>+r.thang===thangHT)
+    .map(r=>({c:r.campus,moi:+r.tuyen_moi||0,si:+r.si_so_kh||0}))
+    .filter(r=>r.moi||r.si).sort((a,b)=>b.moi-a.moi);
+  const ktCard = !ktDs.length ?
+   '<div class="card"><h2>Chỉ tiêu tuyển sinh</h2>'
+   +'<p class="sub">'+nhanCP+' · bảng <code>chi_tieu</code> trả về <b class="down">0 dòng</b></p>'
+   +'<div class="q">Chưa có chỉ tiêu nào để chia theo tuần. Xem thẻ <b>Chẩn đoán nguồn dữ liệu</b> — '
+   +'nếu <code>chi_tieu</code> báo lỗi thì bảng hỏng; nếu 0 dòng không lỗi thì file kế hoạch 2026 chưa được nạp lên.</div></div>'
+   :
+   '<div class="card"><h2>Chỉ tiêu tuyển sinh — tháng · tuần · ngày</h2>'
+   +'<p class="sub">'+nhanCP+' · nguồn: bảng <code>chi_tieu</code> (file kế hoạch 2026) · tháng '+thangHT+"</p>"
+   +'<div class="kpis">'
+   +kpi("Chỉ tiêu tháng "+thangHT,ktNay?fmt(ktNay.moi):"—","","học sinh mới trong cả tháng")
+   +kpi("Mỗi tuần",ktNay?dec(ktNay.moi/4,1):"—","","chỉ tiêu tháng ÷ 4 — quy ước đang dùng")
+   +kpi("Mỗi tuần (theo lịch)",ktNay?dec(ktNay.moi/soTuanThang(thangHT),1):"—","","÷ "+dec(soTuanThang(thangHT),2)+" tuần thật của tháng")
+   +kpi("Mỗi ngày học",ktNay?dec(ktNay.moi/soNgayHoc(thangHT),2):"—","","÷ "+soNgayHoc(thangHT)+" ngày T2–T6")+"</div>"
+   +'<p class="leg" style="margin-top:12px"><b>Hai con số “mỗi tuần” khác nhau, và khác biệt này có hậu quả:</b> '
+   +'tháng '+thangHT+" có "+dec(soTuanThang(thangHT),2)+' tuần chứ không phải 4. Chia cho 4 thì cộng bốn tuần lại sẽ <b>vượt chỉ tiêu tháng ~'
+   +dec((soTuanThang(thangHT)/4-1)*100,0)+'%</b> — nghĩa là mỗi tuần đang bị chấm khắt khe hơn thực tế. '
+   +'App đang dùng <b>÷ 4</b> vì đó là quy ước cũ. Muốn đổi thì sửa trong <code>METRIC_DEFINITIONS.md</code>, tôi làm theo — '
+   +'không tự đổi mẫu số.</p>'
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tháng</th><th>Chỉ tiêu tháng</th><th>Mỗi tuần (÷4)</th>'
+   +'<th>Mỗi tuần (theo lịch)</th><th>Mỗi ngày học</th>'+(ktCoThuc?"<th>Đã đi học</th><th>vs chỉ tiêu</th>":"")+"</tr></thead><tbody>"
+   +ktDs.map(r=>{const th=ktThuc[r.thang], d=(th==null?null:th-r.moi);
+     return "<tr"+(r.thang===thangHT?' style="background:var(--soft)"':"")+"><td>"+(r.thang===thangHT?"<b>Tháng "+r.thang+"</b>":"Tháng "+r.thang)
+      +'</td><td class="mono">'+fmt(r.moi)+'</td><td class="mono">'+dec(r.moi/4,1)
+      +'</td><td class="mono">'+dec(r.moi/soTuanThang(r.thang),1)+'</td><td class="mono">'+dec(r.moi/soNgayHoc(r.thang),2)+"</td>"
+      +(ktCoThuc?'<td class="mono">'+(th==null?'<span style="opacity:.3">—</span>':fmt(th))
+        +'</td><td class="mono">'+(d==null?'<span style="opacity:.3">—</span>':'<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+fmt(d)+"</span>")+"</td>":"")
+      +"</tr>";}).join("")
+   +'<tr><td><b>Cả năm</b></td><td class="mono"><b>'+fmt(ktDs.reduce((a,r)=>a+r.moi,0))+"</b></td><td></td><td></td><td></td>"
+   +(ktCoThuc?"<td></td><td></td>":"")+"</tr>"
+   +"</tbody></table></div>"
+   +(ktCam.length>1 ? '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng '+thangHT+' theo campus — cao nhất trước</p>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Chỉ tiêu tháng</th><th>Mỗi tuần (÷4)</th><th>Sĩ số kế hoạch</th></tr></thead><tbody>'
+     +ktCam.map(r=>"<tr><td>"+nhan(r.c)+'</td><td class="mono">'+fmt(r.moi)+'</td><td class="mono">'+dec(r.moi/4,1)
+       +'</td><td class="mono">'+(r.si?fmt(r.si):'<span style="opacity:.3">—</span>')+"</td></tr>").join("")
+     +'<tr><td><b>Tổng</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.moi,0))+'</b></td><td class="mono"><b>'
+     +dec(ktCam.reduce((a,r)=>a+r.moi,0)/4,1)+'</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.si,0))+"</b></td></tr>"
+     +"</tbody></table></div>" : "")
+   +(ktCoThuc ? "" : '<div class="gap"><b>Cột “đã đi học” đang trống.</b> Số thực tế theo tuần lấy từ <code>v_tuan_campus</code>, '
+     +'view đó hiện trả 0 dòng. Chỉ tiêu ở trên vẫn đúng vì nó đến từ bảng <code>chi_tieu</code> — hai nguồn khác nhau. '
+     +'Sửa được view kia thì cột thực tế và cột chênh tự hiện.</div>')
+   +'<div class="q"><b>Câu hỏi:</b> chỉ tiêu tháng này chia cho số campus ra bao nhiêu học sinh mỗi campus mỗi tuần? '
+   +'Nếu con số đó nhỏ hơn 1, thì chỉ tiêu tuần không phải thứ để họp hằng tuần — phải đo bằng <b>lead measure</b> '
+   +'(cuộc gọi, tham quan) chứ không phải lag measure.</div></div>';
 
   // khong bao gio tra ve rong im lang: neu thieu du lieu thi noi ro thieu gi
   const bdThieu = (!bdNgay||!bdRows.length) ?
@@ -1002,7 +1066,7 @@ async function render(){
 
   const bdCard = (!bdNgay||!bdRows.length) ? bdThieu :
    '<div class="card"><h2>Bảng điểm campus theo ngày</h2>'
-   +'<p class="sub">'+nhanCP+' · <b>'+tenThu(bdNgay)+" "+bdNgay+'</b> · so với dải của 3 '+tenThu(bdNgay).toLowerCase()+" trước ("+bdTruoc.join(" · ")+")</p>"
+   +'<p class="sub">'+nhanCP+' · <b>'+tenThu(bdNgay)+" "+bdNgay+'</b> · so với dải <b>4 tuần gần nhất</b> — 4 '+tenThu(bdNgay).toLowerCase()+" trước ("+bdTruoc.join(" · ")+")</p>"
    +'<p class="leg" style="margin-top:-6px">⏱ Đơn vị là <b>một ngày học</b>. Chỉ so với <b>cùng thứ</b> trong 3 tuần trước — '
    +'thứ Hai và thứ Sáu vốn không giống nhau, so chéo thứ là tự tạo báo động giả.</p>'
    +'<div class="tw"><table style="min-width:920px"><thead>'
@@ -1019,9 +1083,9 @@ async function render(){
       return "<tr"+bg+"><td>"+nhan(r.c)+'</td><td class="mono">'+dau+"</td>"
         +r.o.map(x=>'<td class="bd mono">'+x.h+"</td>").join("")+"</tr>";}).join("")
    +"</tbody></table></div>"
-   +'<p class="leg"><b>Dải là gì:</b> lấy 3 '+tenThu(bdNgay).toLowerCase()+' trước, dải chạy từ ngày thấp nhất đến ngày cao nhất. '
+   +'<p class="leg"><b>Dải là gì:</b> lấy 4 '+tenThu(bdNgay).toLowerCase()+' của 4 tuần gần nhất, dải chạy từ ngày thấp nhất đến ngày cao nhất. '
    +'Con số hôm đó rơi <b>trong dải</b> (·) nghĩa là bình thường — đừng họp về nó. '
-   +'Rơi <b>ngoài dải</b> (▲ ▼) nghĩa là ngày này khác hẳn ba '+tenThu(bdNgay).toLowerCase()+' trước, và <i>đó</i> là chỗ đáng hỏi. '
+   +'Rơi <b>ngoài dải</b> (▲ ▼) nghĩa là ngày này khác hẳn bốn '+tenThu(bdNgay).toLowerCase()+' trước, và <i>đó</i> là chỗ đáng hỏi. '
    +'Đây là số của chính ME School, không phải benchmark ngành.</p>'
    +'<p class="leg"><b>Cột Tín hiệu</b> = có bao nhiêu ô ra ngoài dải <b>theo hướng xấu</b>. '
    +'Bốn cột có dấu ↓ đảo chiều: tăng là xấu. <b>⚪</b> = thiếu dữ liệu từ 2 ô trở lên, không xếp hạng'
@@ -1030,7 +1094,7 @@ async function render(){
    +(Object.keys(bdMau).length?'<p class="leg"><b>Có dòng bị bỏ vì không đọc được ngày:</b> '
      +Object.keys(bdMau).map(k=>k+" → <code>"+bdMau[k]+"</code>").join(" · ")+"</p>":"")
    +'<div class="q"><b>Cách dùng mỗi sáng:</b> chỉ đọc các dòng có Tín hiệu ≥ 1, từ trên xuống. '
-   +'Với mỗi ô ▲▼, hỏi đúng một câu: <i>hôm qua campus này có chuyện gì khác ba '+tenThu(bdNgay).toLowerCase()+' trước?</i> '
+   +'Với mỗi ô ▲▼, hỏi đúng một câu: <i>hôm đó campus này có chuyện gì khác bốn '+tenThu(bdNgay).toLowerCase()+' trước?</i> '
    +'Nếu không ai trả lời được thì thay đổi đó là ngẫu nhiên — hoặc đang có việc xảy ra mà chưa ai nói ra.</div></div>';
 
 
@@ -1047,6 +1111,7 @@ async function render(){
    +'<p class="sub">Đọc trong 5 phút. Bảng đầu cho thấy <i>từng ngày học</i>; bảng giữa hỏi <i>campus nào khác thường hôm đó</i>; bảng cuối hỏi <i>toàn hệ thống có kịp chỉ tiêu không</i>.</p>'
    +ngayCard
    +bdCard
+   +ktCard
    +ctCard
    +(nguonHong.length?cdCard:"")
    +'</div>'
