@@ -340,7 +340,7 @@ async function render(){
    +'Chọn khoảng <b>7 ngày gần nhất</b> để xem những lượt mới nhất.</div></div>'
    : '<div class="card"><h2>Ai giơ tay trên website</h2><p class="sub">Dữ liệu của chính ME School · không qua Google hay Meta · '+start+" → "+endW+' (thời gian thực, tính đến hôm nay)</p>'
    +'<div class="kpis">'
-   +kpi("Tổng lượt giơ tay",fmt(wTot),"","người chủ động muốn liên lạc")
+   +kpi("Tổng lượt bấm",fmt(wTot),"","cú bấm, KHÔNG phải số người")
    +kpi("Trên tổng lượt vào",pct(ses?wTot/ses:0,2),"","bao nhiêu % khách để lại liên hệ")
    +kpi("Từ bài blog",fmt(wRef.blog||0),"","nội dung miễn phí mang về")
    +kpi("Từ trang chủ",fmt(wRef.trangchu||0),"","người vào thẳng website")+"</div>"
@@ -348,6 +348,9 @@ async function render(){
    +Object.entries(wKind).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<tr><td>'+(TEN[k]||k)
      +'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(v/wTot,0)+"</td></tr>").join("")
    +"</tbody></table></div>"
+   +'<p class="leg"><b>Đây là số CÚ BẤM, không phải số NGƯỜI.</b> Bảng ghi nhận không có mã nhận diện khách, '
+   +'nên một người vừa bấm hotline vừa bấm Messenger sẽ được đếm <b>2 lượt</b>, và bấm lại 3 lần là <b>3 lượt</b>. '
+   +'Không khử trùng được — muốn đếm theo người thì phải thêm mã khách vào đoạn ghi nhận trên website.</p>'
    +'<p class="leg"><b>Cách đọc:</b> mỗi dòng là một lần phụ huynh bấm nút liên lạc trên web. '
    +'Đây <b>chưa phải lead</b> — bấm gọi không có nghĩa là đã nói chuyện được. '
    +'Nhưng đây là số ME School tự đo, không phụ thuộc bên nào.</p>'
