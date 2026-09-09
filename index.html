@@ -124,7 +124,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-09 · b10";
+const BUILD="2026-09-09 · b11";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -334,7 +334,9 @@ async function render(){
   const isRaise=k=>RAISE.test(k)&&!NOTRAISE.test(k);
   const evAgg={}; (ev||[]).filter(r=>+r.cua_so===n).forEach(r=>{
     const k=r.event_name; evAgg[k]={c:+r.so_lan||0,u:+r.nguoi||0}});
-  const evRows=Object.entries(evAgg).sort((a,b)=>b[1].c-a[1].c);
+  // bo cac su kien khong noi len dieu gi ve phu huynh: gio hang thuong mai dien tu, "gửi" mo ho
+  const BOSK=/remove_from_cart|add_to_cart|view_cart|begin_checkout|purchase|^send$|^gui$|generate_lead$/i;
+  const evRows=Object.entries(evAgg).filter(([k])=>!BOSK.test(k)).sort((a,b)=>b[1].c-a[1].c);
   const raiseAll=evRows.filter(([k])=>isRaise(k));
   const suspect=raiseAll.filter(([k,v])=>ses&&v.c/ses>0.03);
   const raiseRows=raiseAll.filter(x=>suspect.indexOf(x)<0);
@@ -421,8 +423,33 @@ async function render(){
    +(tired.length ?
      '<div class="gap"><b>'+tired.length+' chiến dịch có tần suất ≥ 2,5:</b> '+tired.slice(0,4).map(x=>x.name).join(" · ")
      +'<br>Cùng một nhóm phụ huynh đang bị phát đi phát lại. Lần cuối đổi hình/nội dung quảng cáo là bao giờ?</div>' : "")
-   +(cmpRes ? '<div class="q"><b>Tổng:</b> '+vnd(cmpSpend)+" cho "+fmt(cmpRes)+' kết quả — trung bình <b class="mono">'
-     +vnd(cmpSpend/cmpRes)+'</b> mỗi kết quả. Bao nhiêu trong số đó thành một cuộc hẹn thăm trường?</div>' : "")
+   +(function(){
+      // KHONG tron cac loai ket qua: 1 like va 1 tin nhan khong cung don vi
+      const L={}; (mc||[]).filter(r=>inR(r.day,start,end)).forEach(r=>{
+        const k=(r.result_type||"(chưa đặt mục tiêu)");
+        const o=L[k]||(L[k]={chi:0,kq:0,cd:{}}); o.chi+=+r.spend||0; o.kq+=+r.results||0;
+        if(r.campaign_name)o.cd[r.campaign_name]=1;});
+      const rows=Object.entries(L).sort((a,b)=>b[1].chi-a[1].chi);
+      if(!rows.length) return "";
+      const TENKQ={"tin nhan":"Tin nhắn Messenger","nhap lien ket":"Nhấp vào liên kết",
+        "tuong tac bai":"Tương tác bài (like, bình luận)","lead":"Lead (form Meta)"};
+      const dat=rows.filter(x=>x[1].kq>0);
+      const datNhat=dat.length?dat.reduce((a,b)=>(a[1].chi/a[1].kq)>(b[1].chi/b[1].kq)?a:b):null;
+      return '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Chi tiêu và giá theo <b>từng loại kết quả</b></p>'
+      +'<div class="tw"><table><thead><tr><th>Loại kết quả Meta đếm</th><th>Chiến dịch</th><th>Chi tiêu</th><th>Kết quả</th><th>Giá mỗi kết quả</th></tr></thead><tbody>'
+      +rows.map(([k,v])=>"<tr><td>"+(TENKQ[k]||k)+'</td><td class="mono">'+fmt(Object.keys(v.cd).length)
+        +'</td><td class="mono">'+vnd(v.chi)+'</td><td class="mono">'+(v.kq?fmt(v.kq):'<span style="opacity:.35">0</span>')
+        +'</td><td class="mono">'+(v.kq?"<b>"+vnd(v.chi/v.kq)+"</b>":'<span style="opacity:.35">—</span>')+"</td></tr>").join("")
+      +"</tbody></table></div>"
+      +'<p class="leg"><b>Vì sao không có một con số “giá mỗi kết quả” chung:</b> Meta gọi mọi thứ là “kết quả”, '
+      +'nhưng <b>một lượt like và một tin nhắn của phụ huynh không cùng đơn vị</b>. Cộng chúng lại rồi chia ra một con số trung bình '
+      +'sẽ cho ra một giá rẻ giả tạo — vì hàng nghìn lượt like giá vài chục đồng kéo tụt con số xuống, '
+      +'trong khi gần như toàn bộ tiền lại nằm ở loại đắt nhất.</p>'
+      +(datNhat ? '<div class="q"><b>Con số đáng nhìn:</b> <b>'+(TENKQ[datNhat[0]]||datNhat[0])+'</b> đang tốn <b class="mono">'
+        +vnd(datNhat[1].chi/datNhat[1].kq)+'</b> một kết quả, chiếm <b>'+pct(datNhat[1].chi/(cmpSpend||1),0)
+        +'</b> tổng chi tiêu.<br>Câu hỏi: trong số đó bao nhiêu thành một cuộc hẹn thăm trường? '
+        +'Nếu chưa ai đếm được, thì mọi tranh luận về “quảng cáo đắt hay rẻ” đều chưa có căn cứ.</div>' : "");
+    })()
    +"</div>";
 
   // ----- AI GIO TAY TREN WEBSITE (du lieu cua chinh ME School) -----
@@ -497,7 +524,7 @@ async function render(){
 
   // ----- the: trang co traffic -----
   const pageCard = !pageRows.length ? "" :
-   '<div class="card"><h2>Trang kéo được người vào</h2><p class="sub">Top theo lượt nhấp từ Google · ghép với hành vi đọc trên GA4</p>'
+   '<div class="card"><h2>Trang kéo được người vào</h2><p class="sub">Xếp theo <b>lượt nhấp</b> từ Google · ghép với hành vi đọc trên GA4</p>'
    +'<div class="tw"><table style="min-width:640px"><thead><tr><th>Trang</th><th>Nhấp</th><th>Hiển thị</th><th>Vị trí</th><th>Phiên</th><th>Đọc thật</th><th>Giây</th></tr></thead><tbody>'
    +pageRows.map(p=>'<tr><td style="max-width:260px;white-space:normal;word-break:break-all">'+path(p.page)
      +'</td><td class="mono">'+fmt(p.clicks)+'</td><td class="mono">'+fmt(p.impressions)
@@ -1277,9 +1304,9 @@ async function render(){
    +'<b>Paid Social</b> = từ quảng cáo Facebook · <b>Referral</b> = trang khác dẫn sang.</p>'
    +'<p class="note">Paid Search và Paid Social gần như bằng 0 — quảng cáo hầu như không đưa ai về website.</p></div>'
 
-   +'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">5 từ khoá mang về nhiều lượt hiển thị nhất</p>'
+   +'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">Xếp theo <b>lượt nhấp</b> — số người thật sự vào web, không phải số lần xuất hiện</p>'
    +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Hiển thị</th><th>Nhấp</th><th>CTR</th><th>Vị trí</th></tr></thead><tbody>'
-   +gq.slice(0,5).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
+   +gq.slice().sort((a,b)=>(+b.clicks||0)-(+a.clicks||0)||(+b.impressions||0)-(+a.impressions||0)).slice(0,8).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
      +'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+dec(q.position,1)+"</td></tr>").join("")
    +"</tbody></table></div>"
    +'<p class="leg"><b>Hiện</b> = số lần web xuất hiện trên Google · <b>Bấm</b> = số lần có người bấm vào · '
