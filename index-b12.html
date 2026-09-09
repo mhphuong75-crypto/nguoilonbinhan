@@ -1,0 +1,1444 @@
+<!doctype html><html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>nguoilonbinhan.meschool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#F4F6F5;--surface:#fff;--sunk:#EDF1EF;--line:#DCE3E0;--ink:#141D1B;--ink2:#42514E;
+--muted:#6E7D79;--accent:#0F5348;--soft:#E1EEE9;--good:#4F7A1E;--warn:#A96C05;--crit:#A93126;
+--shadow:0 1px 2px rgba(20,29,27,.06),0 6px 20px -12px rgba(20,29,27,.22)}
+@media(prefers-color-scheme:dark){:root{--bg:#0D1210;--surface:#151D1B;--sunk:#1D2724;--line:#2A3633;
+--ink:#E7EDEA;--ink2:#B4C1BD;--muted:#8B9995;--accent:#4EB69D;--soft:#173029;--good:#8DBE4E;
+--warn:#DFA648;--crit:#E2776A;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -14px rgba(0,0,0,.7)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,sans-serif;
+font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1000px;margin:0 auto;padding:0 14px 60px}
+header{position:sticky;top:0;z-index:9;background:var(--bg);border-bottom:1px solid var(--line);
+padding-top:env(safe-area-inset-top)}
+.hin{max-width:1000px;margin:0 auto;padding:12px 14px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:11px;
+letter-spacing:.06em;text-transform:uppercase}
+.row{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap;align-items:center}
+select,button{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);
+border:1px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;
+box-shadow:var(--shadow);margin-top:14px}
+.card h2{margin:0 0 2px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+color:var(--accent);font-weight:600}
+.card .sub{margin:0 0 14px;font-size:12.5px;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);
+border:1px solid var(--line);border-radius:12px;overflow:hidden}
+@media(min-width:620px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--surface);padding:13px 12px}
+.kpi .l{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-size:25px;font-weight:600;letter-spacing:-.02em;margin-top:4px}
+.kpi .d{font-size:12px;margin-top:3px;color:var(--muted)}
+.up{color:var(--good)}.down{color:var(--crit)}.flat{color:var(--muted)}
+.hint{font-size:11px;line-height:1.35;color:var(--muted);margin-top:5px}
+.leg{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.5}
+.leg b{color:var(--ink2);font-weight:500}
+.bar{height:14px;background:var(--sunk);border-radius:4px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.frow{margin-bottom:10px}
+.fm{display:flex;justify-content:space-between;font-size:13px;align-items:baseline}
+.tw{overflow-x:auto;margin:0 -16px;padding:0 16px}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:460px}
+th{text-align:right;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+font-weight:500;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+.note{font-size:12.5px;color:var(--muted);margin-top:12px;padding-top:11px;border-top:1px dashed var(--line)}
+.q{font-size:13.5px;color:var(--ink2);background:var(--soft);border-radius:10px;padding:11px 13px;margin-top:13px}
+.q b{color:var(--accent)}
+.gap{font-size:13.5px;color:var(--ink2);background:var(--sunk);border-left:3px solid var(--warn);
+border-radius:0 10px 10px 0;padding:12px 14px;margin-top:13px}
+.gap b{color:var(--warn)}
+.big{font-size:19px;font-weight:600;letter-spacing:-.01em}
+/* login */
+.login{max-width:380px;margin:14vh auto;padding:0 18px;text-align:center}
+.login h1{font-size:24px;letter-spacing:-.02em;margin:14px 0 6px}
+.login p{color:var(--muted);font-size:14px;margin:0 0 22px}
+.login input{width:100%;font:inherit;padding:12px 14px;border-radius:10px;border:1px solid var(--line);
+background:var(--surface);color:var(--ink);margin-bottom:10px;text-align:center}
+.login button{width:100%;padding:12px}
+.msg{margin-top:14px;font-size:13.5px;padding:11px;border-radius:10px}
+.msg.ok{background:var(--soft);color:var(--accent)}
+.msg.err{background:#FAE5E2;color:var(--crit)}
+@media(prefers-color-scheme:dark){.msg.err{background:#2E1815}}
+.chart{width:100%;height:auto;display:block}
+.hidden{display:none}
+/* ba che do */
+.seg{display:inline-flex;background:var(--sunk);border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg>button{border:0;background:transparent;border-radius:8px;padding:6px 11px;font-size:13px;
+color:var(--muted);font-weight:500;white-space:nowrap}
+.seg>button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);font-weight:600}
+.zone{display:none}.zone.on{display:block}
+.zone>.sub:first-child{margin:14px 0 0;font-size:12.5px;color:var(--muted)}
+td.bd{text-align:right;line-height:1.35;padding:8px}
+.bdg{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
+</style></head><body>
+
+<div id="login" class="login">
+  <div style="display:flex;justify-content:center"><span class="dot"></span></div>
+  <h1>nguoilonbinhan.meschool</h1>
+  <p>Nhập email công ty. Chúng tôi gửi một link đăng nhập — không cần mật khẩu.</p>
+  <input id="email" type="email" placeholder="ten@meschool.vn" autocomplete="email">
+  <button class="primary" id="send">Gửi link đăng nhập</button>
+  <div id="msg"></div>
+</div>
+
+<div id="app" class="hidden">
+<header><div class="hin">
+  <div class="brand"><span class="dot"></span><div>nguoilonbinhan.meschool<small id="who">—</small></div></div>
+  <div class="row">
+    <span id="oTG" style="display:none;gap:8px;align-items:center">
+    <select id="period">
+      <option value="7">7 ngày gần nhất</option>
+      <option value="28">28 ngày</option>
+      <option value="90">90 ngày</option>
+    </select>
+    <span style="font-size:11px;opacity:.55;margin-left:6px" title="Ô thời gian chỉ đổi các thẻ Website, Meta, Google và dòng “Lead mới trong kỳ”. Các thẻ khác có cửa sổ riêng, ghi ở dòng ⏱ của từng thẻ.">⏱ chỉ đổi Website · Meta · Google</span>
+    </span>
+    <select id="camp"><option value="">Toàn hệ thống</option></select>
+    <button id="lai" title="Gọi lại toàn bộ dữ liệu từ máy chủ" style="margin-left:auto">↻ Tải lại số</button>
+    <button id="out">Đăng xuất</button>
+  </div>
+  <div class="row"><div class="seg" id="che">
+    <button data-z="1" class="on">① Hôm nay cần làm gì</button>
+    <button data-z="2">② Tuần này ra sao</button>
+    <button data-z="3">③ Đào sâu</button>
+  </div><span id="tuoi" style="font-size:11px;color:var(--muted)"></span></div>
+</div></header>
+<main class="wrap" id="body"></main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
+const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
+const sb=supabase.createClient(URL_,KEY_);
+const BUILD="2026-09-09 · b12";
+const $=id=>document.getElementById(id);
+const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
+const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
+ return (Math.abs(k)<10? k.toFixed(1).replace(".",",") : Math.round(k).toLocaleString("vi-VN"))+" ng";};
+const pct=(n,d=1)=>n==null||!isFinite(n)?"—":(n*100).toFixed(d).replace(".",",")+"%";
+const dec=(n,d=1)=>n==null||!isFinite(n)?"—":(+n).toFixed(d).replace(".",",");
+const shift=(iso,d)=>{const t=new Date(iso+"T00:00:00Z");t.setUTCDate(t.getUTCDate()+d);return t.toISOString().slice(0,10)};
+
+$("send").onclick=async()=>{
+  const email=$("email").value.trim();
+  if(!email){$("msg").className="msg err";$("msg").textContent="Chưa nhập email.";return}
+  $("send").disabled=true;$("send").textContent="Đang gửi…";
+  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split("#")[0]}});
+  $("send").disabled=false;$("send").textContent="Gửi link đăng nhập";
+  if(error){$("msg").className="msg err";$("msg").textContent="Lỗi: "+error.message}
+  else{$("msg").className="msg ok";$("msg").textContent="Đã gửi. Mở email và bấm vào link — link dùng được một lần."}
+};
+$("email").addEventListener("keydown",e=>{if(e.key==="Enter")$("send").click()});
+$("out").onclick=async()=>{await sb.auth.signOut();location.reload()};
+function chay(){
+  Promise.resolve().then(render).catch(e=>{
+    $("body").innerHTML='<div class="card" style="border-color:#7f1d1d"><h2>App gặp lỗi</h2>'
+     +'<p class="sub">Trang dừng giữa chừng. Bản dựng '+BUILD+'. Chụp khối dưới gửi cho tôi là đủ để sửa.</p>'
+     +'<pre style="white-space:pre-wrap;font-size:12px;background:var(--sunk);padding:12px;border-radius:10px;overflow:auto">'
+     +String((e&&e.stack)||e).replace(/</g,"&lt;")+'</pre></div>';
+  });
+}
+$("period").onchange=chay;
+$("camp").onchange=chay;
+$("lai").onclick=()=>{ buocLai=true; chay(); };
+
+function spark(series){
+  if(!series.length) return '<div class="note">Không có dữ liệu trong khoảng này</div>';
+  const w=560,h=62,p=3,max=Math.max(...series.map(x=>x.v),1);
+  const X=i=>p+i*(w-2*p)/Math.max(series.length-1,1), Y=v=>h-p-(v/max)*(h-2*p-8);
+  const pts=series.map((x,i)=>X(i).toFixed(1)+","+Y(x.v).toFixed(1)).join(" ");
+  const last=series[series.length-1];
+  return '<svg class="chart" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" role="img" aria-label="Xu hướng theo ngày">'
+   +'<polygon points="'+p+','+(h-p)+' '+pts+' '+X(series.length-1).toFixed(1)+','+(h-p)+'" fill="var(--accent)" opacity=".13"></polygon>'
+   +'<polyline points="'+pts+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>'
+   +'<circle cx="'+X(series.length-1).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="3.4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"></circle></svg>'
+   +'<div class="note" style="border:0;padding:0;margin-top:7px;display:flex;justify-content:space-between">'
+   +'<span>'+series[0].d.slice(8)+"/"+series[0].d.slice(5,7)+'</span><span>đỉnh <b class="mono">'+fmt(max)+'</b> · gần nhất <b class="mono">'+fmt(last.v)+'</b></span></div>';
+}
+function delta(cur,prev,goodUp=true){
+  if(prev==null||prev===0) return '<div class="d">kỳ trước —</div>';
+  const r=(cur-prev)/Math.abs(prev);
+  const cls=Math.abs(r)<0.02?"flat":(r>0)===goodUp?"up":"down";
+  const a=Math.abs(r)<0.02?"→":r>0?"↑":"↓";
+  return '<div class="d"><span class="'+cls+'">'+a+" "+(Math.abs(r)*100).toFixed(0)+'%</span> <span style="opacity:.7">vs '+fmt(prev)+"</span></div>";
+}
+const kpi=(l,v,d,h)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v mono">'+v+"</div>"+(d||"")
+ +(h?'<div class="hint">'+h+"</div>":"")+"</div>";
+
+let KHO=null, buocLai=false;   // kho tam trong bo nho: doi campus/thoi gian khong goi lai 25 truy van
+const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","meta_campaign_daily",
+  "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","v_lead_campus","v_diem_danh",
+  "v_siso (1 dòng)","v_web_tong","v_tuan_campus","chi_tieu","v_can_ly_do","v_cohort_tuan",
+  "v_viec_tuan","v_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa","v_nhap_hoc",
+  "v_tuoi_du_lieu"];
+const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
+function taoTruyVan(CP){ return [
+    sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
+    sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day",{ascending:false}).limit(400),
+    sb.from("gsc_query").select("snapshot_on,query,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("impressions",{ascending:false}).limit(1200),
+    sb.from("meta_ad_daily").select("day,account_name,spend,impressions,reach,clicks").order("day",{ascending:false}).limit(1200),
+    sb.from("meta_campaign_daily").select("day,account_name,campaign_name,objective,spend,impressions,reach,clicks,link_clicks,results,result_type").order("day",{ascending:false}).limit(2000),
+    sb.from("gsc_page").select("snapshot_on,page,clicks,impressions,ctr,position").order("snapshot_on",{ascending:false}).order("clicks",{ascending:false}).limit(600),
+    sb.from("v_web_su_kien").select("cua_so,event_name,so_lan,nguoi").limit(500),
+    sb.from("v_web_trang").select("cua_so,landing_page,phien,gan_ket,giay_tong,su_kien").limit(500),
+    sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(4000),
+    sb.from("v_siso").select("nhom,campus,so_hs,so_lop").limit(2000),
+    sb.from("v_lead_campus").select("ngay,campus,giai_doan,nguon,so_lead").limit(2000),
+    sb.from("v_diem_danh").select("ngay,campus,di_hoc,vang,dan_thuoc").order("ngay",{ascending:false}).limit(2000),
+    sb.from("v_siso").select("nhom,campus,so_hs").limit(1),
+    sb.from("v_web_tong").select("cua_so,su_kien,phien").limit(10),
+    sb.from("v_tuan_campus").select("tuan,campus,cuoc_goi,lead_moi,hen,da_tham_quan,dat_coc,da_di_hoc").order("tuan",{ascending:false}).limit(2000),
+    sb.from("chi_tieu").select("campus,thang,tuyen_moi,si_so_kh").limit(500),
+    sb.from("v_can_ly_do").select("campus,ten,giai_doan,so_ngay_im_lang,ly_do,ngay_doi").order("so_ngay_im_lang",{ascending:false}).limit(1000),
+    sb.from("v_cohort_tuan").select("tuan_tao,campus,lead,cham_24h,cham_2_lan_tro_len,chua_ai_cham,hen_tham,coc_chot,tu_choi,im_lang_14").limit(500),
+    (CP? sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").eq("campus",CP).not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)
+       : sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)),
+    (CP? sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").eq("campus",CP).order("im_lang",{ascending:false}).limit(1000)
+       : sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").order("im_lang",{ascending:false}).limit(1000)),
+    sb.from("v_su_co").select("ma_ticket,ngay_tao,campus,phan_loai,muc_do,trang_thai,tieu_de,nguoi_tao,nguoi_duoc_giao,so_ngay_mo,con_mo,he_trong,so_tre_lq").order("ngay_tao",{ascending:false}).limit(1000),
+    sb.from("v_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra,chua_quay_lai,ngay_ke_tu_khi_nghi").order("den_ngay",{ascending:false}).limit(1000),
+    sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
+    sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
+    sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000),
+    sb.from("v_nhap_hoc").select("ma_tre,ten_tre,lop,campus,ngay_dau").gte("ngay_dau","2026-06-01").order("ngay_dau",{ascending:false}).limit(3000),
+    sb.from("v_tuoi_du_lieu").select("nguon,lan_cuoi,so_gio,so_lan").limit(20)
+];}
+// Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
+// "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
+const SONG_SONG=4;
+const THU_TU=TEN_NGUON.map((t,i)=>i)
+  .sort((a,b)=>(TEN_NGUON[b].indexOf("v_")===0?1:0)-(TEN_NGUON[a].indexOf("v_")===0?1:0));
+const HET_GIO=/timeout|canceling statement/i;
+const bocMot=async(CP,i)=>{
+  const t=performance.now(); let r=null, thu=0;
+  for(let lan=0;lan<2;lan++){
+    thu++;
+    try{ r=await taoTruyVan(CP)[i]; }
+    catch(e){ r={data:null,error:{message:String(e&&e.message||e)}}; }
+    if(!r||!r.error||!HET_GIO.test(r.error.message||"")) break;
+    await new Promise(s=>setTimeout(s,700));     // het gio -> nghi mot nhip roi thu lai dung 1 lan
+  }
+  r=r||{data:null,error:{message:"không rõ"}};
+  r.__ms=Math.round(performance.now()-t); r.__i=i; r.__thu=thu; return r;
+};
+async function chayTheoLo(CP, ds){
+  const kq={}; let k=0;
+  const tho=async()=>{ while(k<ds.length){ const i=ds[k++]; kq[i]=await bocMot(CP,i); } };
+  await Promise.all(Array.from({length:Math.min(SONG_SONG,ds.length)},tho));
+  return kq;
+}
+async function napKho(CP, ep){
+  if(!ep && KHO){
+    if(KHO.cp===CP) return KHO.kq;                     // khong doi gi -> dung lai het
+    const m=await chayTheoLo(CP, LOC_CAMPUS);           // doi campus -> chi goi lai 2 truy van
+    const kq=KHO.kq.slice(); LOC_CAMPUS.forEach(i=>{kq[i]=m[i];});
+    KHO={t:KHO.t, tLoc:new Date(), cp:CP, kq:kq, tong:KHO.tong}; return kq;
+  }
+  const t0=performance.now();
+  const m=await chayTheoLo(CP, THU_TU);
+  const kq=TEN_NGUON.map((_,i)=>m[i]);
+  KHO={t:new Date(), tLoc:new Date(), cp:CP, kq:kq, tong:Math.round(performance.now()-t0)};
+  return kq;
+}
+
+async function render(){
+  const n=+$("period").value;
+  const CP=$("camp").value||"";            // "" = toan he thong
+  const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
+  $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
+  const KQ = await napKho(CP, buocLai);
+  buocLai=false;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL}] = KQ;
+  // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
+  const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
+  const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
+  const nguonCham=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, ms:r&&r.__ms||0, thu:r&&r.__thu||1}))
+    .sort((a,b)=>b.ms-a.ms).slice(0,8);
+  const tongDong=KQ.reduce((a,r)=>a+((r&&r.data)?r.data.length:0),0);
+  const cdCard =
+   '<div class="card"'+(nguonHong.length?' style="border-color:#7f1d1d"':"")+'><h2>Chẩn đoán nguồn dữ liệu</h2>'
+   +'<p class="sub">'+fmt(KQ.length-nguonHong.length)+"/"+fmt(KQ.length)+' nguồn trả về dữ liệu · '
+   +fmt(tongDong)+' dòng · '+(KHO&&KHO.tong?fmt(KHO.tong)+"ms lần tải đầu":"—")+' · bản dựng '+BUILD+'</p>'
+   +'<p class="sub" style="margin:-8px 0 12px;text-transform:none;letter-spacing:0">8 nguồn chậm nhất</p>'
+   +'<div class="tw"><table><thead><tr><th>Nguồn</th><th>Dòng</th><th>Thời gian</th></tr></thead><tbody>'
+   +nguonCham.map(x=>"<tr><td><code>"+x.ten+'</code></td><td class="mono">'+fmt(x.n)
+     +'</td><td class="mono">'+(x.ms>3000?'<span class="down">':"<span>")+fmt(x.ms)+"ms</span>"
+     +(x.thu>1?' <span class="down" title="đã thử lại vì hết giờ">↻</span>':"")+"</td></tr>").join("")
+   +"</tbody></table></div>'"
+   +(nguonHong.length
+     ? '<div class="tw"><table><thead><tr><th>Nguồn</th><th>Dòng</th><th>Lỗi</th></tr></thead><tbody>'
+       +nguonHong.map(x=>'<tr><td><code>'+x.ten+'</code></td><td class="mono">'
+         +(x.n?fmt(x.n):'<span class="down">0</span>')+'</td><td style="text-align:left;white-space:normal">'
+         +(x.loi?'<span class="down">'+String(x.loi).replace(/</g,"&lt;")+"</span>":'<span style="opacity:.5">không lỗi — bảng rỗng hoặc chưa có quyền đọc</span>')+"</td></tr>").join("")
+       +"</tbody></table></div>"
+       +'<div class="q"><b>Đọc thế nào:</b> <code>statement timeout</code> = view còn sống nhưng <b>chạy quá lâu</b>, Postgres cắt giữa chừng — phải làm view nhanh hơn, không phải sửa cột. '
+       +'<b>0 dòng, không lỗi</b> = view còn sống nhưng rỗng, hoặc RLS chưa cho tài khoản này đọc. '
+       +'Hai loại này sửa ở hai chỗ khác nhau — chụp bảng này gửi tôi.</div>'
+     : '<p class="leg">Tất cả nguồn đều trả về dữ liệu.</p>')
+   +"</div>";
+  // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
+  const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
+  const gq=newest(gqAll,"snapshot_on"), gp=newest(gpAll,"snapshot_on");
+  if(!ga||!gs){$("body").innerHTML='<div class="card"><h2>Không đọc được dữ liệu</h2><p class="sub">Tài khoản chưa được cấp quyền xem.</p></div>';return}
+
+  // nap danh sach campus vao o chon, chi lam mot lan
+  if($("camp").options.length<2){
+    const ds=new Set();
+    (hs||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa gán campus)")ds.add(r.campus)});
+    (dd||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa rõ)")ds.add(r.campus)});
+    (tsi||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa rõ)"&&r.campus!=="TRUNG TÂM")ds.add(r.campus)});
+    [...ds].sort().forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;$("camp").appendChild(o)});
+  }
+  const nhanCP = CP ? CP : "toàn hệ thống";
+  const moGap = CP ? '<details><summary style="cursor:pointer;padding:14px 18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;font-weight:600">Xem dữ liệu toàn hệ thống — Website · Meta · Google (không tách được theo campus)</summary><div style="margin-top:14px">' : "";
+  const dongGap = CP ? "</div></details>" : "";
+  const luuY = "";
+
+  const days=[...new Set(ga.map(r=>r.day))].sort();
+  const end=days[days.length-1], start=shift(end,-(n-1)), pEnd=shift(start,-1), pStart=shift(pEnd,-(n-1));
+  const inR=(d,a,b)=>d>=a&&d<=b;
+  const sum=(rows,f,a,b)=>(rows||[]).filter(r=>inR(r.day,a,b)).reduce((s,r)=>s+(+r[f]||0),0);
+
+  const ses=sum(ga,"sessions",start,end), pses=sum(ga,"sessions",pStart,pEnd);
+  const usr=sum(ga,"active_users",start,end), pusr=sum(ga,"active_users",pStart,pEnd);
+  const cl=sum(gs,"clicks",start,end), pcl=sum(gs,"clicks",pStart,pEnd);
+  const im=sum(gs,"impressions",start,end), pim=sum(gs,"impressions",pStart,pEnd);
+
+  const byDay={}; days.filter(d=>inR(d,start,end)).forEach(d=>byDay[d]=0);
+  ga.forEach(r=>{if(byDay[r.day]!==undefined)byDay[r.day]+=(+r.sessions||0)});
+  const series=Object.keys(byDay).sort().map(d=>({d,v:byDay[d]}));
+
+  const ch={}; ga.filter(r=>inR(r.day,start,end)).forEach(r=>ch[r.channel]=(ch[r.channel]||0)+(+r.sessions||0));
+  const chRows=Object.entries(ch).sort((a,b)=>b[1]-a[1]); const chTot=chRows.reduce((s,x)=>s+x[1],0)||1;
+  const paidSes=ga.filter(r=>inR(r.day,start,end)&&/paid/i.test(r.channel)).reduce((s,r)=>s+(+r.sessions||0),0);
+
+  const brand=gq.filter(q=>/me\s*school/i.test(q.query));
+  const brandCl=brand.reduce((s,q)=>s+(+q.clicks||0),0);
+  const allCl=gq.reduce((s,q)=>s+(+q.clicks||0),0);
+
+  // ----- SU KIEN WEBSITE: website co cho phu huynh gio tay khong? -----
+  const RAISE=/form|submit|lead|contact|phone|hotline|tel|zalo|messeng|chat|call|dang.?ky|register|booking|dat.?lich|tu.?van/i;
+  const NOTRAISE=/form_start|^click$|^send$|select_content/i;
+  const isRaise=k=>RAISE.test(k)&&!NOTRAISE.test(k);
+  const evAgg={}; (ev||[]).filter(r=>+r.cua_so===n).forEach(r=>{
+    const k=r.event_name; evAgg[k]={c:+r.so_lan||0,u:+r.nguoi||0}});
+  // bo cac su kien khong noi len dieu gi ve phu huynh: gio hang thuong mai dien tu, "gửi" mo ho
+  const BOSK=/remove_from_cart|add_to_cart|view_cart|begin_checkout|purchase|^send$|^gui$|generate_lead$/i;
+  const evRows=Object.entries(evAgg).filter(([k])=>!BOSK.test(k)).sort((a,b)=>b[1].c-a[1].c);
+  const raiseAll=evRows.filter(([k])=>isRaise(k));
+  const suspect=raiseAll.filter(([k,v])=>ses&&v.c/ses>0.03);
+  const raiseRows=raiseAll.filter(x=>suspect.indexOf(x)<0);
+  const raiseTot=raiseRows.reduce((s,x)=>s+x[1].c,0);
+
+  // ----- GAN LEN TOP: tu khoa vi tri 8-20, con nhieu cho de len -----
+  const ctrAt=p=>p<=1.5?.28:p<=2.5?.15:p<=3.5?.11:p<=4.5?.085:p<=5.5?.065:p<=10?.04:p<=20?.014:.005;
+  const near=gq.filter(q=>+q.position>=7.5&&+q.position<=20.5&&+q.impressions>=30)
+    .map(q=>({...q,gain:Math.round(+q.impressions*ctrAt(4)- +q.clicks)}))
+    .filter(q=>q.gain>0).sort((a,b)=>b.gain-a.gain).slice(0,5);
+  const nearGain=near.reduce((s,q)=>s+q.gain,0);
+  // tieu de hong: xep hang tot nhung it ai bam
+  const weakTitle=gq.filter(q=>+q.position<=10&&+q.impressions>=150&&+q.ctr<ctrAt(+q.position)*0.4)
+    .sort((a,b)=>b.impressions-a.impressions).slice(0,6);
+
+  // ----- TRANG: ghep Search Console (nguon) voi GA4 (nguoi doc that su lam gi) -----
+  const path=u=>{try{return new URL(u).pathname}catch(e){return (u||"").replace(/^https?:\/\/[^/]+/,"")||"/"}};
+  const lpAgg={}; (lp||[]).filter(r=>+r.cua_so===n).forEach(r=>{
+    lpAgg[r.landing_page||"/"]={s:+r.phien||0, e:+r.gan_ket||0, t:+r.giay_tong||0}});
+  const pageRows=gp.slice(0,10).map(p=>{const g=lpAgg[path(p.page)]||null;
+    return {...p, ses:g?g.s:null, er:g&&g.s?g.e/g.s:null, sec:g&&g.s?g.t/g.s:null}});
+
+  // ----- Meta -----
+  const M=mt||[];
+  const msp=sum(M,"spend",start,end),  pmsp=sum(M,"spend",pStart,pEnd);
+  const mcl=sum(M,"clicks",start,end), pmcl=sum(M,"clicks",pStart,pEnd);
+  const mim=sum(M,"impressions",start,end), pmim=sum(M,"impressions",pStart,pEnd);
+  const cpc=mcl?msp/mcl:null,  pcpc=pmcl?pmsp/pmcl:null;
+  const cpm=mim?msp/mim*1000:null, pcpm=pmim?pmsp/pmim*1000:null;
+  const acc={}; M.filter(r=>inR(r.day,start,end)).forEach(r=>{const k=r.account_name||"(không tên)";
+    acc[k]=acc[k]||{s:0,i:0,c:0}; acc[k].s+=+r.spend||0; acc[k].i+=+r.impressions||0; acc[k].c+=+r.clicks||0});
+  const accRows=Object.entries(acc).sort((a,b)=>b[1].s-a[1].s);
+  const mDays=[...new Set(M.map(r=>r.day))].sort();
+
+  const metaCard = M.length ?
+   '<div class="card"><h2>Quảng cáo Meta</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
+   +'<div class="kpis">'
+   +kpi("Tiền đã tiêu",vnd(msp),delta(msp,pmsp,false),"nghìn đồng")
+   +kpi("Lượt bấm",fmt(mcl),delta(mcl,pmcl),"số lần bấm vào quảng cáo")
+   +kpi("Giá 1 lượt bấm",vnd(cpc),delta(cpc,pcpc,false),"tiền ÷ lượt bấm")
+   +kpi("Giá 1.000 lần hiện",vnd(cpm),delta(cpm,pcpm,false),"càng cao càng đắt để hiện ra")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tài khoản</th><th>Chi tiêu</th><th>Hiển thị</th><th>Nhấp</th><th>Giá/nhấp</th></tr></thead><tbody>'
+   +accRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+vnd(v.s)+'</td><td class="mono">'+fmt(v.i)
+     +'</td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+vnd(v.c?v.s/v.c:null)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>ng = nghìn đồng.</b> Ví dụ 135.000 ng = 135 triệu đồng.</p>'
+   +'<div class="gap"><b>Khoảng trắng:</b> <span class="big mono">'+fmt(mcl)+'</span> lượt nhấp đã trả tiền trên Meta, '
+   +'nhưng website chỉ nhận <span class="big mono">'+fmt(paidSes)+'</span> phiên từ quảng cáo trong cùng kỳ.<br>'
+   +'Vậy những người bấm đó đi đâu — ai trả lời họ, sau bao lâu, và có ai trong số đó được ghi vào CRM không?</div></div>'
+   : '<div class="card"><h2>Quảng cáo Meta</h2><p class="sub">Chưa có dữ liệu trong khoảng này</p></div>';
+
+  // ----- Meta theo campaign: tien di dau, campaign nao dot -----
+  const cmp={}; (mc||[]).filter(r=>inR(r.day,start,end)).forEach(r=>{
+    const k=(r.campaign_name||"(không tên)")+"|"+(r.account_name||"");
+    cmp[k]=cmp[k]||{name:r.campaign_name||"(không tên)",acc:r.account_name||"",obj:r.objective||"",
+                    s:0,i:0,re:0,c:0,lc:0,res:0,rt:r.result_type||""};
+    const o=cmp[k]; o.s+=+r.spend||0; o.i+=+r.impressions||0; o.re+=+r.reach||0;
+    o.c+=+r.clicks||0; o.lc+=+r.link_clicks||0; o.res+=+r.results||0;
+    if(r.result_type) o.rt=r.result_type});
+  const cmpRows=Object.values(cmp).sort((a,b)=>b.s-a.s).slice(0,20);
+  const cmpSpend=cmpRows.reduce((s,x)=>s+x.s,0), cmpRes=cmpRows.reduce((s,x)=>s+x.res,0);
+  const tired=cmpRows.filter(x=>x.re&&x.i/x.re>=2.5&&x.s>0);
+  const noRes=cmpRows.filter(x=>x.s>0&&!x.res);
+  const cmpCard = !cmpRows.length ? "" :
+   '<div class="card"><h2>Meta theo chiến dịch</h2><p class="sub">'+cmpRows.length+' chiến dịch có chi tiêu · '+start+" → "+end+'</p>'
+   +'<div class="tw"><table style="min-width:740px"><thead><tr><th>Chiến dịch</th><th>Chi tiêu</th><th>Tần suất</th><th>CPM</th><th>CTR</th><th>Kết quả</th><th>Giá/kết quả</th></tr></thead><tbody>'
+   +cmpRows.map(x=>{const f=x.re?x.i/x.re:null;
+     return '<tr><td style="max-width:230px;white-space:normal">'+x.name
+      +'<div style="font-size:11px;color:var(--muted)">'+x.acc+(x.obj?" · "+x.obj:"")+'</div>'
+      +'</td><td class="mono">'+vnd(x.s)
+      +'</td><td class="mono'+(f&&f>=2.5?" down":"")+'">'+(f?dec(f,2):"—")
+      +'</td><td class="mono">'+vnd(x.i?x.s/x.i*1000:null)
+      +'</td><td class="mono">'+pct(x.i?(x.lc||x.c)/x.i:null,2)
+      +'</td><td class="mono">'+(x.res?fmt(x.res)+' <span style="font-size:10px;color:var(--muted)">'+x.rt+'</span>':'<span class="down">0</span>')
+      +'</td><td class="mono">'+(x.res?vnd(x.s/x.res):"—")+"</td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>ng = nghìn đồng</b> (135.000 ng = 135 triệu) · <b>CPM</b> = tiền để quảng cáo hiện ra 1.000 lần · '
+   +'<b>CTR</b> = bao nhiêu % người thấy thì bấm · <b>Kết quả</b> = việc Meta ghi nhận được (tin nhắn, lead…).</p>'
+   +'<p class="note">Tần suất = mỗi người thấy quảng cáo bao nhiêu lần. Từ 2,5 trở lên là đang phát lại cho cùng một nhóm — tiền tăng, kết quả không tăng.</p>'
+   +(noRes.length ?
+     '<div class="gap"><b>'+noRes.length+' chiến dịch chi tiền nhưng Meta không ghi nhận một kết quả nào:</b> '
+     +noRes.slice(0,4).map(x=>x.name+" ("+vnd(x.s)+")").join(" · ")
+     +'<br>Hoặc chiến dịch đặt sai mục tiêu, hoặc kết quả đang xảy ra ở chỗ Meta không thấy được. Ai đặt mục tiêu cho những chiến dịch này?</div>' : "")
+   +(tired.length ?
+     '<div class="gap"><b>'+tired.length+' chiến dịch có tần suất ≥ 2,5:</b> '+tired.slice(0,4).map(x=>x.name).join(" · ")
+     +'<br>Cùng một nhóm phụ huynh đang bị phát đi phát lại. Lần cuối đổi hình/nội dung quảng cáo là bao giờ?</div>' : "")
+   +(function(){
+      // KHONG tron cac loai ket qua: 1 like va 1 tin nhan khong cung don vi
+      const L={}; (mc||[]).filter(r=>inR(r.day,start,end)).forEach(r=>{
+        const k=(r.result_type||"(chưa đặt mục tiêu)");
+        const o=L[k]||(L[k]={chi:0,kq:0,cd:{}}); o.chi+=+r.spend||0; o.kq+=+r.results||0;
+        if(r.campaign_name)o.cd[r.campaign_name]=1;});
+      const rows=Object.entries(L).sort((a,b)=>b[1].chi-a[1].chi);
+      if(!rows.length) return "";
+      const TENKQ={"tin nhan":"Tin nhắn Messenger","nhap lien ket":"Nhấp vào liên kết",
+        "tuong tac bai":"Tương tác bài (like, bình luận)","lead":"Lead (form Meta)"};
+      const dat=rows.filter(x=>x[1].kq>0);
+      const datNhat=dat.length?dat.reduce((a,b)=>(a[1].chi/a[1].kq)>(b[1].chi/b[1].kq)?a:b):null;
+      return '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Chi tiêu và giá theo <b>từng loại kết quả</b></p>'
+      +'<div class="tw"><table><thead><tr><th>Loại kết quả Meta đếm</th><th>Chiến dịch</th><th>Chi tiêu</th><th>Kết quả</th><th>Giá mỗi kết quả</th></tr></thead><tbody>'
+      +rows.map(([k,v])=>"<tr><td>"+(TENKQ[k]||k)+'</td><td class="mono">'+fmt(Object.keys(v.cd).length)
+        +'</td><td class="mono">'+vnd(v.chi)+'</td><td class="mono">'+(v.kq?fmt(v.kq):'<span style="opacity:.35">0</span>')
+        +'</td><td class="mono">'+(v.kq?"<b>"+vnd(v.chi/v.kq)+"</b>":'<span style="opacity:.35">—</span>')+"</td></tr>").join("")
+      +"</tbody></table></div>"
+      +'<p class="leg"><b>Vì sao không có một con số “giá mỗi kết quả” chung:</b> Meta gọi mọi thứ là “kết quả”, '
+      +'nhưng <b>một lượt like và một tin nhắn của phụ huynh không cùng đơn vị</b>. Cộng chúng lại rồi chia ra một con số trung bình '
+      +'sẽ cho ra một giá rẻ giả tạo — vì hàng nghìn lượt like giá vài chục đồng kéo tụt con số xuống, '
+      +'trong khi gần như toàn bộ tiền lại nằm ở loại đắt nhất.</p>'
+      +(datNhat ? '<div class="q"><b>Con số đáng nhìn:</b> <b>'+(TENKQ[datNhat[0]]||datNhat[0])+'</b> đang tốn <b class="mono">'
+        +vnd(datNhat[1].chi/datNhat[1].kq)+'</b> một kết quả, chiếm <b>'+pct(datNhat[1].chi/(cmpSpend||1),0)
+        +'</b> tổng chi tiêu.<br>Câu hỏi: trong số đó bao nhiêu thành một cuộc hẹn thăm trường? '
+        +'Nếu chưa ai đếm được, thì mọi tranh luận về “quảng cáo đắt hay rẻ” đều chưa có căn cứ.</div>' : "");
+    })()
+   +"</div>";
+
+  // ----- AI GIO TAY TREN WEBSITE (du lieu cua chinh ME School) -----
+  const TEN={zalo:"Zalo",hotline:"Gọi hotline",messenger:"Nhắn Messenger",form:"Gửi form"};
+  const NGUON={trangchu:"Trang chủ",blog:"Bài blog",web:"Trang khác"};
+  // bang nay ghi thoi gian thuc -> luon tinh den hom nay, khong dung theo cua so GA4 (GA4 tre 2 ngay)
+  const homNay=new Date(Date.now()+7*3600*1000).toISOString().slice(0,10);
+  const endW = end>homNay ? end : homNay;
+  const W=(wc||[]).filter(r=>r.ts && inR(String(r.ts).slice(0,10),start,endW));
+  const wKind={}, wRef={};
+  W.forEach(r=>{wKind[r.kind]=(wKind[r.kind]||0)+1; const g=r.ref||"web"; wRef[g]=(wRef[g]||0)+1});
+  const wTot=W.length;
+  const wDays=[...new Set(W.map(r=>String(r.ts).slice(0,10)))].sort();
+  const wCard = !wTot ?
+   '<div class="card"><h2>Ai giơ tay trên website</h2><p class="sub">Dữ liệu của chính ME School — bắt đầu ghi từ 03/09/2026</p>'
+   +'<div class="q">Chưa có lượt nào. Bảng này chỉ đếm từ lúc bật (03/09/2026), không có dữ liệu quá khứ.<br>'
+   +'Chọn khoảng <b>7 ngày gần nhất</b> để xem những lượt mới nhất.</div></div>'
+   : '<div class="card"><h2>Ai giơ tay trên website</h2><p class="sub">Dữ liệu của chính ME School · không qua Google hay Meta · '+start+" → "+endW+' (thời gian thực, tính đến hôm nay)</p>'
+   +'<div class="kpis">'
+   +kpi("Tổng lượt bấm",fmt(wTot),"","cú bấm, KHÔNG phải số người")
+   +kpi("Trên tổng lượt vào",pct(ses?wTot/ses:0,2),"","bao nhiêu % khách để lại liên hệ")
+   +kpi("Từ bài blog",fmt(wRef.blog||0),"","nội dung miễn phí mang về")
+   +kpi("Từ trang chủ",fmt(wRef.trangchu||0),"","người vào thẳng website")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Cách liên lạc</th><th>Số lượt</th><th>Tỷ lệ</th></tr></thead><tbody>'
+   +Object.entries(wKind).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<tr><td>'+(TEN[k]||k)
+     +'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(v/wTot,0)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Đây là số CÚ BẤM, không phải số NGƯỜI.</b> Bảng ghi nhận không có mã nhận diện khách, '
+   +'nên một người vừa bấm hotline vừa bấm Messenger sẽ được đếm <b>2 lượt</b>, và bấm lại 3 lần là <b>3 lượt</b>. '
+   +'Không khử trùng được — muốn đếm theo người thì phải thêm mã khách vào đoạn ghi nhận trên website.</p>'
+   +'<p class="leg"><b>Cách đọc:</b> mỗi dòng là một lần phụ huynh bấm nút liên lạc trên web. '
+   +'Đây <b>chưa phải lead</b> — bấm gọi không có nghĩa là đã nói chuyện được. '
+   +'Nhưng đây là số ME School tự đo, không phụ thuộc bên nào.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> '+fmt(wTot)+' lượt giơ tay trong kỳ này — bao nhiêu trong số đó có tên trong AMIS?</div></div>';
+
+  // ----- the: su kien website -----
+  const TENSK={
+    page_view:"Xem một trang", session_start:"Một lượt vào web", first_visit:"Lần đầu vào web",
+    user_engagement:"Ở lại đọc (quá 10 giây)", scroll:"Kéo xuống cuối trang",
+    click:"Bấm liên kết ra ngoài", form_start:"Bắt đầu điền form", form_submit:"Gửi form",
+    view_search_results:"Tìm kiếm trên web", generate_lead:"Được ghi nhận là lead",
+    remove_from_cart:"Bỏ khỏi giỏ hàng (thừa từ nền tảng bán hàng)", add_to_cart:"Thêm vào giỏ hàng (thừa)",
+    view_item:"Xem sản phẩm (thừa)", send:"Gửi (chưa rõ đo gì)",
+    GA4_Form_Submit:"Gửi form (đo bằng GTM)", GA4_click_form_submit:"Bấm nút trong form",
+    GA4_click_messenger:"Bấm nhắn Messenger", GA4_click_hotline:"Bấm gọi hotline",
+    GA4_click_zalo:"Bấm nhắn Zalo"};
+  const tenSK=k=>TENSK[k]||k.replace(/^GA4_/,"").replace(/_/g," ");
+  const keTot=((wTong||[]).find(r=>+r.cua_so===n)||{}).su_kien||0;
+  const evCard = !evRows.length ?
+   '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">Chưa có dữ liệu — lần kéo tới sẽ có</p></div>'
+   : '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">'+evRows.length+' loại sự kiện GA4 đang ghi nhận · '+start+" → "+end+'</p>'
+   +'<div class="tw"><table><thead><tr><th>Sự kiện</th><th>Số lần</th><th>Người</th><th>Giơ tay?</th></tr></thead><tbody>'
+   +evRows.slice(0,20).map(([k,v])=>'<tr><td style="white-space:normal">'+tenSK(k)
+     +'<div style="font-size:10.5px;color:var(--muted)" class="mono">'+k+'</div></td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+fmt(v.u)
+     +'</td><td>'+(suspect.some(x=>x[0]===k)?'<span class="down">? sai</span>':isRaise(k)?'<span class="up">✓</span>':'<span style="color:var(--muted)">—</span>')+'</td></tr>').join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Số lần</b> = tổng số lần xảy ra · <b>Người</b> = số người khác nhau. '
+   +'Lấy Số lần ÷ Người: nếu một sự kiện "giơ tay" ra tỷ lệ trên 10 thì gần như chắc chắn đo sai — không ai bấm gửi form 10 lần.</p>'
+   +(suspect.length ? '<div class="gap"><b>Nghi ngờ đo sai:</b> '
+     +suspect.map(([k,v])=>tenSK(k)+" ("+fmt(v.c)+" lần = "+pct(v.c/ses,1)+" số phiên)").join(" · ")
+     +'<br>Một sự kiện "giơ tay" xảy ra ở hơn 3% số phiên gần như chắc chắn là điều kiện kích hoạt bắt quá rộng — nó đang đếm cả những cú bấm không phải gửi thông tin. Đã loại khỏi tổng bên dưới.<br>Ai dựng trigger này trong GTM — và có ai đang báo cáo con số đó như số lead không?</div>' : "")
+   +(raiseRows.length ?
+      '<div class="q"><b>Có '+raiseRows.length+' cách để phụ huynh giơ tay.</b> '+fmt(raiseTot)+' lần trong kỳ, trên '+fmt(ses)
+      +' phiên — tỷ lệ <b class="mono">'+pct(ses?raiseTot/ses:0,2)+'</b>.'
+      +(keTot?' GA4 đếm được <b class="mono">'+fmt(keTot)+'</b> key event.':'')
+      +'<br>Ai nhận những lượt giơ tay này, và sau bao lâu thì có người gọi lại?</div>'
+    : '<div class="gap"><b>Không có một sự kiện nào là chỗ để phụ huynh giơ tay.</b> '
+      +'Toàn bộ '+evRows.length+' sự kiện đang ghi nhận đều là hành vi xem trang — không có form, không có nút gọi, không có Zalo, không có đặt lịch.<br>'
+      +'Nghĩa là <span class="big mono">'+fmt(ses)+'</span> phiên trong kỳ này đi vào website và <b>không có cách nào để lại tên.</b><br>'
+      +'Câu hỏi: việc gắn một đường giơ tay lên các trang có traffic — hôm nay ai được giao?</div>')
+   +"</div>";
+
+  // ----- the: trang co traffic -----
+  const pageCard = !pageRows.length ? "" :
+   '<div class="card"><h2>Trang kéo được người vào</h2><p class="sub">Xếp theo <b>lượt nhấp</b> từ Google · ghép với hành vi đọc trên GA4</p>'
+   +'<div class="tw"><table style="min-width:640px"><thead><tr><th>Trang</th><th>Nhấp</th><th>Hiển thị</th><th>Vị trí</th><th>Phiên</th><th>Đọc thật</th><th>Giây</th></tr></thead><tbody>'
+   +pageRows.map(p=>'<tr><td style="max-width:260px;white-space:normal;word-break:break-all">'+path(p.page)
+     +'</td><td class="mono">'+fmt(p.clicks)+'</td><td class="mono">'+fmt(p.impressions)
+     +'</td><td class="mono">'+dec(p.position,1)+'</td><td class="mono">'+fmt(p.ses)
+     +'</td><td class="mono">'+(p.er==null?"—":pct(p.er,0))+'</td><td class="mono">'+(p.sec==null?"—":Math.round(p.sec))+"</td></tr>").join("")
+   +'</tbody></table></div><p class="note">"Đọc thật" = phiên ở lại đủ lâu hoặc xem tiếp trang khác. Trang nhiều nhấp nhưng đọc thật thấp = tiêu đề hứa một đằng, nội dung một nẻo.</p></div>';
+
+  // ----- the: gan len top -----
+  const nearCard = !near.length ? "" :
+   '<div class="card"><h2>Gần lên top</h2><p class="sub">Từ khoá đang ở vị trí 8–20 · đẩy lên top 4 dễ hơn viết bài mới</p>'
+   +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Vị trí</th><th>Hiển thị</th><th>Nhấp nay</th><th>Thêm được</th></tr></thead><tbody>'
+   +near.map(q=>'<tr><td style="max-width:230px;white-space:normal">'+q.query+'</td><td class="mono">'+dec(q.position,1)
+     +'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
+     +'</td><td class="mono up">+'+fmt(q.gain)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +(weakTitle.length ?
+     '<p class="sub" style="margin:16px 0 6px;color:var(--warn);text-transform:none;letter-spacing:0;font-size:13px"><b>Xếp hạng tốt nhưng ít ai bấm — nhiều khả năng tiêu đề hỏng:</b></p>'
+     +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Vị trí</th><th>Hiển thị</th><th>CTR</th><th>Đáng lẽ</th></tr></thead><tbody>'
+     +weakTitle.map(q=>'<tr><td style="max-width:230px;white-space:normal">'+q.query+'</td><td class="mono">'+dec(q.position,1)
+       +'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono down">'+pct(q.ctr,1)+'</td><td class="mono">'+pct(ctrAt(+q.position),1)+"</td></tr>").join("")
+     +"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Thêm được</b> là <b>ước lượng</b>, không phải cam kết: giả sử từ khoá lên vị trí 4 '
+   +'thì cứ 100 lần hiện ra sẽ có ~8,5 người bấm (mức trung bình của ngành).</p>'
+   +'<div class="q"><b>Cộng lại:</b> khoảng <span class="big mono">+'+fmt(nearGain)+'</span> lượt nhấp mỗi kỳ nếu '+near.length
+   +' từ khoá này lên được top 4 — không tốn một đồng quảng cáo nào.<br>Ai là người viết? Và tuần này họ sửa được mấy bài?</div></div>';
+
+  // ----- the: hoc sinh va tuyen sinh (AMIS CRM) -----
+  const H=(hs||[]).filter(r=>hopCP(r.campus)), TS=(tsi||[]).filter(r=>hopCP(r.campus)||(!CP));
+  const nhomD={}; H.forEach(r=>nhomD[r.nhom]=(nhomD[r.nhom]||0)+(+r.so_hs||0));
+  const diHoc=nhomD["Đang đi học"]||0, choHoc=nhomD["Đã đóng tiền, chờ đi học"]||0,
+        baoLuu=nhomD["Bảo lưu"]||0, chuaPL=nhomD["Chưa phân loại"]||0;
+  const camp={}; H.filter(r=>r.nhom==="Đang đi học").forEach(r=>{const c=r.campus||"(chưa gán campus)";const o=camp[c]||(camp[c]={hs:0,lop:0});o.hs+=(+r.so_hs||0);o.lop+=(+r.so_lop||0)});
+  const campRows=Object.entries(camp).sort((a,b)=>b[1].hs-a[1].hs);
+  const tongLop=campRows.reduce((s2,x)=>s2+x[1].lop,0);
+  const tsMoi=TS.filter(r=>r.ngay&&r.ngay>=start&&r.ngay<=end);
+  const tsTong=tsMoi.reduce((s2,r)=>s2+(+r.so_lead||0),0);
+  const gd={}; tsMoi.forEach(r=>{const k=r.giai_doan||"(chưa có)";gd[k]=(gd[k]||0)+(+r.so_lead||0)});
+  const gdRows=Object.entries(gd).sort((a,b)=>b[1]-a[1]);
+  // ai dang giu lead: trung tam hay campus (chi hien khi xem toan he thong)
+  const CHOT=/thành công|đặt cọc/i;
+  const giu={}; (tsi||[]).filter(r=>r.ngay&&r.ngay>=start&&r.ngay<=end).forEach(r=>{
+    const k=(r.campus==="TRUNG TÂM")?"Trung tâm (Hiền)":"Campus tự giữ";
+    const o=giu[k]||(giu[k]={lead:0,chot:0,tq:0});
+    o.lead+=(+r.so_lead||0);
+    if(CHOT.test(r.giai_doan||"")) o.chot+=(+r.so_lead||0);
+    if(/tham quan/i.test(r.giai_doan||"")) o.tq+=(+r.so_lead||0)});
+  const giuRows=Object.entries(giu).sort((a,b)=>b[1].lead-a[1].lead);
+  // ----- THE: TRE DEN LOP MOI NGAY (Tomia) -----
+  const ddLoc=(dd||[]).filter(r=>hopCP(r.campus));
+  const ddNgay={}; ddLoc.forEach(r=>{const o=ddNgay[r.ngay]||(ddNgay[r.ngay]={ngay:r.ngay,di_hoc:0,vang:0,dan_thuoc:0});
+    o.di_hoc+=+r.di_hoc||0; o.vang+=+r.vang||0; o.dan_thuoc+=+r.dan_thuoc||0});
+  // thu Bay/Chu nhat trung binh ~120 tre = 1/5 ngay thuong -> phai tach, khong tron vao trung binh
+  const cuoiTuan=d=>{const w=new Date(d+"T00:00:00Z").getUTCDay(); return w===0||w===6;};
+  const DDall=Object.values(ddNgay).map(r=>({...r, ct:cuoiTuan(r.ngay), ty_le: (r.di_hoc+r.vang)?100*r.di_hoc/(r.di_hoc+r.vang):null}))
+    .sort((a,b)=>a.ngay<b.ngay?1:-1);
+  const DD=DDall.filter(r=>!r.ct);          // chi ngay thuong
+  const DDct=DDall.filter(r=>r.ct);         // cuoi tuan, de rieng
+  const ddNay=DD[0]||null;
+  const dd14=DD.slice(0,14);
+  const ctTB=DDct.slice(0,8).length?Math.round(DDct.slice(0,8).reduce((s2,r)=>s2+r.di_hoc,0)/DDct.slice(0,8).length):null;
+  const moc28=DD.length?DD[Math.min(19,DD.length-1)].ngay:"";   // 20 ngay THUONG ~ 4 tuan
+  const ddT2={}; ddLoc.filter(r=>r.ngay>=moc28 && !cuoiTuan(r.ngay)).forEach(r=>{const o=ddT2[r.campus]||(ddT2[r.campus]={ten_truong:r.campus,d:0,v:0,n:0});
+    o.d+=+r.di_hoc||0; o.v+=+r.vang||0; o.n++});
+  const ddTruong=Object.values(ddT2).map(o=>({ten_truong:o.ten_truong, di_hoc_tb:Math.round(o.d/(o.n||1)),
+    vang_tb:Math.round(o.v/(o.n||1)), ty_le:(o.d+o.v)?100*o.d/(o.d+o.v):null}))
+    .sort((a,b)=>b.di_hoc_tb-a.di_hoc_tb);
+  const ddTong=ddTruong.reduce((s2,r)=>s2+(+r.di_hoc_tb||0),0);
+  // TAN THUAN / LINH DAM khong dung AMIS CRM -> si so "tam" = trung binh so tre co mat
+  // trong 5 ngay hoc gan nhat (chi ngay thuong), lay tu diem danh Tomia
+  const NGOAI_CRM=["TÂN THUẬN","LINH ĐÀM"];
+  const ngayHoc=DD.slice(0,5).map(r=>r.ngay);
+  const siTam=NGOAI_CRM.map(c=>{
+    const v=ddLoc.filter(r=>r.campus===c && ngayHoc.indexOf(r.ngay)>=0).map(r=>+r.di_hoc||0);
+    return {campus:c, hs:v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null, n:v.length};
+  }).filter(x=>x.hs!==null);
+  const tamTong=siTam.reduce((s2,x)=>s2+x.hs,0);
+  const tamNgay=ngayHoc.length?ngayHoc[ngayHoc.length-1]+" → "+ngayHoc[0]:"";
+  const ddCard = !ddNay ? "" :
+   '<div class="card"><h2>Trẻ đến lớp mỗi ngày</h2><p class="sub">Từ Tomia · '+nhanCP+' · ngày thường gần nhất: '+ddNay.ngay+' · '+ddTruong.length+' trường</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Chỉ tính <b>ngày thường (T2–T6)</b>. Bảng ngày = <b>14 ngày thường gần nhất</b>; bảng trường = <b>trung bình 20 ngày thường</b> (≈4 tuần). Không đổi theo ô chọn thời gian.'
+   +(ctTB!==null?' · Cuối tuần để riêng: trung bình <b>'+fmt(ctTB)+' trẻ</b>/ngày.':'')+'</p>'
+   +'<div class="kpis">'
+   +kpi("Đang có mặt",fmt(ddNay.di_hoc),"","trẻ thật sự đến lớp hôm đó")
+   +kpi("Vắng",fmt(ddNay.vang),"","nghỉ ốm, nghỉ phép")
+   +kpi("Tỷ lệ có mặt",dec(ddNay.ty_le,1)+"%","","đi học ÷ (đi học + vắng)")
+   +kpi("Trẻ có dặn thuốc",fmt(ddNay.dan_thuoc),"","cần người theo dõi trong ngày")+"</div>"
+   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">14 ngày thường gần nhất (bỏ T7/CN)</p>'
+   +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Đi học</th><th>Vắng</th><th>Có mặt</th></tr></thead><tbody>'
+   +dd14.slice().reverse().map(r=>"<tr><td>"+r.ngay+'</td><td class="mono">'+fmt(r.di_hoc)+'</td><td class="mono">'+fmt(r.vang)
+     +'</td><td class="mono">'+dec(r.ty_le,1)+"%</td></tr>").join("")+"</tbody></table></div>"
+   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Trung bình 20 ngày thường, theo trường</p>'
+   +'<div class="tw"><table><thead><tr><th>Trường</th><th>Đi học TB</th><th>Vắng TB</th><th>Tỷ lệ có mặt</th></tr></thead><tbody>'
+   +ddTruong.map(r=>"<tr><td>"+r.ten_truong+'</td><td class="mono">'+fmt(r.di_hoc_tb)+'</td><td class="mono">'+fmt(r.vang_tb)
+     +'</td><td class="mono">'+dec(r.ty_le,1)+"%</td></tr>").join("")
+   +'<tr><td><b>Toàn hệ thống</b></td><td class="mono"><b>'+fmt(ddTong)+"</b></td><td></td><td></td></tr>"
+   +"</tbody></table></div>"
+   +'<p class="leg">Tomia có <b>'+ddTruong.length+' trường</b>, AMIS CRM có <b>13</b>. '
+   +'Tân Thuận và Linh Đàm không dùng CRM (cấu trúc pháp lý riêng), nên hai bảng không bao giờ bằng nhau — chênh lệch đó là bình thường, miễn là giải thích được.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> ngày có tỷ lệ có mặt thấp nhất trong 14 ngày trên — hôm đó xảy ra chuyện gì, và ai là người đầu tiên biết?</div></div>';
+
+  const sdt=v=>v?'<a href="tel:'+String(v).replace(/[^\d+]/g,"")+'" class="mono" style="color:inherit">'+v+"</a>":'<span style="opacity:.45">—</span>';
+  // ----- ten vui theo campus -----
+  const CO={}; (nguoi||[]).forEach(r=>{CO[r.campus]={that:r.ten_that, nguon:r.nguon_ten, vai:r.vai_tro}});
+  // ten that co the la nguoi phu trach that, hoac chi la nguoi ghi nhan nhieu nhat -> phai noi ro
+  const nhan=c=>{const t=CO[c]; if(!t) return '<b>'+(c||"(chưa rõ)")+'</b>';
+    const chac = t.nguon==="người phụ trách" || t.nguon==="QLVH";
+    return '<b>'+c+'</b>'
+      +(t.that?'<br><span style="opacity:'+(chac?'.6':'.45')+';font-size:11px" title="'+(t.nguon||"")+'">'+t.that+(chac?"":" ?")+'</span>':'');};
+
+  // ----- THE: AN TOAN & SU CO (Tomia, sheet Van hanh) -----
+  const scLoc=(suCo||[]).filter(r=>hopCP(r.campus));
+  const scMo=scLoc.filter(r=>r.con_mo), scNang=scMo.filter(r=>r.he_trong);
+  const scChuaGiao=scMo.filter(r=>!r.nguoi_duoc_giao);
+  const scTBngay=scMo.length?Math.round(scMo.reduce((a,r)=>a+(+r.so_ngay_mo||0),0)/scMo.length):0;
+  const scTheoCampus={}; scMo.forEach(r=>{const k=r.campus||"(chưa rõ)";
+    const o=scTheoCampus[k]||(scTheoCampus[k]={mo:0,nang:0,lau:0}); o.mo++; if(r.he_trong)o.nang++;
+    if((+r.so_ngay_mo||0)>30)o.lau++});
+  const scCampusRows=Object.entries(scTheoCampus).sort((a,b)=>b[1].nang-a[1].nang||b[1].mo-a[1].mo);
+  const scCard = !scLoc.length ? "" :
+   '<div class="card" style="border-color:#7f1d1d"><h2>🚨 An toàn &amp; sự cố</h2>'
+   +'<p class="sub">Từ Tomia · '+nhanCP+' · ticket vận hành, hành vi, an toàn, sức khoẻ</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Toàn bộ ticket có trong các kỳ báo cáo đã kéo về. <b>Không đổi theo ô chọn thời gian</b> — sự cố chưa đóng thì không có hạn.</p>'
+   +'<div class="kpis">'
+   +kpi("Còn mở",fmt(scMo.length),"","chưa đóng, chưa hoàn tất")
+   +kpi("Nghiêm trọng còn mở",fmt(scNang.length),"","An toàn · Hành vi · hoặc mức Cao")
+   +kpi("Chưa giao cho ai",fmt(scChuaGiao.length),"","không có người được giao")
+   +kpi("Mở trung bình",fmt(scTBngay)+" ngày","","tính đến hôm nay")+"</div>"
+   +(scNang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghiêm trọng &amp; còn mở — đọc từng dòng</p>'
+     +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Campus</th><th>Việc gì</th><th>Loại</th><th>Mức</th><th>Trạng thái</th><th>Đã mở</th><th>Giao cho</th></tr></thead><tbody>'
+     +scNang.sort((a,b)=>(+b.so_ngay_mo||0)-(+a.so_ngay_mo||0)).map(r=>
+       '<tr style="background:rgba(220,38,38,.10)"><td>'+(r.ngay_tao||"—")+'</td><td>'+nhan(r.campus)+'</td><td>'+(r.tieu_de||"—")
+       +'</td><td>'+(r.phan_loai||"—")+'</td><td>'+(r.muc_do||"—")+'</td><td>'+(r.trang_thai||"—")
+       +'</td><td class="mono"><span class="down">'+fmt(r.so_ngay_mo)+' ngày</span></td><td>'
+       +(r.nguoi_duoc_giao||'<span style="color:#f87171">chưa giao</span>')+"</td></tr>").join("")
+     +"</tbody></table></div>" : '<p class="leg">Không có sự cố nghiêm trọng nào đang mở.</p>')
+   +(scCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Ticket còn mở, theo campus</p>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Còn mở</th><th>Nghiêm trọng</th><th>Mở quá 30 ngày</th></tr></thead><tbody>'
+     +scCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.mo)+'</td><td class="mono">'+(v.nang?'<span class="down">'+v.nang+"</span>":"0")
+       +'</td><td class="mono">'+fmt(v.lau)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Tên người dưới tên campus</b> lấy từ hệ thống — '
+   +'<b>6 campus</b> là QLVH thật (ghi trong SUPA), <b>9 campus</b> có dấu <b>?</b> là <i>người ghi nhận nhiều nhất</i>, '
+   +'không phải người chịu trách nhiệm. Muốn đúng thì gán người phụ trách vào bảng <code>nguoi_phu_trach</code> — dấu ? sẽ mất.</p>'
+   +'<p class="leg"><b>“Nghiêm trọng”</b> = phân loại An toàn hoặc Hành vi, hoặc mức độ Cao. Đây là quy ước của app, không phải của Tomia — Tomia chỉ ghi phân loại và mức độ rời nhau.</p>'
+   +'<div class="q"><b>Nguyên tắc thứ nhất:</b> an toàn trẻ em không đứng sau tăng trưởng. '
+   +'Một ticket mức Cao còn mở sau 48 giờ là một quyết định đã bị hoãn, không phải một việc đang chờ. '
+   +'Dòng nào ghi <i>chưa giao</i> — ai là người nhận nó trước khi hết ngày hôm nay?</div></div>';
+
+  // ----- THE: TRE NGHI LIEN TUC (Tomia, sheet diem danh chi tiet) -----
+  const ngLoc=(nghi||[]).filter(r=>hopCP(r.campus));
+  const ngDang=ngLoc.filter(r=>r.dang_dien_ra);
+  const ngMat=ngLoc.filter(r=>r.chua_quay_lai&&!r.dang_dien_ra).sort((a,b)=>(+a.ngay_ke_tu_khi_nghi||0)-(+b.ngay_ke_tu_khi_nghi||0));
+  const ngCoLyDo=ngLoc.filter(r=>r.ly_do&&String(r.ly_do).trim());
+  const ngTheoCampus={}; ngLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";
+    const o=ngTheoCampus[k]||(ngTheoCampus[k]={n:0,dang:0,buoi:0,cly:0});
+    o.n++; if(r.dang_dien_ra)o.dang++; o.buoi+=+r.so_buoi||0; if(r.ly_do)o.cly++});
+  const ngCampusRows=Object.entries(ngTheoCampus).sort((a,b)=>b[1].dang-a[1].dang||b[1].n-a[1].n);
+  const ngCard = !ngLoc.length ? "" :
+   '<div class="card"><h2>Trẻ nghỉ liên tục từ 3 buổi</h2>'
+   +'<p class="sub">Từ Tomia · điểm danh chi tiết từng trẻ · '+nhanCP+'</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Chuỗi nghỉ tính theo <b>ngày học liên tiếp</b> — đã bỏ thứ Bảy, Chủ nhật và ngày nghỉ lễ. Gọi hỏi thăm <b>từ buổi thứ tư</b>.</p>'
+   +'<div class="kpis">'
+   +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chưa quay lại, mới nghỉ trong vòng 7 ngày")
+   +kpi("Nghỉ lâu, chưa quay lại",fmt(ngMat.length),"","quá 7 ngày — nghi đã nghỉ hẳn")
+   +kpi("Tổng chuỗi ≥3 buổi",fmt(ngLoc.length),"","toàn bộ dữ liệu điểm danh đã có")
+   +kpi("Có ghi lý do",fmt(ngCoLyDo.length)+" / "+fmt(ngLoc.length),"","phần còn lại không ai biết vì sao")+"</div>"
+   +(ngDang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang nghỉ dở — gọi hôm nay</p>'
+     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Đến</th><th>Số buổi</th><th>Lý do</th></tr></thead><tbody>'
+     +ngDang.sort((a,b)=>(+b.so_buoi||0)-(+a.so_buoi||0)).slice(0,25).map(r=>
+       "<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
+       +"</td><td>"+(r.tu_ngay||"—")+"</td><td>"+(r.den_ngay||"—")
+       +'</td><td class="mono">'+((+r.so_buoi||0)>=4?'<span class="down">':"<span>")+fmt(r.so_buoi)+"</span>"
+       +"</td><td>"+(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>").join("")
+     +"</tbody></table></div>" : "")
+   +(ngMat.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghỉ lâu, chưa quay lại — đã ai gọi chưa?</p>'
+     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Buổi vắng đầu</th><th>Số buổi</th><th>Đã bao lâu</th><th>Lý do</th></tr></thead><tbody>'
+     +ngMat.slice(0,20).map(r=>
+       "<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
+       +"</td><td>"+(r.tu_ngay||"—")+'</td><td class="mono">'+fmt(r.so_buoi)
+       +'</td><td class="mono"><span class="down">'+fmt(r.ngay_ke_tu_khi_nghi)+" ngày</span></td><td>"
+       +(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>").join("")
+     +"</tbody></table></div>"
+     +(ngMat.length>20?'<p class="leg">Hiện 20 ca gần nhất trong '+fmt(ngMat.length)+'.</p>':"") : "")
+   +(ngCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đang nghỉ dở</th><th>Tổng chuỗi</th><th>Buổi nghỉ TB/chuỗi</th><th>Có ghi lý do</th></tr></thead><tbody>'
+     +ngCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+(v.dang?'<span class="down">'+v.dang+"</span>":"0")
+       +'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+(v.n?(v.buoi/v.n).toFixed(1):"—")
+       +'</td><td class="mono">'+fmt(v.cly)+" / "+fmt(v.n)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +'<p class="leg"><b>“Chuỗi” là gì:</b> những <b>buổi học liền nhau</b> mà bé vắng. Cuối tuần và ngày nghỉ lễ không phải buổi học — không cắt chuỗi, cũng không cộng vào. '
+   +'Nghỉ T6 rồi nghỉ tiếp T2 = <b>chuỗi 2 buổi</b>, không phải 4.<br>'
+   +'<b>“Đang nghỉ dở”</b> = sau chuỗi đó bé <b>chưa có buổi đi học nào</b>, và buổi vắng cuối cách ngày học gần nhất của campus <b>không quá 7 ngày</b>. Đây là danh sách gọi hôm nay.<br>'
+   +'<b>“Nghỉ lâu, chưa quay lại”</b> = cũng chưa đi học lại, nhưng đã quá 7 ngày. Một cuộc gọi không cứu được nữa — nhưng vẫn cần gọi để biết <b>vì sao</b>.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> trong danh sách “đang nghỉ dở” ở trên, bé nào đã có người gọi cho phụ huynh? '
+   +'Nếu chưa có ai gọi và cũng không ai ghi lý do — thì ME School đang không biết bé đó ốm, đi du lịch, hay đã quyết định nghỉ.</div></div>';
+
+  // ----- THE: MESSENGER / ZALO (Harasocial) -----
+  const hrLoc=(hara||[]);
+  const hrNguoi={}; hrLoc.forEach(r=>{const k=r.nguoi||"(không rõ)";
+    const o=hrNguoi[k]||(hrNguoi[k]={n:0,tin:0,tl:[]}); o.n++; o.tin+=+r.so_tin||0;
+    if(+r.tra_loi_dau_giay>0) o.tl.push(+r.tra_loi_dau_giay)});
+  const trungVi=a=>{if(!a.length)return null;const b=a.slice().sort((x,y)=>x-y);return b[Math.floor((b.length-1)/2)]};
+  const hrTLall=hrLoc.map(r=>+r.tra_loi_dau_giay||0).filter(x=>x>0);
+  const hrTV=trungVi(hrTLall);
+  const hrKhongTL=hrLoc.filter(r=>!(+r.tra_loi_dau_giay>0)).length;
+  const hrNgay=[...new Set(hrLoc.map(r=>r.ngay))].sort();
+  const phut=g=>g==null?"—":(g<3600?Math.round(g/60)+" phút":(g/3600).toFixed(1)+" giờ");
+  const hrCard = !hrLoc.length ? "" :
+   '<div class="card"><h2>Messenger &amp; Zalo</h2>'
+   +'<p class="sub">Từ Harasocial · phiên hội thoại trên các trang Facebook của ME School</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Harasocial chỉ giữ khoảng <b>7 ngày gần nhất</b> và bỏ qua bộ lọc ngày — '
+   +'dữ liệu hiện có: <b>'+(hrNgay[0]||"—")+' → '+(hrNgay[hrNgay.length-1]||"—")+'</b>. Tuần nào không bấm dấu trang là mất vĩnh viễn tuần đó.</p>'
+   +'<div class="kpis">'
+   +kpi("Phiên hội thoại",fmt(hrLoc.length),"","trong cửa sổ Harasocial trả về")
+   +kpi("Người xử lý",fmt(Object.keys(hrNguoi).length),"","kể cả trợ lý AI")
+   +kpi("Trả lời lần đầu",phut(hrTV),"","trung vị — không phải trung bình")
+   +kpi("Không ai trả lời",fmt(hrKhongTL),"","phiên không có phản hồi nào")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Người xử lý</th><th>Phiên</th><th>Tin đã gửi</th><th>Trả lời lần đầu (trung vị)</th></tr></thead><tbody>'
+   +Object.entries(hrNguoi).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>
+     "<tr><td>"+k+'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+fmt(v.tin)
+     +'</td><td class="mono">'+phut(trungVi(v.tl))+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<div class="gap"><b>Không có campus nào trong bảng này.</b> Toàn bộ tin nhắn của các trang Facebook đang do một người tiếp nhận, '
+   +'sau đó mới chuyển về campus. Nghĩa là năng lực phản hồi mạng xã hội của ME School bằng đúng năng lực của một người.</div>'
+   +'<div class="q"><b>Câu hỏi:</b> tuần Hiền nghỉ phép thì ai trả lời? Và ai biết được điều đó đã xảy ra — '
+   +'ngoài việc thấy lead tuần ấy tự nhiên ít đi?</div></div>';
+
+  // ----- THE: CHECKLIST SUPA -----
+  const spTatCa=(supa||[]).filter(r=>hopCP(r.campus));
+  const spMax=spTatCa.reduce((a,r)=>r.ngay>a?r.ngay:a,"");
+  const spT0=spMax?new Date(String(spMax).slice(0,10)+"T00:00:00Z").getTime():NaN;
+  const spMoc=isNaN(spT0)?"":new Date(spT0-27*864e5).toISOString().slice(0,10);
+  const spLoc=spTatCa.filter(r=>r.ngay>=spMoc);   // 4 tuan gan nhat
+  const spNgay=[...new Set(spLoc.map(r=>r.ngay))].sort();
+  const spBo={}; spLoc.forEach(r=>{const k=r.bo_ma;
+    const o=spBo[k]||(spBo[k]={ten:r.bo_ten||k,ph:0,dat:0,chua:0});
+    o.ph+=+r.so_phieu||0; o.dat+=+r.so_dat||0; o.chua+=+r.so_chua_dat||0; if(r.bo_ten)o.ten=r.bo_ten});
+  const spCam={}; spLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";
+    const o=spCam[k]||(spCam[k]={ph:0,dat:0,chua:0,cuoi:""});
+    o.ph+=+r.so_phieu||0; o.dat+=+r.so_dat||0; o.chua+=+r.so_chua_dat||0;
+    if(r.ngay>o.cuoi)o.cuoi=r.ngay});
+  const spCamRows=Object.entries(spCam).sort((a,b)=>{
+    const ta=a[1].dat+a[1].chua?a[1].dat/(a[1].dat+a[1].chua):1;
+    const tb=b[1].dat+b[1].chua?b[1].dat/(b[1].dat+b[1].chua):1; return ta-tb});
+  const spTongPh=spLoc.reduce((a,r)=>a+(+r.so_phieu||0),0);
+  const spTongDat=spLoc.reduce((a,r)=>a+(+r.so_dat||0),0);
+  const spTongChua=spLoc.reduce((a,r)=>a+(+r.so_chua_dat||0),0);
+  const spTL=(spTongDat+spTongChua)?100*spTongDat/(spTongDat+spTongChua):null;
+  const spCard = !spLoc.length ? "" :
+   '<div class="card"><h2>Checklist SUPA</h2>'
+   +'<p class="sub">Từ SUPA · '+nhanCP+' · '+(spNgay[0]||"—")+' → '+(spNgay[spNgay.length-1]||"—")+'</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ <b>4 tuần gần nhất</b> (kho có từ '+((spTatCa[0]&&spTatCa.reduce((a,r)=>r.ngay<a?r.ngay:a,"9999"))||"—")+'), <b>không đổi theo ô chọn thời gian</b>. '
+   +'Câu trả lời “N/A” không tính vào tỷ lệ — chỉ đếm câu <b>đạt</b> và <b>chưa đạt</b>.</p>'
+   +'<div class="kpis">'
+   +kpi("Lần đi kiểm",fmt(spTongPh),"","mỗi lần là một phiếu, gồm nhiều câu")
+   +kpi("Câu đã trả lời",fmt(spTongDat+spTongChua),"",(spTongPh?dec((spTongDat+spTongChua)/spTongPh,1):"—")+" câu mỗi lần kiểm")
+   +kpi("Câu chưa đạt",fmt(spTongChua),"","việc thật sự cần sửa")
+   +kpi("Tỷ lệ đạt",dec(spTL,1)+"%","","câu đạt ÷ câu đã trả lời")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Bộ checklist</th><th>Lần kiểm</th><th>Câu đã trả lời</th><th>Câu chưa đạt</th><th>Tỷ lệ đạt</th></tr></thead><tbody>'
+   +Object.entries(spBo).sort((a,b)=>b[1].ph-a[1].ph).map(([k,v])=>{
+     const tl=(v.dat+v.chua)?100*v.dat/(v.dat+v.chua):null;
+     return "<tr><td>"+v.ten+'</td><td class="mono">'+fmt(v.ph)+'</td><td class="mono">'+fmt(v.dat+v.chua)
+       +'</td><td class="mono">'+(v.chua?'<span class="down">'+fmt(v.chua)+"</span>":"0")
+       +'</td><td class="mono">'+dec(tl,1)+"%</td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +(spCamRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus — thấp nhất trước</p>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Lần kiểm</th><th>Câu chưa đạt / tổng câu</th><th>Tỷ lệ đạt</th><th>Kiểm gần nhất</th></tr></thead><tbody>'
+     +spCamRows.map(([k,v])=>{const tl=(v.dat+v.chua)?100*v.dat/(v.dat+v.chua):null;
+       return "<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.ph)+'</td><td class="mono">'+fmt(v.chua)+" / "+fmt(v.dat+v.chua)
+       +'</td><td class="mono">'+(tl!==null&&tl<85?'<span class="down">':"<span>")+dec(tl,1)+"%</span></td><td>"+(v.cuoi||"—")+"</td></tr>"}).join("")
+     +"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Hai đơn vị khác nhau, đừng so trực tiếp:</b> <b>lần kiểm</b> là một lượt người đi kiểm; '
+   +'<b>câu</b> là từng dòng trong checklist đó. Một lần kiểm chứa khoảng 7–10 câu, nên số câu chưa đạt hoàn toàn có thể lớn hơn số lần kiểm.<br>'
+   +'Ví dụ Thảo Điền, checklist an toàn lớp học: <b>48 lần kiểm</b> → <b>324 câu</b> → <b>48 câu chưa đạt</b>. Hai số 48 bằng nhau là trùng hợp, không liên quan.</p>'
+   +'<p class="leg"><b>Cách đọc:</b> tỷ lệ đạt cao không có nghĩa là an toàn — nó có nghĩa là <b>người đi kiểm đã trả lời “đã hoàn thành”</b>. '
+   +'Đối chiếu campus có tỷ lệ đạt cao nhưng vẫn có ticket sự cố ở thẻ trên: đó là chỗ checklist đang không nhìn thấy thứ cần nhìn.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> campus nào lâu nhất chưa có lần kiểm nào? Và trong số câu “chưa đạt”, câu nào lặp lại nhiều lần — '
+   +'vì một câu trượt liên tục không phải lỗi người làm, mà là lỗi thiết kế quy trình.</div></div>';
+
+  // ----- THE: VIEC CUA TUAN NAY (danh sach hanh dong) -----
+  const RO=["Chưa ai chạm","Đã thăm chưa chốt","Hẹn rồi, chưa thấy kết quả","Im lặng trên 14 ngày"];
+  const LUAT={"Chưa ai chạm":"Chạm lần đầu trong 24h. Nếu khách chỉ nhắn tin, nhắn — đừng gọi.",
+    "Đã thăm chưa chốt":"Gọi trong 48h sau visit. Hỏi đúng một câu: điều gì khiến anh/chị chưa quyết?",
+    "Hẹn rồi, chưa thấy kết quả":"Xác nhận lại lịch, hoặc hỏi vì sao không đến được. Ghi lại câu trả lời.",
+    "Im lặng trên 14 ngày":"Một lần chạm cuối. Rồi đóng KÈM LÝ DO — kể cả lý do “không phù hợp”."};
+  const vLoc=(viec||[]).filter(r=>hopCP(r.campus));
+  const vRo={}; vLoc.forEach(r=>{(vRo[r.ro]=vRo[r.ro]||[]).push(r)});
+  // ba ro dau la de CUU -> moi nhat truoc; ro "im lang" la de DONG -> lau nhat truoc
+  Object.keys(vRo).forEach(k=>{ if(k!=="Im lặng trên 14 ngày") vRo[k].sort((a,b)=>(+a.im_lang||0)-(+b.im_lang||0)); });
+  const viecCard = !vLoc.length ? "" :
+   '<div class="card"><h2>Việc của tuần này</h2><p class="sub">'+nhanCP+' · '+fmt(vLoc.length)+' hồ sơ đang chờ một hành động cụ thể</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Danh sách này tính trên <b>90 ngày gần nhất</b>, không đổi theo ô chọn thời gian.</p>'
+   +'<div class="kpis">'
+   +RO.map(k=>kpi(k,fmt((vRo[k]||[]).length),"",
+       (vRo[k]&&vRo[k].length)?("im lặng TB "+Math.round(vRo[k].reduce((s2,r)=>s2+(+r.im_lang||0),0)/vRo[k].length)+" ngày"):"không có ai")).join("")
+   +"</div>"
+   +RO.filter(k=>vRo[k]&&vRo[k].length).map(k=>{
+     const rows=vRo[k].slice(0,8);
+     return '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">'+k+' — '+fmt(vRo[k].length)+' hồ sơ</p>'
+       +'<div class="q" style="margin:0 0 8px">'+LUAT[k]+'</div>'
+       +'<div class="tw"><table><thead><tr><th>Phụ huynh / bé</th><th>Số điện thoại</th><th>Campus</th><th>Kênh</th><th>Lần chạm</th><th>Im lặng</th></tr></thead><tbody>'
+       +rows.map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+sdt(r.dien_thoai)+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")
+         +'</td><td class="mono">'+fmt(r.so_cham)+'</td><td class="mono">'+fmt(r.im_lang)+" ngày</td></tr>").join("")
+       +"</tbody></table></div>"
+       +(vRo[k].length>8?'<p class="leg">Hiện 8 hồ sơ '+(k==="Im lặng trên 14 ngày"?"im lặng lâu nhất":"mới nhất")+' trong '+fmt(vRo[k].length)+'. Lọc theo campus để thấy phần của mình.</p>':"")}).join("")
+   +'<p class="leg"><b>“Lần chạm” chỉ đếm cuộc gọi ghi trong CRM.</b> Tin nhắn Zalo/Messenger không vào đây — nên một phụ huynh đang được nhắn rất kỹ vẫn hiện là <b>0 lần chạm</b>. '
+   +'Trước khi trách ai, hỏi họ đã nhắn chưa.</p>'
+   +'<p class="leg"><b>Thứ tự:</b> ba rổ đầu xếp <b>mới nhất trước</b> — càng mới càng còn ấm, cứu được. '
+   +'Rổ “im lặng trên 14 ngày” xếp <b>lâu nhất trước</b>, vì việc ở đó không phải cứu mà là <b>đóng kèm lý do</b>. '
+   +'Số liệu 180 ngày: 60% ca chốt trong 14 ngày đầu, 79% trong 30 ngày — nhưng vẫn có 12% chốt sau 60 ngày, nên đừng xoá, chỉ hạ nhịp.</p>'
+   +'<div class="q"><b>Quy tắc:</b> mỗi hồ sơ trong danh sách này chỉ rời khỏi đây theo hai đường — <b>lên bước tiếp</b>, hoặc <b>đóng kèm lý do</b>. Không có đường thứ ba là “để đấy”.</div></div>';
+
+  // ----- THE: DANH SACH TUNG HO SO THEO TANG PHEU -----
+  const dsLoc=(ds||[]).filter(r=>hopCP(r.campus));
+  const dsT={}; dsLoc.forEach(r=>{(dsT[r.tang]=dsT[r.tang]||[]).push(r)});
+  Object.keys(dsT).forEach(k=>dsT[k].sort((a,b)=>(+a.im_lang||0)-(+b.im_lang||0)));  // moi nhat truoc
+  const dsTang=Object.keys(dsT).sort();
+  const ngan=(t,n)=>{t=String(t||"");return t.length>n?t.slice(0,n)+"…":t};
+  const dsCard = !dsLoc.length ? "" :
+   '<div class="card"><h2>Danh sách từng hồ sơ, theo tầng phễu</h2><p class="sub">'+nhanCP+' · '+fmt(dsLoc.length)+' hồ sơ vào trong 90 ngày · bấm từng tầng để mở</p>'
+   +'<div class="tw"><table><thead><tr><th>Tầng</th><th>Hồ sơ</th><th>Lần chạm</th><th>Nghe máy</th><th>Gọi không nghe</th></tr></thead><tbody>'
+   +dsTang.map(k=>{const v=dsT[k];
+     return "<tr><td>"+k+'</td><td class="mono">'+fmt(v.length)
+       +'</td><td class="mono">'+fmt(v.reduce((s2,r)=>s2+(+r.so_cham||0),0))
+       +'</td><td class="mono">'+fmt(v.reduce((s2,r)=>s2+(+r.goi_nghe_may||0),0))
+       +'</td><td class="mono">'+fmt(v.reduce((s2,r)=>s2+(+r.goi_khong_nghe||0),0))+"</td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +dsTang.map(k=>{const v=dsT[k].slice(0,15);
+     return '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">'+k+" — "+fmt(dsT[k].length)+" hồ sơ</summary>"
+       +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>Phụ huynh / bé</th><th>Số điện thoại</th><th>Campus</th><th>Kênh</th><th>Vào ngày</th><th>Chạm</th><th>Lần cuối — ai, làm gì, khi nào</th><th>Im lặng</th></tr></thead><tbody>'
+       +v.map(r=>{const ai=(r.cham_cuoi_ai||"").replace(/\s*\(\d+\)\s*$/,"");
+         const lc = r.cham_cuoi_ngay ? (ai+" · "+ngan(r.cham_cuoi_lam_gi,38)+" · "+r.cham_cuoi_ngay
+                    +(r.cham_cuoi_ghi_chu?'<br><span style="opacity:.7">“'+ngan(r.cham_cuoi_ghi_chu,70)+'”</span>':""))
+                    : '<span style="opacity:.6">chưa có lần chạm nào ghi trong CRM</span>';
+         return "<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+sdt(r.dien_thoai)+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")+"</td><td>"+r.ngay_tao
+         +'</td><td class="mono">'+fmt(r.so_cham)+(r.goi_khong_nghe?" ("+r.goi_khong_nghe+" không nghe)":"")
+         +"</td><td>"+lc+'</td><td class="mono">'+fmt(r.im_lang)+"n</td></tr>"}).join("")
+       +"</tbody></table></div>"
+       +(dsT[k].length>15?'<p class="leg">Hiện 15 hồ sơ mới nhất trong '+fmt(dsT[k].length)+' (im lặng ít ngày nhất trước).</p>':"")
+       +"</details>"}).join("")
+   +'<p class="leg"><b>Số điện thoại</b> lấy từ module <i>Liên hệ</i> (PHỤ HUYNH) của AMIS, nối qua trường <i>Liên hệ</i> của hồ sơ tuyển sinh — bấm được để gọi thẳng trên điện thoại. '
+   +'Khoảng <b>11% hồ sơ chưa có số</b>: đó là hồ sơ chưa gắn liên hệ nào trong CRM, không phải phụ huynh không cho số. '
+   +'<b>“Gọi không nghe”</b> = cuộc gọi có thời lượng 0 giây. Toàn hệ thống: <b>một nửa số cuộc gọi rơi vào loại này</b>.</p>'
+   +'<div class="q"><b>Cách dùng:</b> mở tầng của campus mình, đọc cột “lần cuối”. Dòng nào ghi <i>chưa có lần chạm nào</i> mà phụ huynh vẫn đang được nhắn tin — '
+   +'thì lỗi ở chỗ ghi nhận, không phải ở người làm. Dòng nào im lặng trên 14 ngày và không ai nhớ đã nói gì — thì đó là một gia đình đang bị bỏ quên.</div></div>';
+
+  // ----- THE: COHORT THEO TUAN VAO -----
+  const cohLoc=(coh||[]).filter(r=>hopCP(r.campus));
+  const cohT={}; cohLoc.forEach(r=>{const o=cohT[r.tuan_tao]||(cohT[r.tuan_tao]={t:r.tuan_tao,lead:0,c24:0,c2:0,ch0:0,ht:0,cc:0,tc:0,im:0});
+    o.lead+=+r.lead||0; o.c24+=+r.cham_24h||0; o.c2+=+r.cham_2_lan_tro_len||0; o.ch0+=+r.chua_ai_cham||0;
+    o.ht+=+r.hen_tham||0; o.cc+=+r.coc_chot||0; o.tc+=+r.tu_choi||0; o.im+=+r.im_lang_14||0});
+  const cohRows=Object.values(cohT).sort((a,b)=>a.t<b.t?1:-1).slice(0,10);
+  // tuoi lua tinh bang tuan; lua >=3 tuan ma van con nguoi chua ai cham = qua han dong so
+  const nowMs=Date.now();
+  const tuoiLua=t=>Math.max(0,Math.floor((nowMs-new Date(t+"T00:00:00Z").getTime())/6048e5));
+  const quaHan=cohRows.filter(r=>tuoiLua(r.t)>=3 && r.ch0>0);
+  const quaHanNguoi=quaHan.reduce((s2,r)=>s2+r.ch0,0);
+  const cohCard = !cohRows.length ? "" :
+   '<div class="card"><h2>Nhóm vào tuần nào, giờ ra sao</h2><p class="sub">'+nhanCP+' · mỗi hàng là những người xuất hiện trong tuần đó, theo họ về sau</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ 12 tuần gần nhất, <b>không đổi theo ô chọn thời gian</b> — cohort chỉ có nghĩa khi nhìn đủ dài.</p>'
+   +'<div class="tw"><table><thead><tr><th>Tuần vào</th><th>Tuổi lứa</th><th>Lead</th><th>Chạm ≤24h</th><th>≥2 lần chạm</th><th>Chưa ai chạm</th><th>Hẹn/Thăm</th><th>Cọc/Chốt</th><th>Từ chối</th><th>Im lặng >14n</th></tr></thead><tbody>'
+   +cohRows.map(r=>{const tu=tuoiLua(r.t); const do_=tu>=3&&r.ch0>0;
+     return '<tr'+(do_?' style="background:rgba(220,38,38,.10)"':'')+'><td>'+r.t+(do_?' 🔴':'')+'</td><td class="mono">'+(tu===0?"tuần này":tu+" tuần")+'</td><td class="mono">'+fmt(r.lead)
+     +'</td><td class="mono">'+(r.lead?pct(r.c24/r.lead,0):"—")+'</td><td class="mono">'+(r.lead?pct(r.c2/r.lead,0):"—")
+     +'</td><td class="mono"'+(do_?' style="color:#f87171;font-weight:700"':'')+'>'+fmt(r.ch0)+'</td><td class="mono">'+fmt(r.ht)+'</td><td class="mono">'+fmt(r.cc)
+     +'</td><td class="mono">'+fmt(r.tc)+'</td><td class="mono">'+fmt(r.im)+"</td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +(quaHan.length?'<div class="gap"><b>'+quaHan.length+' lứa đã quá 3 tuần mà vẫn còn '+fmt(quaHanNguoi)+' người chưa ai chạm.</b><br>'
+     +'Một lứa chỉ sống 3 tuần trong phễu. Sang tuần thứ tư thì hoặc đã gọi, hoặc phải ghi lý do và đóng sổ — không để ô trống. '
+     +'Lứa nào bôi đỏ ở trên là lứa đang quá hạn đóng sổ.</div>':'')
+   +'<p class="leg"><b>Đọc ngang</b> một hàng: nhóm đó chín dần ra sao. <b>Đọc dọc</b> một cột: quy trình có đổi không. '
+   +'Hàng dưới cùng đã có nhiều tuần để chín; hàng trên cùng thì chưa — đừng so trực tiếp hai hàng cách xa nhau.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> cột “≥2 lần chạm” đang rất thấp. Nếu phụ huynh mầm non cần vài tuần và vài lần trò chuyện mới quyết, '
+   +'thì việc thiếu không phải là lead — mà là <b>lần chạm thứ hai</b>. Ai chịu trách nhiệm cho lần thứ hai đó?</div></div>';
+
+  // ----- THE: TUAN NAY vs CHI TIEU -----
+  const thangNay=new Date().getMonth()+1;
+  // moi tuan phai so voi chi tieu CUA THANG CHUA TUAN DO, khong phai thang hien tai
+  const ctThangMap={}; (ct||[]).filter(r=>hopCP(r.campus))
+    .forEach(r=>{ctThangMap[+r.thang]=(ctThangMap[+r.thang]||0)+(+r.tuyen_moi||0)});
+  const ctThangCua = t => ctThangMap[+String(t).slice(5,7)]||0;
+  const ctTuanCua  = t => ctThangCua(t)/4;
+  const ctThang=ctThangMap[thangNay]||0;
+  const ctTuan=ctThang/4;
+  const twLoc=(tw||[]).filter(r=>hopCP(r.campus));
+  const twT={}; twLoc.forEach(r=>{const o=twT[r.tuan]||(twT[r.tuan]={tuan:r.tuan,goi:0,lead:0,hen:0,tq:0,coc:0,dh:0});
+    o.goi+=+r.cuoc_goi||0; o.lead+=+r.lead_moi||0; o.hen+=+r.hen||0; o.tq+=+r.da_tham_quan||0;
+    o.coc+=+r.dat_coc||0; o.dh+=+r.da_di_hoc||0});
+  const twRows=Object.values(twT).sort((a,b)=>a.tuan<b.tuan?1:-1).slice(0,6);
+  const tuanNay=twRows[0]||null;
+  const lyLoc=(lyDo||[]).filter(r=>hopCP(r.campus));
+  const kt={}; lyLoc.forEach(r=>{const o=kt[r.giai_doan]||(kt[r.giai_doan]={n:0,ngay:0,chua:0});
+    o.n++; o.ngay+=+r.so_ngay_im_lang||0; if(!r.ly_do||r.ly_do==="(chưa ghi lý do)")o.chua++});
+  const ktRows=Object.entries(kt).sort((a,b)=>b[1].n-a[1].n);
+  const ketTot=lyLoc.length;
+  const ctCard = !twRows.length ? "" :
+   '<div class="card"><h2>Tuần này so với chỉ tiêu</h2><p class="sub">'+nhanCP+' · mỗi tuần so với chỉ tiêu <b>của tháng chứa tuần đó</b> ÷ 4 · nguồn: file kế hoạch 2026</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Thẻ này luôn tính theo <b>tuần lịch</b> (thứ Hai → Chủ nhật), <b>không đổi theo ô chọn thời gian</b> ở đầu trang.</p>'
+   +'<div class="kpis">'
+   +kpi("Chỉ tiêu tuần",dec(tuanNay?ctTuanCua(tuanNay.tuan):ctTuan,1),"","chỉ tiêu tháng "+(tuanNay?+String(tuanNay.tuan).slice(5,7):thangNay)+" ("+fmt(tuanNay?ctThangCua(tuanNay.tuan):ctThang)+") ÷ 4")
+   +kpi("Đã đi học tuần này",fmt(tuanNay?tuanNay.dh:0),"",(tuanNay?tuanNay.tuan:"")+" — lead chuyển sang “Kết thúc thành công”")
+   +kpi("Chênh",(tuanNay?((tuanNay.dh-ctTuanCua(tuanNay.tuan)>=0?"+":"")+dec(tuanNay.dh-ctTuanCua(tuanNay.tuan),1)):"—"),"","thực tế trừ chỉ tiêu tuần")
+   +kpi("Đang kẹt giữa phễu",fmt(ketTot),"","đã vào phễu nhưng chưa ra kết quả")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tuần</th><th>Cuộc gọi</th><th>Lead mới</th><th>Hẹn</th><th>Đã thăm</th><th>Đặt cọc</th><th>Đi học</th><th>Chỉ tiêu</th><th>vs chỉ tiêu</th></tr></thead><tbody>'
+   +twRows.map(r=>{const ctR=ctTuanCua(r.tuan); const d=r.dh-ctR; const cls=d>=0?"up":"down";
+     return "<tr><td>"+r.tuan+'</td><td class="mono">'+fmt(r.goi)+'</td><td class="mono">'+fmt(r.lead)+'</td><td class="mono">'+fmt(r.hen)
+     +'</td><td class="mono">'+fmt(r.tq)+'</td><td class="mono">'+fmt(r.coc)+'</td><td class="mono">'+fmt(r.dh)
+     +'</td><td class="mono" style="opacity:.6">'+dec(ctR,1)
+     +'</td><td class="mono"><span class="'+cls+'">'+(d>=0?"+":"")+dec(d,1)+"</span></td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +(ktRows.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang kẹt — và không ai ghi vì sao</p>'
+     +'<div class="tw"><table><thead><tr><th>Đang ở bước</th><th>Số lead</th><th>Im lặng TB (ngày)</th><th>Chưa ghi lý do</th></tr></thead><tbody>'
+     +ktRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+Math.round(v.ngay/v.n)
+       +'</td><td class="mono">'+fmt(v.chua)+" / "+fmt(v.n)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +(lyLoc.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Im lặng lâu nhất — 10 trường hợp cần một câu trả lời</p>'
+     +'<div class="tw"><table><thead><tr><th>Phụ huynh / bé</th><th>Campus</th><th>Đang ở bước</th><th>Im lặng</th></tr></thead><tbody>'
+     +lyLoc.slice(0,10).map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+r.campus+"</td><td>"+r.giai_doan
+       +'</td><td class="mono">'+fmt(r.so_ngay_im_lang)+" ngày</td></tr>").join("")+"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Cách đọc:</b> “Đi học” = lead đã chuyển sang <i>Kết thúc thành công</i> trong tuần đó. '
+   +'CRM chỉ lưu <b>trạng thái hiện tại</b>, không lưu lịch sử chuyển bước — nên tuần được tính theo <i>ngày cập nhật gần nhất</i>. '
+   +'Một lead được sửa lại vì lý do khác sẽ nhảy sang tuần mới. Số này đủ để thấy xu hướng, chưa đủ để chấm KPI cá nhân.</p>'
+   +'<div class="q"><b>Câu hỏi cho từng campus:</b> trong 10 dòng trên, ai đã gọi lại lần cuối, ngày nào, và phụ huynh nói gì? '
+   +'Nếu không ai trả lời được thì <b>đó mới là con số cần sửa</b>, không phải tỷ lệ chốt.</div></div>';
+
+  const hsCard = !H.length ? "" :
+   '<div class="card"><h2>Học sinh và tuyển sinh</h2><p class="sub">Từ AMIS CRM · '+nhanCP+' · cập nhật ở lần bấm “Kéo AMIS” gần nhất</p>'
+   +'<div class="kpis">'
+   +kpi("Đang đi học",fmt(diHoc),"","có lớp cụ thể, đang phát sinh doanh thu")
+   +kpi("Đóng tiền, chờ đi học",fmt(choHoc),"","lớp ghi “Chờ nhập học”")
+   +kpi("Bảo lưu",fmt(baoLuu),"","tạm nghỉ, còn giữ chỗ")
+   +kpi("Lead mới trong kỳ",fmt(tsTong),"","tính theo ngày tạo tuyển sinh")
+   +(tamTong?kpi("Toàn hệ thống (gồm tạm)",fmt(diHoc+tamTong),"",fmt(diHoc)+" từ CRM + "+fmt(tamTong)+" tạm từ điểm danh"):"")+"</div>"
+   +(campRows.length ? '<div class="tw" style="margin-top:14px"><table><thead><tr><th>Campus</th><th>Đang đi học</th><th>Số lớp</th><th>HS/lớp</th></tr></thead><tbody>'
+     +campRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.hs)+'</td><td class="mono">'+fmt(v.lop)+'</td><td class="mono">'+(v.lop?(v.hs/v.lop).toFixed(1):"--")+"</td></tr>").join("")
+     +'<tr><td><b>Cộng CRM ('+campRows.length+' campus)</b></td><td class="mono"><b>'+fmt(diHoc)+'</b></td><td class="mono"><b>'+fmt(tongLop)+'</b></td><td class="mono"><b>'+(tongLop?(diHoc/tongLop).toFixed(1):"--")+"</b></td></tr>"
+     +siTam.map(x=>'<tr><td>'+x.campus+' <span style="opacity:.55">· tạm</span></td><td class="mono">'+fmt(x.hs)+'</td><td class="mono">--</td><td class="mono">--</td></tr>').join("")
+     +(tamTong?'<tr><td><b>Toàn hệ thống</b></td><td class="mono"><b>'+fmt(diHoc+tamTong)+'</b></td><td class="mono">--</td><td class="mono">--</td></tr>':"")
+     +"</tbody></table></div>"
+     +(tamTong?'<p class="leg"><b>“tạm” = chưa phải sổ sĩ số.</b> Tân Thuận và Linh Đàm không dùng AMIS CRM, nên số ở đây là <b>trung bình số trẻ có mặt trong 5 ngày học gần nhất</b> ('+tamNgay+') lấy từ điểm danh Tomia. '
+       +'Đây là số <i>trẻ đi học</i>, không phải số <i>trẻ đã ghi danh</i> — trẻ nghỉ ốm cả tuần sẽ không được đếm, nên con số này luôn <b>thấp hơn sĩ số thật</b>. Dùng để có một con số toàn hệ thống, chưa dùng để tính doanh thu.</p>':"") : "")
+   +(giuRows.length>1 && !CP ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lead mới trong kỳ, theo nơi giữ</p>'
+     +'<div class="tw"><table><thead><tr><th>Nơi giữ</th><th>Lead</th><th>Tham quan</th><th>Chốt</th><th>Tỷ lệ chốt</th></tr></thead><tbody>'
+     +giuRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.lead)+'</td><td class="mono">'+fmt(v.tq)
+       +'</td><td class="mono">'+fmt(v.chot)+'</td><td class="mono">'+(v.lead?pct(v.chot/v.lead,1):"—")+"</td></tr>").join("")
+     +"</tbody></table></div>"
+     +'<p class="leg">“Nơi giữ” lấy từ trường <b>Chủ sở hữu</b> trong AMIS. Lead do Hiền nhận rồi chuyển về campus mà không đổi chủ sở hữu thì vẫn nằm ở dòng trên — nên bảng này đo <b>ai đứng tên</b>, chưa chắc đã là <b>ai gọi</b>.</p>' : "")
+   +(gdRows.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lead mới trong kỳ, theo giai đoạn</p>'
+     +'<div class="tw"><table><thead><tr><th>Giai đoạn</th><th>Số lead</th></tr></thead><tbody>'
+     +gdRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v)+"</td></tr>").join("")+"</tbody></table></div>" : "")
+   +'<p class="leg"><b>Cách phân loại:</b> trường “Lớp” trong AMIS chứa cả lớp thật lẫn trạng thái. '
+   +'Thứ tự ưu tiên: đã rời (Nghỉ học/Tốt nghiệp/Hoàn cọc) → Bảo lưu → Chờ nhập học → Ngắn ngày → lớp thật (TTLN/Ghi nhận/GTTC). '
+   +'Một học sinh có thể mang nhiều giá trị cùng lúc, nên thứ tự này quyết định họ được đếm vào đâu.</p>'
+   +(chuaPL ? '<div class="gap"><b>'+fmt(chuaPL)+' học sinh chưa phân loại được</b> — bản ghi không có giá trị ở trường Lớp.<br>'
+     +'Ai điền trường này khi nhận học sinh mới?</div>' : "")
+   +'<div class="gap"><b>Hai campus đang dùng số tạm.</b> Tân Thuận và Linh Đàm không dùng AMIS CRM (cấu trúc pháp lý riêng), '
+   +'nên sĩ số của họ đang lấy từ điểm danh Tomia — xem chú thích dưới bảng. Khi nào hai campus này có sổ sĩ số thật, thay vào đây và bỏ chữ “tạm”.<br>'
+   +'Đối chiếu: file nhân sự ghi <b>768 học sinh / 161 giáo viên</b>.</div>'
+   +'<div class="q"><b>Câu hỏi:</b> con số “đang đi học” này có khớp với sổ điểm danh sáng nay ở từng campus không — lệch ở đâu?</div></div>';
+
+  // ----- THE: BANG DIEM CAMPUS THEO NGAY -----
+  // Don vi la NGAY HOC, khong phai tuan. Dai = 3 ngay CUNG THU truoc do (T3 nay vs 3 T3 truoc),
+  // vi thu Hai va thu Sau khong giong nhau — so cheo thu la tu tao bao dong gia.
+  const chiNgay=d=>{const m=String(d||"").match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:null;};
+  const luiNgay=(d,n)=>{const t=new Date(d+"T00:00:00Z"); t.setUTCDate(t.getUTCDate()-n); return t.toISOString().slice(0,10);};
+  const THU=["Chủ nhật","Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy"];
+  const tenThu=d=>THU[new Date(d+"T00:00:00Z").getUTCDay()];
+  const bdD={}, bdBo=0, bdMau={};
+  const oD=(c,d)=>{const a=bdD[c]||(bdD[c]={}); return a[d]||(a[d]={lead:0,dh:null,vang:null,ng:0,spc:0,spt:0,tk:0});};
+  const ghiBo=(k,v)=>{ if(!bdMau[k]) bdMau[k]=String(v); };
+  (tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&r.campus!=="TRUNG TÂM").forEach(r=>{
+    const d=chiNgay(r.ngay); if(!d){ghiBo("lead",r.ngay);return;} oD(r.campus,d).lead+=+r.so_lead||0;});
+  (dd||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+    const d=chiNgay(r.ngay); if(!d){ghiBo("diemdanh",r.ngay);return;}
+    const o=oD(r.campus,d); o.dh=(o.dh||0)+(+r.di_hoc||0); o.vang=(o.vang||0)+(+r.vang||0);});
+  (nghi||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+    const d=chiNgay(r.tu_ngay); if(!d){ghiBo("nghi",r.tu_ngay);return;} oD(r.campus,d).ng++;});
+  (supa||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+    const d=chiNgay(r.ngay); if(!d){ghiBo("supa",r.ngay);return;}
+    const o=oD(r.campus,d); o.spc+=+r.so_chua_dat||0; o.spt+=(+r.so_dat||0)+(+r.so_chua_dat||0);});
+  (suCo||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+    const d=chiNgay(r.ngay_tao); if(!d){ghiBo("suco",r.ngay_tao);return;} oD(r.campus,d).tk++;});
+
+  const bdCaNgay=[...new Set(Object.keys(bdD).reduce((a,c)=>a.concat(Object.keys(bdD[c])),[]))]
+    .filter(d=>d<=homNay).sort();
+  // "hom nay" = ngay hoc gan nhat CO DIEM DANH — do la su that van hanh, khong phai ngay he thong
+  const ngayCoMat=[...new Set((dd||[]).filter(r=>hopCP(r.campus)).map(r=>chiNgay(r.ngay)).filter(Boolean))]
+    .filter(d=>d<=homNay&&!cuoiTuan(d)).sort();
+  const bdNgay = ngayCoMat.length ? ngayCoMat[ngayCoMat.length-1]
+               : (bdCaNgay.filter(d=>!cuoiTuan(d)).slice(-1)[0]||null);
+  const bdTruoc = bdNgay ? [28,21,14,7].map(k=>luiNgay(bdNgay,k)) : [];
+
+  const DO=[
+   {ten:"Lead mới",      nhom:"Tuyển sinh", tot: 1, v:o=>o?o.lead:0},
+   {ten:"Trẻ có mặt",    nhom:"Vận hành",   tot: 1, v:o=>o?o.dh:null},
+   {ten:"Vắng",          nhom:"Vận hành",   tot:-1, v:o=>o?o.vang:null},
+   {ten:"Trẻ bắt đầu nghỉ dài",nhom:"Rủi ro", tot:-1, v:o=>o?o.ng:0},
+   {ten:"Việc chưa đạt khi kiểm", nhom:"Rủi ro", tot:-1, v:o=>o?o.spc:0},
+   {ten:"Sự cố mới",     nhom:"Rủi ro",     tot:-1, v:o=>o?o.tk:0}];
+  const oNgay=(c,d)=>(bdD[c]&&bdD[c][d])||null;
+  const bdO=(c,m)=>{
+    const cur=m.v(oNgay(c,bdNgay));
+    const tr=bdTruoc.map(d=>m.v(oNgay(c,d))).filter(x=>x!==null&&x!==undefined);
+    // null = that su chua co so (diem danh chua nhap). 0 = co so va bang 0 — KHONG phai thieu du lieu.
+    if(cur===null||cur===undefined) return {h:'<span style="opacity:.4">chưa có</span>',tin:0,thieu:1};
+    if([cur].concat(tr).every(x=>!x)) return {h:'<span style="opacity:.3">0</span>',tin:0,thieu:0};
+    const so=fmt(cur);
+    if(tr.length<2) return {h:'<b>'+so+'</b><br><span style="opacity:.4;font-size:10.5px">chưa đủ dữ liệu</span>',tin:0,thieu:0};
+    const lo=Math.min.apply(null,tr), hi=Math.max.apply(null,tr);
+    let g="·", cls="flat", xau=0;
+    if(cur>hi){ xau=m.tot<0?1:0; g="▲"; cls=xau?"down":"up"; }
+    else if(cur<lo){ xau=m.tot>0?1:0; g="▼"; cls=xau?"down":"up"; }
+    return {h:'<b>'+so+'</b> <span class="'+cls+'">'+g+'</span><br><span style="opacity:.4;font-size:10.5px">dải '+fmt(lo)+"–"+fmt(hi)+"</span>",
+            tin:xau, thieu:0};};
+  const bdRows=Object.keys(bdD).filter(c=>c&&c!=="(chưa rõ)"&&c!=="TRUNG TÂM"&&c!=="(chưa gán campus)")
+    .map(c=>{const o=DO.map(m=>bdO(c,m));
+      return {c:c, o:o, tin:o.reduce((a,x)=>a+x.tin,0), thieu:o.reduce((a,x)=>a+x.thieu,0)};})
+    .sort((a,b)=>b.tin-a.tin||a.thieu-b.thieu||(a.c<b.c?-1:1));
+  const bdMu=bdRows.filter(r=>r.thieu>=2).length;
+
+  // bang theo ngay cho toan he thong — de nhin thay tung ngay, khong phai truu tuong
+  const ngayHocGan=bdCaNgay.filter(d=>!cuoiTuan(d)).slice(-7);
+  const congNgay=d=>{const t={lead:0,dh:0,vang:0,ng:0,spc:0,tk:0,co:0};
+    Object.keys(bdD).forEach(c=>{const o=bdD[c][d]; if(!o)return; t.co=1;
+      t.lead+=o.lead||0; t.dh+=o.dh||0; t.vang+=o.vang||0; t.ng+=o.ng||0; t.spc+=o.spc||0; t.tk+=o.tk||0;});
+    return t;};
+  // canh bao tre du lieu: dem so NGAY HOC da qua ma chua co diem danh
+  const ngayHocTuDen=(a,b2)=>{let n=0,t=new Date(a+"T00:00:00Z"),h=new Date(b2+"T00:00:00Z");
+    t.setUTCDate(t.getUTCDate()+1);
+    while(t<=h){const w=t.getUTCDay(); if(w>=1&&w<=5)n++; t.setUTCDate(t.getUTCDate()+1);} return n;};
+
+  // ===== b12: SUC KHOE DU LIEU — noi ro dang tac o cua nao =====
+  // Ba cua giua "du lieu ton tai" va "CEO nhin thay":
+  //   cua 1 = co ai bam dau trang keo ve chua        (stg_raw.ts, view v_tuoi_du_lieu)
+  //   cua 2 = job GitHub da boc file thanh so chua   (ngay moi nhat trong bang da boc)
+  //   cua 3 = trinh duyet dang giu so cu             (nut ↻ o dau trang)
+  const maxNg=(arr,k)=>{let m=null;(arr||[]).forEach(r=>{const d=chiNgay(r[k]); if(d&&(!m||d>m))m=d;});return m;};
+  // tinh tuoi tu MOC THOI GIAN, khong tin cot so_gio may chu tra ve
+  const tDL={}; (tuoiDL||[]).forEach(r=>{
+    const t=r.lan_cuoi?new Date(r.lan_cuoi):null;
+    const g=(t&&!isNaN(t.getTime()))?((Date.now()-t.getTime())/3600000):(r.so_gio==null?null:+r.so_gio);
+    tDL[r.nguon]={gio:(g==null?null:Math.round(g)), luc:r.lan_cuoi};
+  });
+  // neu view v_tuoi_du_lieu chua duoc tao thi khong doan bua ve cua 1 — chi xet cua 2
+  const coTuoi=Array.isArray(tuoiDL)&&tuoiDL.length>0;
+  const lichNgay=d=>d?Math.round((new Date(homNay+"T00:00:00Z")-new Date(d+"T00:00:00Z"))/864e5):null;
+  const doTuoi=g=>g==null?"chưa bao giờ":(g<1?"vừa xong":(g<24?g+" giờ trước":Math.round(g/24)+" ngày trước"));
+
+  const SK=[
+   {ten:"Tomia — điểm danh",      kho:"Tomia",      den:bdNgay,              tay:true},
+   {ten:"SUPA — kiểm việc",       kho:"SUPA",       den:maxNg(supa,"ngay"),  tay:true},
+   {ten:"AMIS — tuyển sinh",      kho:"AMIS",       den:maxNg(lp,"ngay"),    tay:true},
+   {ten:"Harasocial — tin nhắn",  kho:"Harasocial", den:maxNg(hara,"ngay"),  tay:true},
+   {ten:"Google Analytics",       kho:null,         den:maxNg(ga,"day"),     tay:false},
+   {ten:"Meta Ads",               kho:null,         den:maxNg(mc,"day"),     tay:false}
+  ].map(x=>{
+    const t=x.kho?tDL[x.kho]:null, gio=t?t.gio:null;
+    const treHoc = x.den ? ngayHocTuDen(x.den,homNay) : null;   // so ngay HOC bi thieu
+    const treLich= lichNgay(x.den);
+    let cua=0, nhan="", mau="var(--ink2)";
+    if(x.tay&&coTuoi){
+      if(gio==null)            { cua=1; nhan="Chưa bao giờ được kéo về"; mau="#B42318"; }
+      else if(gio>30)          { cua=1; nhan="Chưa ai bấm dấu trang — "+doTuoi(gio); mau="#B42318"; }
+      else if(x.den==null)     { cua=2; nhan="Đã kéo về, chưa bóc ra số";  mau="#A96C05"; }
+      else if(treHoc>=1)       { cua=2; nhan="Đã kéo về, chờ job bóc số";  mau="#A96C05"; }
+      else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
+    }else{
+      if(x.den==null)          { cua=2; nhan="Chưa có số nào"; mau="#B42318"; }
+      else if(treLich>=3)      { cua=2; nhan="Job tự động chưa chạy — "+treLich+" ngày"; mau="#B42318"; }
+      else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
+    }
+    return Object.assign({},x,{gio:gio,cua:cua,nhan:nhan,mau:mau,treHoc:treHoc});
+  });
+
+  const skHong = SK.filter(x=>x.cua>0);
+  const skCua1 = SK.filter(x=>x.cua===1);
+  const skCua2 = SK.filter(x=>x.cua===2);
+  const tomiaSK = SK[0];
+
+  // cau "cach sua" cho the diem danh tre — phu thuoc dang tac o cua nao
+  const cachSuaTomia = (tomiaSK.cua===1)
+   ? '<b>Đang tắc ở cửa 1 — chưa ai kéo Tomia về.</b> Mở <b>hq.tomia.app</b> → bấm dấu trang '
+     +'<b>Kéo Tomia</b> (tự đồng bộ → tự xuất báo cáo → tự đưa lên kho). Số sẽ lên sau job bóc lúc <b>09:00</b> sáng mai, '
+     +'hoặc chạy ngay ở GitHub → Actions → <i>Keo du lieu</i> → <b>Run workflow</b>.'
+   : (tomiaSK.cua===2)
+   ? '<b>Đang tắc ở cửa 2 — file đã về kho ('+doTuoi(tomiaSK.gio)+') nhưng chưa ai bóc thành số.</b> '
+     +'Job tự bóc lúc <b>09:00</b> sáng mai. Cần ngay thì vào GitHub → Actions → <i>Keo du lieu</i> → '
+     +'<b>Run workflow</b>, chờ ~2 phút rồi bấm <b>↻ Tải lại số</b>.'
+   : '<b>Cả hai cửa đều thông.</b> Nếu vẫn thấy số cũ thì là cửa 3 — trình duyệt đang giữ số cũ: bấm <b>↻ Tải lại số</b> ở đầu trang.';
+
+  const skCard =
+   '<div class="card"'+(skHong.length?' style="border-color:'+(skCua1.length?'#B42318':'#A96C05')+'"':'')+'>'
+   +'<h2>'+(skHong.length?'⚠':'✓')+' Sức khoẻ dữ liệu — '+(skHong.length? skHong.length+'/6 nguồn có vấn đề' : 'cả 6 nguồn bình thường')+'</h2>'
+   +'<p class="sub">Số trên app chỉ mới bằng nguồn cũ nhất. Đọc dòng nào màu đỏ hoặc cam trước.</p>'
+   +'<div class="tw"><table style="min-width:620px"><thead><tr><th>Nguồn</th><th>Kéo về kho</th>'
+   +'<th>Số mới nhất đến ngày</th><th>Tình trạng</th></tr></thead><tbody>'
+   + SK.map(x=>'<tr><td>'+x.ten+'</td>'
+       +'<td class="mono">'+(x.tay?(coTuoi?doTuoi(x.gio):'<span style="opacity:.5">chưa bật</span>'):'<span style="opacity:.5">tự động</span>')+'</td>'
+       +'<td class="mono">'+(x.den||"—")+'</td>'
+       +'<td style="color:'+x.mau+'">'+(x.cua===0?"✓ ":(x.cua===1?"⚠ ":"⏳ "))+x.nhan+'</td></tr>').join("")
+   +'</tbody></table></div>'
+   +(skCua1.length? '<div class="q"><b>Cửa 1 — chưa ai bấm dấu trang:</b> '
+       +skCua1.map(x=>x.ten.split(" —")[0]).join(" · ")
+       +'. Việc của người trực buổi sáng. Mở trang nguồn, bấm dấu trang tương ứng.</div>' : "")
+   +(skCua2.length? '<div class="q"><b>Cửa 2 — đã về kho nhưng chưa bóc thành số:</b> '
+       +skCua2.map(x=>x.ten.split(" —")[0]).join(" · ")
+       +'. Job tự bóc lúc <b>09:00</b> mỗi sáng. Cần ngay: GitHub → Actions → <i>Keo du lieu</i> → <b>Run workflow</b> → chờ ~2 phút → bấm <b>↻ Tải lại số</b>.</div>' : "")
+   +'<p class="note" style="margin-top:10px">Số của <b>hôm nay ('+homNay+')</b> luôn chưa chốt — điểm danh còn đang diễn ra. '
+   +'Chỉ tin số từ <b>ngày học gần nhất trở về trước</b>.</p></div>';
+  const treNgay = bdNgay ? ngayHocTuDen(bdNgay,homNay) : null;
+  const bangTre = (treNgay!=null && treNgay>=1) ?
+   '<div class="card" style="border-color:#A96C05"><h2>⏳ Dữ liệu điểm danh đang trễ</h2>'
+   +'<p class="sub">Ngày học gần nhất có điểm danh: <b>'+bdNgay+'</b> · hôm nay '+homNay+'</p>'
+   +'<p class="leg" style="margin-top:-6px;font-size:13.5px;color:var(--ink2)">Thiếu <b class="down">'+treNgay+' ngày học</b>. '
+   +'Mọi con số về trẻ có mặt, vắng, trẻ nghỉ dài và <b>nhập học thực tế</b> ở dưới đều <b>đang thiếu '+treNgay+' ngày</b> — '
+   +'đó là dữ liệu chưa về, <b>không phải</b> trường tuyển kém hay trẻ nghỉ nhiều.</p>'
+   +'<div class="q">'+cachSuaTomia+'</div></div>' : "";
+
+  const ngayCard = !ngayHocGan.length ? "" :
+   '<div class="card"><h2>Từng ngày học — toàn cảnh</h2>'
+   +'<p class="sub">'+nhanCP+' · 7 ngày học gần nhất · bỏ thứ Bảy và Chủ nhật</p>'
+   +'<div class="tw"><table style="min-width:700px"><thead><tr><th>Ngày</th><th>Thứ</th><th>Lead mới</th>'
+   +'<th>Trẻ có mặt</th><th>Vắng</th><th>Trẻ bắt đầu nghỉ dài</th><th>Việc chưa đạt khi kiểm</th><th>Sự cố mới</th></tr></thead><tbody>'
+   +ngayHocGan.slice().reverse().map(d=>{const t=congNgay(d); const dam=d===bdNgay;
+     return "<tr"+(dam?' style="background:var(--soft)"':"")+"><td>"+(dam?"<b>"+d+"</b>":d)+"</td><td>"+tenThu(d)
+      +'</td><td class="mono">'+fmt(t.lead)+'</td><td class="mono">'+(t.dh?fmt(t.dh):'<span style="opacity:.3">—</span>')
+      +'</td><td class="mono">'+(t.vang?fmt(t.vang):'<span style="opacity:.3">—</span>')
+      +'</td><td class="mono">'+(t.ng?'<span class="down">'+fmt(t.ng)+"</span>":"0")
+      +'</td><td class="mono">'+(t.spc?'<span class="down">'+fmt(t.spc)+"</span>":"0")
+      +'</td><td class="mono">'+(t.tk?'<span class="down">'+fmt(t.tk)+"</span>":"0")+"</td></tr>";}).join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Ba cột cuối nghĩa là gì:</b><br>'
+   +'· <b>Trẻ bắt đầu nghỉ dài</b> — hôm đó có bao nhiêu bé <i>bắt đầu</i> một đợt nghỉ liền từ 3 buổi học trở lên. '
+   +'Đếm ở <b>buổi đầu tiên</b> của đợt nghỉ, đã bỏ thứ Bảy và Chủ nhật. Một bé nghỉ 5 buổi chỉ tính <b>một lần</b>, vào ngày bé nghỉ buổi đầu.<br>'
+   +'· <b>Việc chưa đạt khi kiểm</b> — hôm đó người đi kiểm SUPA trả lời “chưa đạt” bao nhiêu câu. '
+   +'Đây là số <i>câu</i>, không phải số lần đi kiểm; một lần kiểm có khoảng 7–10 câu.<br>'
+   +'· <b>Sự cố mới</b> — hôm đó có bao nhiêu ticket được mở mới (vận hành, hành vi, an toàn, sức khoẻ).</p>'
+   +'<p class="leg">Dòng tô đậm là <b>ngày đang xét</b> ở bảng dưới — ngày học gần nhất có điểm danh. '
+   +'Ô “—” nghĩa là ngày đó chưa có số, không phải bằng 0.</p></div>';
+
+  // ----- THE: MUC TIEU va THUC TE -----
+  // Quyet dinh: MUC TIEU chuan la THANG. Tuan/ngay chi la NHIP (pace), khong phai moc cham diem.
+  // Ly do: muc tieu thang / 15 campus / 4 tuan ~ 1,3 hoc sinh mot campus mot tuan.
+  // Mot tuan chot 0 roi tuan sau chot 3 khong noi len gi — do tuan cho lag measure nay la do nhieu.
+  const ktLoc=(ct||[]).filter(r=>hopCP(r.campus));
+  const ktT={}; ktLoc.forEach(r=>{const m=+r.thang; if(!m||m<1||m>12)return;
+    const o=ktT[m]||(ktT[m]={thang:m,moi:0,si:0}); o.moi+=+r.tuyen_moi||0; o.si+=+r.si_so_kh||0;});
+  const ktDs=Object.keys(ktT).map(k=>ktT[k]).sort((a,b)=>a.thang-b.thang);
+  const namNay=+homNay.slice(0,4), thangHT=+homNay.slice(5,7);
+  const soNgayThang=m=>new Date(Date.UTC(namNay,m,0)).getUTCDate();
+  const soTuanThang=m=>soNgayThang(m)/7;
+  const soNgayHoc=m=>{let n=0; const h=soNgayThang(m);
+    for(let d=1;d<=h;d++){const w=new Date(Date.UTC(namNay,m-1,d)).getUTCDay(); if(w>=1&&w<=5)n++;} return n;};
+  const ngayHocDaQua=m=>{const het=(m===thangHT)? +homNay.slice(8,10) : soNgayThang(m); let n=0;
+    for(let d=1;d<=het;d++){const w=new Date(Date.UTC(namNay,m-1,d)).getUTCDay(); if(w>=1&&w<=5)n++;} return n;};
+  const ktNay=ktT[thangHT]||null;
+
+  // THUC TE: uu tien v_tuan_campus (dinh nghia goc). Neu view do chet -> dung tam v_lead_campus,
+  // nhung day la so COHORT (theo thang TAO lead), khong phai so nhap hoc trong thang -> phai ghi ro.
+  // THUC TE = tre DI HOC BUOI DAU TIEN (v_nhap_hoc, nguon Tomia).
+  // Day la su viec quan sat duoc, phu ca 15 campus, khong phu thuoc ai nho cap nhat CRM.
+  // Chi lui ve CRM khi v_nhap_hoc chua co du lieu.
+  const ktCoNH=(nhapHoc||[]).length>0;
+  const CHOTX=/thành công/i;
+  const thucT={}, thucCam={};
+  if(ktCoNH){
+    (nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+      const d=chiNgay(r.ngay_dau); if(!d||+d.slice(0,4)!==namNay)return; const m=+d.slice(5,7);
+      thucT[m]=(thucT[m]||0)+1;
+      if(m===thangHT) thucCam[r.campus]=(thucCam[r.campus]||0)+1;});
+  } else {
+    (tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).forEach(r=>{
+      const d=chiNgay(r.ngay); if(!d||+d.slice(0,4)!==namNay)return; const m=+d.slice(5,7);
+      thucT[m]=(thucT[m]||0)+(+r.so_lead||0);
+      if(m===thangHT) thucCam[r.campus]=(thucCam[r.campus]||0)+(+r.so_lead||0);});
+  }
+  const ktCoThuc=Object.keys(thucT).length>0;
+  const nhipNay=ktNay? ktNay.moi*ngayHocDaQua(thangHT)/soNgayHoc(thangHT) : null;
+  const thucNay=thucT[thangHT]||0;
+  const ktCam=ktLoc.filter(r=>+r.thang===thangHT)
+    .map(r=>({c:r.campus,moi:+r.tuyen_moi||0,si:+r.si_so_kh||0,
+              thuc:(thucCam[r.campus]||0),
+              nhip:(+r.tuyen_moi||0)*ngayHocDaQua(thangHT)/soNgayHoc(thangHT)}))
+    .filter(r=>r.moi||r.si||r.thuc)
+    .sort((a,b)=>(a.thuc-a.nhip)-(b.thuc-b.nhip));   // tut nhip nhieu nhat len truoc
+  const ktCard = !ktDs.length ?
+   '<div class="card"><h2>Mục tiêu và thực tế</h2>'
+   +'<p class="sub">'+nhanCP+' · bảng <code>chi_tieu</code> trả về <b class="down">0 dòng</b></p>'
+   +'<div class="q">Chưa có mục tiêu nào để so. Xem thẻ <b>Chẩn đoán nguồn dữ liệu</b> — '
+   +'nếu <code>chi_tieu</code> báo lỗi thì bảng hỏng; nếu 0 dòng không lỗi thì file kế hoạch 2026 chưa được nạp lên.</div></div>'
+   :
+   '<div class="card"><h2>Mục tiêu và thực tế — tháng '+thangHT+'</h2>'
+   +'<p class="sub">'+nhanCP+' · mục tiêu: file kế hoạch 2026 · thực tế: <b>trẻ đi học buổi đầu tiên</b> (điểm danh Tomia)</p>'
+   +'<div class="kpis">'
+   +kpi("Mục tiêu tháng "+thangHT,ktNay?fmt(ktNay.moi):"—","","học sinh mới cả tháng")
+   +kpi("Nhịp đến hôm nay",nhipNay==null?"—":dec(nhipNay,1),"",
+        "đã qua "+ngayHocDaQua(thangHT)+"/"+soNgayHoc(thangHT)+" ngày học")
+   +kpi("Thực tế tháng này",ktCoThuc?fmt(thucNay):"—","",ktCoNH?"trẻ đi học buổi đầu tiên":"tạm tính từ CRM — xem ghi chú")
+   +kpi("So với nhịp",(!ktCoThuc||nhipNay==null)?"—":
+        '<span class="'+(thucNay-nhipNay>=0?"up":"down")+'">'+(thucNay-nhipNay>=0?"+":"")+dec(thucNay-nhipNay,1)+"</span>",
+        "","thực tế trừ nhịp — đây là con số cần nhìn")+"</div>"
+   +(ktCoNH
+     ? '<p class="leg" style="margin-top:12px"><b>“Nhập học thực tế” nghĩa là gì:</b> một trẻ được tính vào ngày em <b>đi học buổi đầu tiên</b>, '
+       +'lấy từ điểm danh Tomia. Mỗi trẻ chỉ tính <b>một lần</b> trong đời.<br>'
+       +'Chọn cách đếm này vì: đó là <b>việc đã xảy ra</b>, không phải trạng thái ai đó nhớ bấm trong CRM; '
+       +'nó phủ <b>cả 15 campus</b> kể cả Tân Thuận và Linh Đàm vốn không dùng AMIS; và không ai “chốt” được nó bằng một cú click.<br>'
+       +'Điểm yếu: <b>trễ theo nhịp đồng bộ + xuất báo cáo Tomia</b>. Xem dòng ⏱ ở thẻ “Từng ngày học” — '
+       +'nếu điểm danh trễ vài ngày thì số tháng này còn thiếu, không phải trường tuyển kém.<br>'
+       +'<span style="opacity:.6">Số tháng 5/2026 không dùng được: Tomia bắt đầu ghi từ 04/05 nên toàn bộ trẻ đang học khi đó bị tính là “buổi đầu”.</span></p>'
+     : '<div class="gap"><b>Thực tế đang là số tạm.</b> <code>v_nhap_hoc</code> chưa có dữ liệu nên app đếm tạm từ CRM: '
+       +'<i>lead TẠO trong tháng đó và nay ở trạng thái “Kết thúc thành công”</i> — đó là số cohort, không phải số nhập học trong tháng.</div>')
+   +'<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng 7 → 12 — mục tiêu là mốc <b>tháng</b>, tuần chỉ là nhịp</p>'
+   +'<div class="tw"><table style="min-width:760px"><thead><tr><th>Tháng</th><th>Mục tiêu tháng</th><th>Thực tế</th><th>Chênh</th><th>% đạt</th>'
+   +'<th>Nhịp/tuần (÷4)</th><th>Nhịp/tuần (theo lịch)</th><th>Nhịp/ngày học</th></tr></thead><tbody>'
+   +ktDs.filter(r=>r.thang>=7).map(r=>{const th=(ktCoThuc&&thucT[r.thang]!=null)?thucT[r.thang]:null, d=(th==null?null:th-r.moi);
+     return "<tr"+(r.thang===thangHT?' style="background:var(--soft)"':"")+"><td>"+(r.thang===thangHT?"<b>Tháng "+r.thang+"</b>":"Tháng "+r.thang)
+      +'</td><td class="mono">'+fmt(r.moi)
+      +'</td><td class="mono">'+(th==null?'<span style="opacity:.3">—</span>':fmt(th))
+      +'</td><td class="mono">'+(d==null?'<span style="opacity:.3">—</span>':'<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+fmt(d)+"</span>")
+      +'</td><td class="mono">'+(d==null||!r.moi?'<span style="opacity:.3">—</span>':pct(th/r.moi,0))
+      +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/4,1)
+      +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/soTuanThang(r.thang),1)
+      +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/soNgayHoc(r.thang),2)+"</td></tr>";}).join("")
+   +'<tr><td><b>Tháng 7–12</b></td><td class="mono"><b>'+fmt(ktDs.filter(r=>r.thang>=7).reduce((a,r)=>a+r.moi,0))+"</b></td>"
+   +'<td class="mono"><b>'+(ktCoThuc?fmt(ktDs.filter(r=>r.thang>=7).reduce((a,r)=>a+(thucT[r.thang]||0),0)):"—")+"</b></td>"
+   +"<td></td><td></td><td></td><td></td><td></td></tr>"
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Vì sao mục tiêu chấm theo tháng chứ không theo tuần:</b> mục tiêu tháng '+thangHT+" ("+(ktNay?fmt(ktNay.moi):"—")
+   +') chia cho '+(ktCam.length||1)+' campus rồi chia cho 4 tuần ra <b>'+(ktNay&&ktCam.length?dec(ktNay.moi/ktCam.length/4,1):"—")
+   +' học sinh</b> mỗi campus mỗi tuần. Ở mức đó, một tuần chốt 0 rồi tuần sau chốt 2 <i>không nói lên điều gì</i> — '
+   +'đó là nhiễu, không phải tín hiệu. Nên: <b>tuần dùng để xem nhịp</b> (đang đi kịp chưa), '
+   +'<b>tháng mới dùng để chấm</b>. Còn họp tuần thì đo <b>lead measure</b> — cuộc gọi, tham quan — ở bảng điểm theo ngày phía trên.</p>'
+   +'<p class="leg"><b>Ba cột nhịp khác nhau ở mẫu số:</b> ÷4 là quy ước cũ; “theo lịch” chia cho số tuần thật ('
+   +dec(soTuanThang(thangHT),2)+' tuần trong tháng '+thangHT+'). Cộng 4 tuần theo quy ước ÷4 sẽ <b>vượt mục tiêu tháng ~'
+   +dec((soTuanThang(thangHT)/4-1)*100,0)+'%</b>. Muốn đổi thì sửa <code>METRIC_DEFINITIONS.md</code> — tôi không tự đổi mẫu số.</p>'
+   +(ktCam.length ? '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng '+thangHT+' theo campus — tụt nhịp nhiều nhất trước</p>'
+     +'<div class="tw"><table style="min-width:640px"><thead><tr><th>Campus</th><th>Mục tiêu tháng</th><th>Nhịp đến hôm nay</th><th>Thực tế</th><th>So với nhịp</th><th>Sĩ số kế hoạch</th></tr></thead><tbody>'
+     +ktCam.map(r=>{const d=r.thuc-r.nhip;
+       return "<tr"+(d<-1?' style="background:rgba(220,38,38,.09)"':"")+"><td>"+nhan(r.c)
+       +'</td><td class="mono">'+fmt(r.moi)+'</td><td class="mono" style="opacity:.65">'+dec(r.nhip,1)
+       +'</td><td class="mono">'+(ktCoThuc?fmt(r.thuc):'<span style="opacity:.3">—</span>')
+       +'</td><td class="mono">'+(ktCoThuc?'<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+dec(d,1)+"</span>":'<span style="opacity:.3">—</span>')
+       +'</td><td class="mono">'+(r.si?fmt(r.si):'<span style="opacity:.3">—</span>')+"</td></tr>";}).join("")
+     +'<tr><td><b>Toàn hệ thống</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.moi,0))
+     +'</b></td><td class="mono"><b>'+dec(ktCam.reduce((a,r)=>a+r.nhip,0),1)
+     +'</b></td><td class="mono"><b>'+(ktCoThuc?fmt(ktCam.reduce((a,r)=>a+r.thuc,0)):"—")
+     +'</b></td><td class="mono"><b>'+(ktCoThuc?dec(ktCam.reduce((a,r)=>a+r.thuc-r.nhip,0),1):"—")
+     +'</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.si,0))+"</b></td></tr>"
+     +"</tbody></table></div>"
+     +'<p class="leg"><b>“Nhịp đến hôm nay”</b> = mục tiêu tháng × (số ngày học đã qua ÷ tổng ngày học của tháng). '
+     +'Nó trả lời: <i>đến giờ này lẽ ra phải có bao nhiêu?</i> — công bằng hơn so thẳng với mục tiêu cả tháng khi tháng chưa hết.</p>' : "")
+   +'<div class="q"><b>Câu hỏi cho campus đỏ:</b> tụt nhịp là do <b>ít lead vào</b>, hay <b>lead vào mà không ai chạm lần hai</b>? '
+   +'Hai nguyên nhân này sửa ở hai chỗ hoàn toàn khác nhau — bảng cohort ở chế độ ① phân biệt được.</div></div>';
+
+
+  // khong bao gio tra ve rong im lang: neu thieu du lieu thi noi ro thieu gi
+  const bdThieu = (!bdNgay||!bdRows.length) ?
+   '<div class="card"><h2>Bảng điểm campus theo ngày</h2>'
+   +'<p class="sub">'+nhanCP+' · chưa dựng được bảng — đây là lý do</p>'
+   +'<div class="tw"><table><thead><tr><th>Kiểm tra</th><th>Kết quả</th></tr></thead><tbody>'
+   +[["Lead theo ngày (v_lead_campus)",(tsi||[]).length],
+     ["Điểm danh (v_diem_danh)",(dd||[]).length],
+     ["Chuỗi nghỉ (v_nghi_chuoi)",(nghi||[]).length],
+     ["SUPA (v_supa)",(supa||[]).length],
+     ["Sự cố (v_su_co)",(suCo||[]).length],
+     ["Campus gom được",Object.keys(bdD).length],
+     ["Ngày gom được",bdCaNgay.length],
+     ["Ngày học có điểm danh",ngayCoMat.length]]
+     .map(x=>"<tr><td>"+x[0]+'</td><td class="mono">'+(x[1]?fmt(x[1]):'<span class="down">0</span>')+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<div class="q">Dòng nào bằng 0 chính là chỗ đứt. Thẻ <b>Chẩn đoán nguồn dữ liệu</b> ở cuối chế độ ③ '
+   +'cho biết nguồn đó lỗi hay chỉ rỗng — hai thứ này sửa ở hai chỗ khác nhau.</div></div>' : "";
+
+  const bdCard = (!bdNgay||!bdRows.length) ? bdThieu :
+   '<div class="card"><h2>Bảng điểm campus theo ngày</h2>'
+   +'<p class="sub">'+nhanCP+' · <b>'+tenThu(bdNgay)+" "+bdNgay+'</b> · so với dải <b>4 tuần gần nhất</b> — 4 '+tenThu(bdNgay).toLowerCase()+" trước ("+bdTruoc.join(" · ")+")</p>"
+   +'<p class="leg" style="margin-top:-6px">⏱ Đơn vị là <b>một ngày học</b>. Chỉ so với <b>cùng thứ</b> trong 3 tuần trước — '
+   +'thứ Hai và thứ Sáu vốn không giống nhau, so chéo thứ là tự tạo báo động giả.</p>'
+   +'<div class="tw"><table style="min-width:920px"><thead>'
+   +'<tr><th rowspan="2">Campus</th><th rowspan="2">Tín hiệu</th>'
+   +'<th style="text-align:center;border-bottom:0" class="bdg">Tuyển sinh</th>'
+   +'<th colspan="2" style="text-align:center;border-bottom:0" class="bdg">Vận hành</th>'
+   +'<th colspan="3" style="text-align:center;border-bottom:0" class="bdg">Rủi ro</th></tr>'
+   +"<tr>"+DO.map(m=>"<th>"+m.ten+(m.tot<0?" ↓":"")+"</th>").join("")+"</tr></thead><tbody>"
+   +bdRows.map(r=>{
+      const bg=r.tin>=2?' style="background:rgba(220,38,38,.09)"':(r.thieu>=2?' style="opacity:.6"':"");
+      const dau=r.thieu>=2?'<span title="thiếu dữ liệu ≥2 ô — không xếp hạng">⚪</span>'
+              :r.tin>=2?'<span class="down"><b>'+r.tin+"</b></span>"
+              :r.tin===1?'<span class="down">1</span>':'<span style="opacity:.35">0</span>';
+      return "<tr"+bg+"><td>"+nhan(r.c)+'</td><td class="mono">'+dau+"</td>"
+        +r.o.map(x=>'<td class="bd mono">'+x.h+"</td>").join("")+"</tr>";}).join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Dải là gì:</b> lấy 4 '+tenThu(bdNgay).toLowerCase()+' của 4 tuần gần nhất, dải chạy từ ngày thấp nhất đến ngày cao nhất. '
+   +'Con số hôm đó rơi <b>trong dải</b> (·) nghĩa là bình thường — đừng họp về nó. '
+   +'Rơi <b>ngoài dải</b> (▲ ▼) nghĩa là ngày này khác hẳn bốn '+tenThu(bdNgay).toLowerCase()+' trước, và <i>đó</i> là chỗ đáng hỏi. '
+   +'Đây là số của chính ME School, không phải benchmark ngành.</p>'
+   +'<p class="leg"><b>Cột Tín hiệu</b> = có bao nhiêu ô ra ngoài dải <b>theo hướng xấu</b>. '
+   +'Bốn cột có dấu ↓ đảo chiều: tăng là xấu. <b>⚪</b> = thiếu dữ liệu từ 2 ô trở lên, không xếp hạng'
+   +(bdMu?' — hiện có <b>'+bdMu+" campus</b> như vậy.":".")
+   +' Ô ghi <b>“chưa có”</b> là ngày đó chưa nhập số; ô ghi <b>0</b> mờ là đã có số và bằng 0 suốt 4 ngày — bình thường, không phải lỗ hổng.</p>'
+   +(Object.keys(bdMau).length?'<p class="leg"><b>Có dòng bị bỏ vì không đọc được ngày:</b> '
+     +Object.keys(bdMau).map(k=>k+" → <code>"+bdMau[k]+"</code>").join(" · ")+"</p>":"")
+   +'<div class="q"><b>Cách dùng mỗi sáng:</b> chỉ đọc các dòng có Tín hiệu ≥ 1, từ trên xuống. '
+   +'Với mỗi ô ▲▼, hỏi đúng một câu: <i>hôm đó campus này có chuyện gì khác bốn '+tenThu(bdNgay).toLowerCase()+' trước?</i> '
+   +'Nếu không ai trả lời được thì thay đổi đó là ngẫu nhiên — hoặc đang có việc xảy ra mà chưa ai nói ra.</div></div>';
+
+
+  $("body").innerHTML=
+   '<div class="zone" id="z1">'
+   +'<p class="sub">Bốn thẻ. Mỗi thẻ trả lời được đúng một câu: <b>ai làm gì trong 48 giờ</b>. Thẻ nào không trả lời được thì nằm ở ③.</p>'
+   +skCard
+   +bangTre
+   +scCard
+   +ngCard
+   +viecCard
+   +cohCard
+   +'</div>'
+
+   +'<div class="zone" id="z2">'
+   +'<p class="sub">Đọc trong 5 phút. Bảng đầu cho thấy <i>từng ngày học</i>; bảng giữa hỏi <i>campus nào khác thường hôm đó</i>; bảng cuối hỏi <i>toàn hệ thống có kịp chỉ tiêu không</i>.</p>'
+   +skCard
+   +bangTre
+   +ngayCard
+   +bdCard
+   +ktCard
+   +ctCard
+   +(nguonHong.length?cdCard:"")
+   +'</div>'
+
+   +'<div class="zone" id="z3">'
+   +'<p class="sub">Mở khi cần điều tra một câu hỏi cụ thể — không đọc hằng tuần. Ô thời gian ở đầu trang chỉ đổi các thẻ Website · Meta · Google.</p>'
+   +dsCard
+   +hsCard
+   +ddCard
+   +spCard
+   +hrCard
+   +moGap
+   +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
+   +'<div class="kpis">'
+   +kpi("Lượt vào web",fmt(ses),delta(ses,pses),"mỗi lần một người mở website")
+   +kpi("Số người",fmt(usr),delta(usr,pusr),"người khác nhau, không tính lặp")
+   +kpi("Bấm từ Google",fmt(cl),delta(cl,pcl),"bấm vào web từ kết quả tìm kiếm")
+   +kpi("Hiện trên Google",fmt(im),delta(im,pim),"số lần web xuất hiện, chưa ai bấm")+"</div>"
+   +'<div style="margin-top:14px">'+spark(series)+"</div></div>"
+
+   +evCard
+
+   +wCard
+
+   +metaCard
+
+   +cmpCard
+
+   +'<div class="card"><h2>Nguồn truy cập</h2><p class="sub">Phiên theo kênh · '+fmt(chTot)+" phiên</p>"
+   +chRows.map(([k,v])=>'<div class="frow"><div class="fm"><span>'+k+'</span><span><b class="mono">'+fmt(v)
+     +'</b> <span style="color:var(--muted)">'+pct(v/chTot,1)+"</span></span></div>"
+     +'<div class="bar"><i style="width:'+(v/chRows[0][1]*100).toFixed(1)+'%"></i></div></div>').join("")
+   +'<p class="leg"><b>Organic Search</b> = tự tìm thấy trên Google · <b>Direct</b> = gõ thẳng địa chỉ hoặc bookmark · '
+   +'<b>Paid Social</b> = từ quảng cáo Facebook · <b>Referral</b> = trang khác dẫn sang.</p>'
+   +'<p class="note">Paid Search và Paid Social gần như bằng 0 — quảng cáo hầu như không đưa ai về website.</p></div>'
+
+   +'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">Xếp theo <b>lượt nhấp</b> — số người thật sự vào web, không phải số lần xuất hiện</p>'
+   +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Hiển thị</th><th>Nhấp</th><th>CTR</th><th>Vị trí</th></tr></thead><tbody>'
+   +gq.slice().sort((a,b)=>(+b.clicks||0)-(+a.clicks||0)||(+b.impressions||0)-(+a.impressions||0)).slice(0,8).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
+     +'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+dec(q.position,1)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Hiện</b> = số lần web xuất hiện trên Google · <b>Bấm</b> = số lần có người bấm vào · '
+   +'<b>CTR</b> = bấm ÷ hiện · <b>Vị trí</b> = thứ hạng trung bình, 1 là cao nhất (có số lẻ vì là trung bình).</p>'
+   +'<div class="q"><b>Câu hỏi:</b> từ khoá thương hiệu chỉ chiếm '+pct(allCl?brandCl/allCl:0,1)
+   +' lượt nhấp trên toàn bộ '+fmt(gq.length)+' từ khoá. Người tìm thơ và truyện cho con — họ có phải phụ huynh đang chọn trường không?</div></div>'
+
+   +nearCard
+
+   +pageCard
+
+   +'<div class="card"><h2>Nguồn dữ liệu</h2><p class="sub">Số nào không có thì để trống, không bịa</p>'
+   +'<div class="tw"><table><thead><tr><th>Nguồn</th><th>Đến ngày</th><th>Số ngày trễ</th></tr></thead><tbody>'
+   +[["GA4",days[days.length-1]],["Search Console",gs.length?gs.reduce((a2,r)=>r.day>a2?r.day:a2,gs[0].day):null],
+     ["Sự kiện + trang đích GA4",end],
+     ["Meta Ads",mDays.length?mDays[mDays.length-1]:null],
+     ["Điểm danh Tomia",ddNay?ddNay.ngay:null],
+     ["Học sinh AMIS CRM",H.length?"lần bấm “Kéo AMIS” gần nhất":null],
+     ["Lượt giơ tay trên web",(W.length?String(W[0].ts).slice(0,10):null)]]
+     .map(([nm,d])=>{const lag=(d&&/^\d{4}-\d{2}-\d{2}$/.test(d))?Math.round((Date.now()-new Date(d))/864e5):null;
+       return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
+   +"</tbody></table></div>"
+   +'<p class="note">Chưa nối: giáo viên · tài chính.<br>Bản dựng: <b class="mono">'+BUILD+'</b> — nếu số này khác bản tôi nói, trình duyệt đang giữ bản cũ: bấm Ctrl+Shift+R (Windows) hoặc Cmd+Shift+R (Mac).</p></div>'
+   +dongGap+cdCard+'</div>';
+  if(KHO&&KHO.t){const gio=KHO.t.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+    const phut=Math.round((Date.now()-KHO.t.getTime())/60000);
+    $("tuoi").innerHTML='Số liệu lấy lúc <b>'+gio+'</b>'+(phut>0?" · "+phut+" phút trước":"")
+      +' · đổi thời gian <b>không</b> gọi lại máy chủ, đổi campus chỉ gọi lại <b>2</b>/25 nguồn.';}
+  apDungChe();
+}
+
+let CHE="1";
+function apDungChe(){
+  ["1","2","3"].forEach(z=>{const el=$("z"+z); if(el) el.className="zone"+(z===CHE?" on":"")});
+  document.querySelectorAll("#che > button").forEach(b=>{b.className=(b.dataset.z===CHE?"on":"")});
+  // o thoi gian chi co nghia o che do 3 -> an di cho khoi hieu nham
+  $("oTG").style.display = (CHE==="3") ? "inline-flex" : "none";
+}
+$("che").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b||!b.dataset.z)return;
+  CHE=b.dataset.z; apDungChe(); window.scrollTo(0,0);
+});
+
+sb.auth.onAuthStateChange(async(_e,session)=>{
+  if(session){
+    $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+    $("who").textContent=session.user.email;
+    chay();
+  }
+});
+(async()=>{const {data:{session}}=await sb.auth.getSession();
+ if(session){$("login").classList.add("hidden");$("app").classList.remove("hidden");
+ $("who").textContent=session.user.email;chay();}})();
+</script></body></html>
