@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-09 · b15";
+const BUILD="2026-09-09 · b16";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -190,7 +190,7 @@ let KHO=null, buocLai=false;   // kho tam trong bo nho: doi campus/thoi gian kho
 const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","meta_campaign_daily",
   "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","mv_lead_campus","v_diem_danh",
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
-  "mv_viec_tuan","mv_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa","v_nhap_hoc",
+  "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
@@ -217,11 +217,11 @@ function taoTruyVan(CP){ return [
     (CP? sb.from("mv_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").eq("campus",CP).order("im_lang",{ascending:false}).limit(1000)
        : sb.from("mv_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").order("im_lang",{ascending:false}).limit(1000)),
     sb.from("v_su_co").select("ma_ticket,ngay_tao,campus,phan_loai,muc_do,trang_thai,tieu_de,nguoi_tao,nguoi_duoc_giao,so_ngay_mo,con_mo,he_trong,so_tre_lq").order("ngay_tao",{ascending:false}).limit(1000),
-    sb.from("v_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra,chua_quay_lai,ngay_ke_tu_khi_nghi").order("den_ngay",{ascending:false}).limit(1000),
+    sb.from("mv_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra,chua_quay_lai,ngay_ke_tu_khi_nghi").order("den_ngay",{ascending:false}).limit(1000),
     sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
     sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
-    sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000),
-    sb.from("v_nhap_hoc").select("ma_tre,ten_tre,lop,campus,ngay_dau").gte("ngay_dau","2026-06-01").order("ngay_dau",{ascending:false}).limit(3000),
+    sb.from("mv_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000),
+    sb.from("mv_nhap_hoc").select("ma_tre,ten_tre,lop,campus,ngay_dau").gte("ngay_dau","2026-06-01").order("ngay_dau",{ascending:false}).limit(3000),
     sb.from("v_tuoi_du_lieu").select("nguon,lan_cuoi,so_gio,so_lan").limit(20)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
@@ -1084,17 +1084,17 @@ async function render(){
   // b13: truy van CHET khac han voi truy van TRA VE RONG. Phai tach hai thu nay.
   const TEN_VIET={"mv_lead_campus":"phễu lead theo campus","mv_tuan_campus":"bảng tuần từng campus",
    "mv_can_ly_do":"lý do im lặng","mv_cohort_tuan":"cohort tuần","mv_viec_tuan":"việc trong tuần",
-   "mv_danh_sach":"danh sách gọi","v_diem_danh":"điểm danh","v_nghi_chuoi":"trẻ nghỉ dài",
-   "v_su_co":"sự cố","v_nhap_hoc":"nhập học","v_supa":"kiểm việc SUPA","v_harasocial":"tin nhắn Harasocial",
+   "mv_danh_sach":"danh sách gọi","v_diem_danh":"điểm danh","mv_nghi_chuoi":"trẻ nghỉ dài",
+   "v_su_co":"sự cố","mv_nhap_hoc":"nhập học","mv_supa":"kiểm việc SUPA","v_harasocial":"tin nhắn Harasocial",
    "ga4_daily_channel":"Google Analytics","meta_campaign_daily":"Meta Ads"};
   const vietTen=n=>TEN_VIET[n]||n;
   const bangChet=ds=>ds.filter(n=>{const i=TEN_NGUON.indexOf(n); return i>=0 && KQ[i] && KQ[i].error;});
 
   const SK=[
    {ten:"Tomia — điểm danh",      kho:"Tomia",      den:bdNgay,              tay:true,
-    bang:["v_diem_danh","v_nghi_chuoi","v_su_co","v_nhap_hoc"]},
+    bang:["v_diem_danh","mv_nghi_chuoi","v_su_co","mv_nhap_hoc"]},
    {ten:"SUPA — kiểm việc",       kho:"SUPA",       den:maxNg(supa,"ngay"),  tay:true,
-    bang:["v_supa"]},
+    bang:["mv_supa"]},
    {ten:"AMIS — tuyển sinh",      kho:"AMIS",       den:maxNg(tsi,"ngay"),   tay:true,
     bang:["mv_lead_campus","mv_tuan_campus","mv_can_ly_do","mv_cohort_tuan","mv_viec_tuan","mv_danh_sach"]},
    {ten:"Harasocial — tin nhắn",  kho:"Harasocial", den:maxNg(hara,"ngay"),  tay:true,
