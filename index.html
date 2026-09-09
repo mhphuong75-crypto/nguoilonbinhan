@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-09 · b16";
+const BUILD="2026-09-09 · b17";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -277,7 +277,7 @@ async function render(){
     .sort((a,b)=>b.ms-a.ms).slice(0,8);
   const tongDong=KQ.reduce((a,r)=>a+((r&&r.data)?r.data.length:0),0);
   const cdCard =
-   '<details class="card"'+(nguonHong.length?' open style="border-color:#7f1d1d"':"")+'>'
+   '<details class="card"'+(nguonHong.length?' style="border-color:#7f1d1d"':"")+'>'
    +'<summary>'+(nguonHong.length?'⛔ ':'')+'Chẩn đoán nguồn dữ liệu — '
    +fmt(KQ.length-nguonHong.length)+"/"+fmt(KQ.length)+' nguồn trả về dữ liệu</summary>'
    +'<p class="sub">'+fmt(KQ.length-nguonHong.length)+"/"+fmt(KQ.length)+' nguồn trả về dữ liệu · '
@@ -1143,7 +1143,7 @@ async function render(){
    : '<b>Cả hai cửa đều thông.</b> Nếu vẫn thấy số cũ thì là cửa 3 — trình duyệt đang giữ số cũ: bấm <b>↻ Tải lại số</b> ở đầu trang.';
 
   const skCard =
-   '<details class="card"'+(skHong.length?' open style="border-color:'+((skCua3.length||skCua1.length)?'#B42318':'#A96C05')+'"':'')+'>'
+   '<details class="card"'+(skHong.length?' style="border-color:'+((skCua3.length||skCua1.length)?'#B42318':'#A96C05')+'"':'')+'>'
    +'<summary>'+(skCua3.length?'⛔':(skHong.length?'⚠':'✓'))+' Sức khoẻ dữ liệu — '
    +(skCua3.length? skCua3.length+'/6 nguồn KHÔNG lấy được số' : (skHong.length? skHong.length+'/6 nguồn có vấn đề' : 'cả 6 nguồn bình thường'))+'</summary>'
    +'<p class="sub">Số trên app chỉ mới bằng nguồn cũ nhất. Đọc dòng nào màu đỏ hoặc cam trước.</p>'
@@ -1168,12 +1168,13 @@ async function render(){
    +'Chỉ tin số từ <b>ngày học gần nhất trở về trước</b>.</p></details>';
   const treNgay = bdNgay ? ngayHocTuDen(bdNgay,homNay) : null;
   const bangTre = (treNgay!=null && treNgay>=1) ?
-   '<div class="card" style="border-color:#A96C05"><h2>⏳ Dữ liệu điểm danh đang trễ</h2>'
+   '<details class="card" style="border-color:#A96C05">'
+   +'<summary>⏳ Dữ liệu điểm danh đang trễ — thiếu '+treNgay+' ngày học</summary>'
    +'<p class="sub">Ngày học gần nhất có điểm danh: <b>'+bdNgay+'</b> · hôm nay '+homNay+'</p>'
    +'<p class="leg" style="margin-top:-6px;font-size:13.5px;color:var(--ink2)">Thiếu <b class="down">'+treNgay+' ngày học</b>. '
    +'Mọi con số về trẻ có mặt, vắng, trẻ nghỉ dài và <b>nhập học thực tế</b> ở dưới đều <b>đang thiếu '+treNgay+' ngày</b> — '
    +'đó là dữ liệu chưa về, <b>không phải</b> trường tuyển kém hay trẻ nghỉ nhiều.</p>'
-   +'<div class="q">'+cachSuaTomia+'</div></div>' : "";
+   +'<div class="q">'+cachSuaTomia+'</div></details>' : "";
 
   const ngayCard = !ngayHocGan.length ? "" :
    '<div class="card"><h2>Từng ngày học — toàn cảnh</h2>'
