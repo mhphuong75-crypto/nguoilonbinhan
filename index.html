@@ -32,6 +32,13 @@ box-shadow:var(--shadow);margin-top:14px}
 .card h2{margin:0 0 2px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
 color:var(--accent);font-weight:600}
 .card .sub{margin:0 0 14px;font-size:12.5px;color:var(--muted)}
+details.card>summary{margin:0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+color:var(--accent);font-weight:600;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::before{content:"\25B8";font-size:11px;opacity:.6}
+details.card[open]>summary::before{content:"\25BE"}
+details.card[open]>summary{margin-bottom:2px}
+details.card>summary:hover{opacity:.8}
 .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);
 border:1px solid var(--line);border-radius:12px;overflow:hidden}
 @media(min-width:620px){.kpis{grid-template-columns:repeat(4,1fr)}}
@@ -124,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-09 · b12";
+const BUILD="2026-09-09 · b15";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -181,9 +188,9 @@ const kpi=(l,v,d,h)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v m
 
 let KHO=null, buocLai=false;   // kho tam trong bo nho: doi campus/thoi gian khong goi lai 25 truy van
 const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","meta_campaign_daily",
-  "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","v_lead_campus","v_diem_danh",
-  "v_siso (1 dòng)","v_web_tong","v_tuan_campus","chi_tieu","v_can_ly_do","v_cohort_tuan",
-  "v_viec_tuan","v_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa","v_nhap_hoc",
+  "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","mv_lead_campus","v_diem_danh",
+  "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
+  "mv_viec_tuan","mv_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa","v_nhap_hoc",
   "v_tuoi_du_lieu"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
@@ -197,18 +204,18 @@ function taoTruyVan(CP){ return [
     sb.from("v_web_trang").select("cua_so,landing_page,phien,gan_ket,giay_tong,su_kien").limit(500),
     sb.from("web_click").select("ts,kind,page,ref").order("ts",{ascending:false}).limit(4000),
     sb.from("v_siso").select("nhom,campus,so_hs,so_lop").limit(2000),
-    sb.from("v_lead_campus").select("ngay,campus,giai_doan,nguon,so_lead").limit(2000),
+    sb.from("mv_lead_campus").select("ngay,campus,giai_doan,nguon,so_lead").limit(2000),
     sb.from("v_diem_danh").select("ngay,campus,di_hoc,vang,dan_thuoc").order("ngay",{ascending:false}).limit(2000),
     sb.from("v_siso").select("nhom,campus,so_hs").limit(1),
     sb.from("v_web_tong").select("cua_so,su_kien,phien").limit(10),
-    sb.from("v_tuan_campus").select("tuan,campus,cuoc_goi,lead_moi,hen,da_tham_quan,dat_coc,da_di_hoc").order("tuan",{ascending:false}).limit(2000),
+    sb.from("mv_tuan_campus").select("tuan,campus,cuoc_goi,lead_moi,hen,da_tham_quan,dat_coc,da_di_hoc").order("tuan",{ascending:false}).limit(2000),
     sb.from("chi_tieu").select("campus,thang,tuyen_moi,si_so_kh").limit(500),
-    sb.from("v_can_ly_do").select("campus,ten,giai_doan,so_ngay_im_lang,ly_do,ngay_doi").order("so_ngay_im_lang",{ascending:false}).limit(1000),
-    sb.from("v_cohort_tuan").select("tuan_tao,campus,lead,cham_24h,cham_2_lan_tro_len,chua_ai_cham,hen_tham,coc_chot,tu_choi,im_lang_14").limit(500),
-    (CP? sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").eq("campus",CP).not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)
-       : sb.from("v_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)),
-    (CP? sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").eq("campus",CP).order("im_lang",{ascending:false}).limit(1000)
-       : sb.from("v_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").order("im_lang",{ascending:false}).limit(1000)),
+    sb.from("mv_can_ly_do").select("campus,ten,giai_doan,so_ngay_im_lang,ly_do,ngay_doi").order("so_ngay_im_lang",{ascending:false}).limit(1000),
+    sb.from("mv_cohort_tuan").select("tuan_tao,campus,lead,cham_24h,cham_2_lan_tro_len,chua_ai_cham,hen_tham,coc_chot,tu_choi,im_lang_14").limit(500),
+    (CP? sb.from("mv_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").eq("campus",CP).not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)
+       : sb.from("mv_viec_tuan").select("ro,campus,ten,giai_doan,kenh,ngay_tao,im_lang,so_cham").not("ro","is",null).order("im_lang",{ascending:false}).limit(1000)),
+    (CP? sb.from("mv_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").eq("campus",CP).order("im_lang",{ascending:false}).limit(1000)
+       : sb.from("mv_danh_sach").select("tang,campus,ten,kenh,giai_doan,ngay_tao,im_lang,so_cham,goi_nghe_may,goi_khong_nghe,cham_cuoi_ngay,cham_cuoi_ai,cham_cuoi_lam_gi,cham_cuoi_ket_qua,cham_cuoi_ghi_chu,dien_thoai").order("im_lang",{ascending:false}).limit(1000)),
     sb.from("v_su_co").select("ma_ticket,ngay_tao,campus,phan_loai,muc_do,trang_thai,tieu_de,nguoi_tao,nguoi_duoc_giao,so_ngay_mo,con_mo,he_trong,so_tre_lq").order("ngay_tao",{ascending:false}).limit(1000),
     sb.from("v_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra,chua_quay_lai,ngay_ke_tu_khi_nghi").order("den_ngay",{ascending:false}).limit(1000),
     sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
@@ -270,7 +277,9 @@ async function render(){
     .sort((a,b)=>b.ms-a.ms).slice(0,8);
   const tongDong=KQ.reduce((a,r)=>a+((r&&r.data)?r.data.length:0),0);
   const cdCard =
-   '<div class="card"'+(nguonHong.length?' style="border-color:#7f1d1d"':"")+'><h2>Chẩn đoán nguồn dữ liệu</h2>'
+   '<details class="card"'+(nguonHong.length?' open style="border-color:#7f1d1d"':"")+'>'
+   +'<summary>'+(nguonHong.length?'⛔ ':'')+'Chẩn đoán nguồn dữ liệu — '
+   +fmt(KQ.length-nguonHong.length)+"/"+fmt(KQ.length)+' nguồn trả về dữ liệu</summary>'
    +'<p class="sub">'+fmt(KQ.length-nguonHong.length)+"/"+fmt(KQ.length)+' nguồn trả về dữ liệu · '
    +fmt(tongDong)+' dòng · '+(KHO&&KHO.tong?fmt(KHO.tong)+"ms lần tải đầu":"—")+' · bản dựng '+BUILD+'</p>'
    +'<p class="sub" style="margin:-8px 0 12px;text-transform:none;letter-spacing:0">8 nguồn chậm nhất</p>'
@@ -278,7 +287,7 @@ async function render(){
    +nguonCham.map(x=>"<tr><td><code>"+x.ten+'</code></td><td class="mono">'+fmt(x.n)
      +'</td><td class="mono">'+(x.ms>3000?'<span class="down">':"<span>")+fmt(x.ms)+"ms</span>"
      +(x.thu>1?' <span class="down" title="đã thử lại vì hết giờ">↻</span>':"")+"</td></tr>").join("")
-   +"</tbody></table></div>'"
+   +"</tbody></table></div>"
    +(nguonHong.length
      ? '<div class="tw"><table><thead><tr><th>Nguồn</th><th>Dòng</th><th>Lỗi</th></tr></thead><tbody>'
        +nguonHong.map(x=>'<tr><td><code>'+x.ten+'</code></td><td class="mono">'
@@ -289,7 +298,7 @@ async function render(){
        +'<b>0 dòng, không lỗi</b> = view còn sống nhưng rỗng, hoặc RLS chưa cho tài khoản này đọc. '
        +'Hai loại này sửa ở hai chỗ khác nhau — chụp bảng này gửi tôi.</div>'
      : '<p class="leg">Tất cả nguồn đều trả về dữ liệu.</p>')
-   +"</div>";
+   +"</details>";
   // chi lay ban chup moi nhat — cac ban chup cu de danh so sanh sau
   const newest=(rows,f)=>{if(!rows||!rows.length)return[];const m=rows.reduce((a,r)=>r[f]>a?r[f]:a,rows[0][f]);return rows.filter(r=>r[f]===m)};
   const gq=newest(gqAll,"snapshot_on"), gp=newest(gpAll,"snapshot_on");
@@ -1072,35 +1081,54 @@ async function render(){
   const lichNgay=d=>d?Math.round((new Date(homNay+"T00:00:00Z")-new Date(d+"T00:00:00Z"))/864e5):null;
   const doTuoi=g=>g==null?"chưa bao giờ":(g<1?"vừa xong":(g<24?g+" giờ trước":Math.round(g/24)+" ngày trước"));
 
+  // b13: truy van CHET khac han voi truy van TRA VE RONG. Phai tach hai thu nay.
+  const TEN_VIET={"mv_lead_campus":"phễu lead theo campus","mv_tuan_campus":"bảng tuần từng campus",
+   "mv_can_ly_do":"lý do im lặng","mv_cohort_tuan":"cohort tuần","mv_viec_tuan":"việc trong tuần",
+   "mv_danh_sach":"danh sách gọi","v_diem_danh":"điểm danh","v_nghi_chuoi":"trẻ nghỉ dài",
+   "v_su_co":"sự cố","v_nhap_hoc":"nhập học","v_supa":"kiểm việc SUPA","v_harasocial":"tin nhắn Harasocial",
+   "ga4_daily_channel":"Google Analytics","meta_campaign_daily":"Meta Ads"};
+  const vietTen=n=>TEN_VIET[n]||n;
+  const bangChet=ds=>ds.filter(n=>{const i=TEN_NGUON.indexOf(n); return i>=0 && KQ[i] && KQ[i].error;});
+
   const SK=[
-   {ten:"Tomia — điểm danh",      kho:"Tomia",      den:bdNgay,              tay:true},
-   {ten:"SUPA — kiểm việc",       kho:"SUPA",       den:maxNg(supa,"ngay"),  tay:true},
-   {ten:"AMIS — tuyển sinh",      kho:"AMIS",       den:maxNg(lp,"ngay"),    tay:true},
-   {ten:"Harasocial — tin nhắn",  kho:"Harasocial", den:maxNg(hara,"ngay"),  tay:true},
-   {ten:"Google Analytics",       kho:null,         den:maxNg(ga,"day"),     tay:false},
-   {ten:"Meta Ads",               kho:null,         den:maxNg(mc,"day"),     tay:false}
+   {ten:"Tomia — điểm danh",      kho:"Tomia",      den:bdNgay,              tay:true,
+    bang:["v_diem_danh","v_nghi_chuoi","v_su_co","v_nhap_hoc"]},
+   {ten:"SUPA — kiểm việc",       kho:"SUPA",       den:maxNg(supa,"ngay"),  tay:true,
+    bang:["v_supa"]},
+   {ten:"AMIS — tuyển sinh",      kho:"AMIS",       den:maxNg(tsi,"ngay"),   tay:true,
+    bang:["mv_lead_campus","mv_tuan_campus","mv_can_ly_do","mv_cohort_tuan","mv_viec_tuan","mv_danh_sach"]},
+   {ten:"Harasocial — tin nhắn",  kho:"Harasocial", den:maxNg(hara,"ngay"),  tay:true,
+    bang:["v_harasocial"]},
+   {ten:"Google Analytics",       kho:null,         den:maxNg(ga,"day"),     tay:false,
+    bang:["ga4_daily_channel"]},
+   {ten:"Meta Ads",               kho:null,         den:maxNg(mc,"day"),     tay:false,
+    bang:["meta_campaign_daily"]}
   ].map(x=>{
     const t=x.kho?tDL[x.kho]:null, gio=t?t.gio:null;
+    const chet=bangChet(x.bang||[]);
     const treHoc = x.den ? ngayHocTuDen(x.den,homNay) : null;   // so ngay HOC bi thieu
     const treLich= lichNgay(x.den);
     let cua=0, nhan="", mau="var(--ink2)";
-    if(x.tay&&coTuoi){
+    if(chet.length){          cua=3; nhan="Máy chủ quá tải — thiếu "+chet.length+"/"+x.bang.length+" bảng"; mau="#B42318"; }
+    else if(x.tay&&coTuoi){
       if(gio==null)            { cua=1; nhan="Chưa bao giờ được kéo về"; mau="#B42318"; }
       else if(gio>30)          { cua=1; nhan="Chưa ai bấm dấu trang — "+doTuoi(gio); mau="#B42318"; }
       else if(x.den==null)     { cua=2; nhan="Đã kéo về, chưa bóc ra số";  mau="#A96C05"; }
       else if(treHoc>=1)       { cua=2; nhan="Đã kéo về, chờ job bóc số";  mau="#A96C05"; }
       else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
     }else{
-      if(x.den==null)          { cua=2; nhan="Chưa có số nào"; mau="#B42318"; }
+      if(x.den==null)          { cua=2; nhan="Chưa có số nào"; mau="#A96C05"; }
       else if(treLich>=3)      { cua=2; nhan="Job tự động chưa chạy — "+treLich+" ngày"; mau="#B42318"; }
       else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
     }
-    return Object.assign({},x,{gio:gio,cua:cua,nhan:nhan,mau:mau,treHoc:treHoc});
+    return Object.assign({},x,{gio:gio,cua:cua,nhan:nhan,mau:mau,treHoc:treHoc,chet:chet});
   });
 
   const skHong = SK.filter(x=>x.cua>0);
   const skCua1 = SK.filter(x=>x.cua===1);
   const skCua2 = SK.filter(x=>x.cua===2);
+  const skCua3 = SK.filter(x=>x.cua===3);
+  const chetTatCa = [...new Set(SK.reduce((a2,x)=>a2.concat(x.chet||[]),[]))];
   const tomiaSK = SK[0];
 
   // cau "cach sua" cho the diem danh tre — phu thuoc dang tac o cua nao
@@ -1115,16 +1143,21 @@ async function render(){
    : '<b>Cả hai cửa đều thông.</b> Nếu vẫn thấy số cũ thì là cửa 3 — trình duyệt đang giữ số cũ: bấm <b>↻ Tải lại số</b> ở đầu trang.';
 
   const skCard =
-   '<div class="card"'+(skHong.length?' style="border-color:'+(skCua1.length?'#B42318':'#A96C05')+'"':'')+'>'
-   +'<h2>'+(skHong.length?'⚠':'✓')+' Sức khoẻ dữ liệu — '+(skHong.length? skHong.length+'/6 nguồn có vấn đề' : 'cả 6 nguồn bình thường')+'</h2>'
+   '<details class="card"'+(skHong.length?' open style="border-color:'+((skCua3.length||skCua1.length)?'#B42318':'#A96C05')+'"':'')+'>'
+   +'<summary>'+(skCua3.length?'⛔':(skHong.length?'⚠':'✓'))+' Sức khoẻ dữ liệu — '
+   +(skCua3.length? skCua3.length+'/6 nguồn KHÔNG lấy được số' : (skHong.length? skHong.length+'/6 nguồn có vấn đề' : 'cả 6 nguồn bình thường'))+'</summary>'
    +'<p class="sub">Số trên app chỉ mới bằng nguồn cũ nhất. Đọc dòng nào màu đỏ hoặc cam trước.</p>'
    +'<div class="tw"><table style="min-width:620px"><thead><tr><th>Nguồn</th><th>Kéo về kho</th>'
    +'<th>Số mới nhất đến ngày</th><th>Tình trạng</th></tr></thead><tbody>'
    + SK.map(x=>'<tr><td>'+x.ten+'</td>'
        +'<td class="mono">'+(x.tay?(coTuoi?doTuoi(x.gio):'<span style="opacity:.5">chưa bật</span>'):'<span style="opacity:.5">tự động</span>')+'</td>'
        +'<td class="mono">'+(x.den||"—")+'</td>'
-       +'<td style="color:'+x.mau+'">'+(x.cua===0?"✓ ":(x.cua===1?"⚠ ":"⏳ "))+x.nhan+'</td></tr>').join("")
+       +'<td style="color:'+x.mau+'">'+(x.cua===0?"✓ ":(x.cua===1?"⚠ ":(x.cua===3?"⛔ ":"⏳ ")))+x.nhan+'</td></tr>').join("")
    +'</tbody></table></div>'
+   +(chetTatCa.length? '<div class="q" style="border-color:#B42318"><b>⛔ Máy chủ không trả kịp '+chetTatCa.length+' bảng:</b> '
+       +chetTatCa.map(vietTen).join(" · ")
+       +'.<br>Các thẻ dùng những bảng này <b>không hiện trên trang</b> — nghĩa là <b>chưa lấy được</b>, '
+       +'<b>không phải</b> là không có việc. Bấm <b>↻ Tải lại số</b> để thử lại; nếu lặp lại nhiều lần thì máy chủ đang quá tải, báo cho Phuong.</div>' : "")
    +(skCua1.length? '<div class="q"><b>Cửa 1 — chưa ai bấm dấu trang:</b> '
        +skCua1.map(x=>x.ten.split(" —")[0]).join(" · ")
        +'. Việc của người trực buổi sáng. Mở trang nguồn, bấm dấu trang tương ứng.</div>' : "")
@@ -1132,7 +1165,7 @@ async function render(){
        +skCua2.map(x=>x.ten.split(" —")[0]).join(" · ")
        +'. Job tự bóc lúc <b>09:00</b> mỗi sáng. Cần ngay: GitHub → Actions → <i>Keo du lieu</i> → <b>Run workflow</b> → chờ ~2 phút → bấm <b>↻ Tải lại số</b>.</div>' : "")
    +'<p class="note" style="margin-top:10px">Số của <b>hôm nay ('+homNay+')</b> luôn chưa chốt — điểm danh còn đang diễn ra. '
-   +'Chỉ tin số từ <b>ngày học gần nhất trở về trước</b>.</p></div>';
+   +'Chỉ tin số từ <b>ngày học gần nhất trở về trước</b>.</p></details>';
   const treNgay = bdNgay ? ngayHocTuDen(bdNgay,homNay) : null;
   const bangTre = (treNgay!=null && treNgay>=1) ?
    '<div class="card" style="border-color:#A96C05"><h2>⏳ Dữ liệu điểm danh đang trễ</h2>'
