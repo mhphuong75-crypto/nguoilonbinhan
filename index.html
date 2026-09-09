@@ -124,7 +124,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-08 · b9";
+const BUILD="2026-09-09 · b10";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -183,7 +183,7 @@ let KHO=null, buocLai=false;   // kho tam trong bo nho: doi campus/thoi gian kho
 const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","meta_campaign_daily",
   "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","v_lead_campus","v_diem_danh",
   "v_siso (1 dòng)","v_web_tong","v_tuan_campus","chi_tieu","v_can_ly_do","v_cohort_tuan",
-  "v_viec_tuan","v_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa"];
+  "v_viec_tuan","v_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa","v_nhap_hoc"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -212,7 +212,8 @@ function taoTruyVan(CP){ return [
     sb.from("v_nghi_chuoi").select("ma_tre,ten_tre,lop,campus,tu_ngay,den_ngay,so_buoi,ly_do,dang_dien_ra,chua_quay_lai,ngay_ke_tu_khi_nghi").order("den_ngay",{ascending:false}).limit(1000),
     sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
     sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
-    sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000)
+    sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000),
+    sb.from("v_nhap_hoc").select("ma_tre,ten_tre,lop,campus,ngay_dau").gte("ngay_dau","2026-06-01").order("ngay_dau",{ascending:false}).limit(3000)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -259,7 +260,7 @@ async function render(){
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
   const KQ = await napKho(CP, buocLai);
   buocLai=false;
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -1020,6 +1021,21 @@ async function render(){
     Object.keys(bdD).forEach(c=>{const o=bdD[c][d]; if(!o)return; t.co=1;
       t.lead+=o.lead||0; t.dh+=o.dh||0; t.vang+=o.vang||0; t.ng+=o.ng||0; t.spc+=o.spc||0; t.tk+=o.tk||0;});
     return t;};
+  // canh bao tre du lieu: dem so NGAY HOC da qua ma chua co diem danh
+  const ngayHocTuDen=(a,b2)=>{let n=0,t=new Date(a+"T00:00:00Z"),h=new Date(b2+"T00:00:00Z");
+    t.setUTCDate(t.getUTCDate()+1);
+    while(t<=h){const w=t.getUTCDay(); if(w>=1&&w<=5)n++; t.setUTCDate(t.getUTCDate()+1);} return n;};
+  const treNgay = bdNgay ? ngayHocTuDen(bdNgay,homNay) : null;
+  const bangTre = (treNgay!=null && treNgay>=1) ?
+   '<div class="card" style="border-color:#A96C05"><h2>⏳ Dữ liệu điểm danh đang trễ</h2>'
+   +'<p class="sub">Ngày học gần nhất có điểm danh: <b>'+bdNgay+'</b> · hôm nay '+homNay+'</p>'
+   +'<p class="leg" style="margin-top:-6px;font-size:13.5px;color:var(--ink2)">Thiếu <b class="down">'+treNgay+' ngày học</b>. '
+   +'Mọi con số về trẻ có mặt, vắng, trẻ nghỉ dài và <b>nhập học thực tế</b> ở dưới đều <b>đang thiếu '+treNgay+' ngày</b> — '
+   +'đó là dữ liệu chưa về, <b>không phải</b> trường tuyển kém hay trẻ nghỉ nhiều.</p>'
+   +'<div class="q"><b>Cách sửa, 2 phút:</b> mở <b>hq.tomia.app</b> → bấm dấu trang <b>Kéo Tomia</b> '
+   +'(nó tự đồng bộ → tự xuất báo cáo → tự đưa lên kho). Sau đó vào GitHub → Actions → '
+   +'<i>Keo du lieu</i> → <b>Run workflow</b>, chờ ~2 phút rồi bấm <b>↻ Tải lại số</b> ở đầu trang.</div></div>' : "";
+
   const ngayCard = !ngayHocGan.length ? "" :
    '<div class="card"><h2>Từng ngày học — toàn cảnh</h2>'
    +'<p class="sub">'+nhanCP+' · 7 ngày học gần nhất · bỏ thứ Bảy và Chủ nhật</p>'
@@ -1061,13 +1077,17 @@ async function render(){
 
   // THUC TE: uu tien v_tuan_campus (dinh nghia goc). Neu view do chet -> dung tam v_lead_campus,
   // nhung day la so COHORT (theo thang TAO lead), khong phai so nhap hoc trong thang -> phai ghi ro.
-  const ktCoTw=(tw||[]).length>0;
+  // THUC TE = tre DI HOC BUOI DAU TIEN (v_nhap_hoc, nguon Tomia).
+  // Day la su viec quan sat duoc, phu ca 15 campus, khong phu thuoc ai nho cap nhat CRM.
+  // Chi lui ve CRM khi v_nhap_hoc chua co du lieu.
+  const ktCoNH=(nhapHoc||[]).length>0;
   const CHOTX=/thành công/i;
   const thucT={}, thucCam={};
-  if(ktCoTw){
-    (tw||[]).filter(r=>hopCP(r.campus)).forEach(r=>{const m=+String(r.tuan).slice(5,7); if(!m)return;
-      thucT[m]=(thucT[m]||0)+(+r.da_di_hoc||0);
-      if(m===thangHT) thucCam[r.campus]=(thucCam[r.campus]||0)+(+r.da_di_hoc||0);});
+  if(ktCoNH){
+    (nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
+      const d=chiNgay(r.ngay_dau); if(!d||+d.slice(0,4)!==namNay)return; const m=+d.slice(5,7);
+      thucT[m]=(thucT[m]||0)+1;
+      if(m===thangHT) thucCam[r.campus]=(thucCam[r.campus]||0)+1;});
   } else {
     (tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).forEach(r=>{
       const d=chiNgay(r.ngay); if(!d||+d.slice(0,4)!==namNay)return; const m=+d.slice(5,7);
@@ -1090,21 +1110,25 @@ async function render(){
    +'nếu <code>chi_tieu</code> báo lỗi thì bảng hỏng; nếu 0 dòng không lỗi thì file kế hoạch 2026 chưa được nạp lên.</div></div>'
    :
    '<div class="card"><h2>Mục tiêu và thực tế — tháng '+thangHT+'</h2>'
-   +'<p class="sub">'+nhanCP+' · mục tiêu từ bảng <code>chi_tieu</code> · thực tế từ <code>'+(ktCoTw?"v_tuan_campus":"v_lead_campus")+"</code></p>"
+   +'<p class="sub">'+nhanCP+' · mục tiêu: file kế hoạch 2026 · thực tế: <b>trẻ đi học buổi đầu tiên</b> (điểm danh Tomia)</p>'
    +'<div class="kpis">'
    +kpi("Mục tiêu tháng "+thangHT,ktNay?fmt(ktNay.moi):"—","","học sinh mới cả tháng")
    +kpi("Nhịp đến hôm nay",nhipNay==null?"—":dec(nhipNay,1),"",
         "đã qua "+ngayHocDaQua(thangHT)+"/"+soNgayHoc(thangHT)+" ngày học")
-   +kpi("Thực tế tháng này",ktCoThuc?fmt(thucNay):"—","",ktCoTw?"lead chuyển sang Kết thúc thành công":"tạm tính — xem ghi chú")
+   +kpi("Thực tế tháng này",ktCoThuc?fmt(thucNay):"—","",ktCoNH?"trẻ đi học buổi đầu tiên":"tạm tính từ CRM — xem ghi chú")
    +kpi("So với nhịp",(!ktCoThuc||nhipNay==null)?"—":
         '<span class="'+(thucNay-nhipNay>=0?"up":"down")+'">'+(thucNay-nhipNay>=0?"+":"")+dec(thucNay-nhipNay,1)+"</span>",
         "","thực tế trừ nhịp — đây là con số cần nhìn")+"</div>"
-   +(ktCoTw ? "" : '<div class="gap"><b>Thực tế đang là số tạm, không phải số nhập học trong tháng.</b> '
-     +'Nguồn gốc <code>v_tuan_campus</code> đang trả 0 dòng, nên tôi đếm tạm từ <code>v_lead_campus</code>: '
-     +'<i>lead TẠO trong tháng đó và nay đã ở trạng thái “Kết thúc thành công”.</i> '
-     +'Một phụ huynh vào phễu tháng 8 và nhập học tháng 9 sẽ được tính vào <b>tháng 8</b>. '
-     +'Vì vậy các tháng gần đây luôn bị <b>thấp hơn thực tế</b> — lead vừa vào chưa kịp chốt. '
-     +'Sửa được <code>v_tuan_campus</code> thì số này tự đúng lại.</div>')
+   +(ktCoNH
+     ? '<p class="leg" style="margin-top:12px"><b>“Nhập học thực tế” nghĩa là gì:</b> một trẻ được tính vào ngày em <b>đi học buổi đầu tiên</b>, '
+       +'lấy từ điểm danh Tomia. Mỗi trẻ chỉ tính <b>một lần</b> trong đời.<br>'
+       +'Chọn cách đếm này vì: đó là <b>việc đã xảy ra</b>, không phải trạng thái ai đó nhớ bấm trong CRM; '
+       +'nó phủ <b>cả 15 campus</b> kể cả Tân Thuận và Linh Đàm vốn không dùng AMIS; và không ai “chốt” được nó bằng một cú click.<br>'
+       +'Điểm yếu: <b>trễ theo nhịp đồng bộ + xuất báo cáo Tomia</b>. Xem dòng ⏱ ở thẻ “Từng ngày học” — '
+       +'nếu điểm danh trễ vài ngày thì số tháng này còn thiếu, không phải trường tuyển kém.<br>'
+       +'<span style="opacity:.6">Số tháng 5/2026 không dùng được: Tomia bắt đầu ghi từ 04/05 nên toàn bộ trẻ đang học khi đó bị tính là “buổi đầu”.</span></p>'
+     : '<div class="gap"><b>Thực tế đang là số tạm.</b> <code>v_nhap_hoc</code> chưa có dữ liệu nên app đếm tạm từ CRM: '
+       +'<i>lead TẠO trong tháng đó và nay ở trạng thái “Kết thúc thành công”</i> — đó là số cohort, không phải số nhập học trong tháng.</div>')
    +'<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng 7 → 12 — mục tiêu là mốc <b>tháng</b>, tuần chỉ là nhịp</p>'
    +'<div class="tw"><table style="min-width:760px"><thead><tr><th>Tháng</th><th>Mục tiêu tháng</th><th>Thực tế</th><th>Chênh</th><th>% đạt</th>'
    +'<th>Nhịp/tuần (÷4)</th><th>Nhịp/tuần (theo lịch)</th><th>Nhịp/ngày học</th></tr></thead><tbody>'
@@ -1204,6 +1228,7 @@ async function render(){
   $("body").innerHTML=
    '<div class="zone" id="z1">'
    +'<p class="sub">Bốn thẻ. Mỗi thẻ trả lời được đúng một câu: <b>ai làm gì trong 48 giờ</b>. Thẻ nào không trả lời được thì nằm ở ③.</p>'
+   +bangTre
    +scCard
    +ngCard
    +viecCard
@@ -1212,6 +1237,7 @@ async function render(){
 
    +'<div class="zone" id="z2">'
    +'<p class="sub">Đọc trong 5 phút. Bảng đầu cho thấy <i>từng ngày học</i>; bảng giữa hỏi <i>campus nào khác thường hôm đó</i>; bảng cuối hỏi <i>toàn hệ thống có kịp chỉ tiêu không</i>.</p>'
+   +bangTre
    +ngayCard
    +bdCard
    +ktCard
