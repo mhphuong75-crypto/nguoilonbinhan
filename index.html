@@ -124,7 +124,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-09 · b11";
+const BUILD="2026-09-09 · b12";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -183,7 +183,8 @@ let KHO=null, buocLai=false;   // kho tam trong bo nho: doi campus/thoi gian kho
 const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","meta_campaign_daily",
   "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","v_lead_campus","v_diem_danh",
   "v_siso (1 dòng)","v_web_tong","v_tuan_campus","chi_tieu","v_can_ly_do","v_cohort_tuan",
-  "v_viec_tuan","v_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa","v_nhap_hoc"];
+  "v_viec_tuan","v_danh_sach","v_su_co","v_nghi_chuoi","v_harasocial","v_nguoi","v_supa","v_nhap_hoc",
+  "v_tuoi_du_lieu"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -213,7 +214,8 @@ function taoTruyVan(CP){ return [
     sb.from("v_harasocial").select("id,ngay,nguoi,trang,tra_loi_dau_giay,so_tin").limit(2000),
     sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
     sb.from("v_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000),
-    sb.from("v_nhap_hoc").select("ma_tre,ten_tre,lop,campus,ngay_dau").gte("ngay_dau","2026-06-01").order("ngay_dau",{ascending:false}).limit(3000)
+    sb.from("v_nhap_hoc").select("ma_tre,ten_tre,lop,campus,ngay_dau").gte("ngay_dau","2026-06-01").order("ngay_dau",{ascending:false}).limit(3000),
+    sb.from("v_tuoi_du_lieu").select("nguon,lan_cuoi,so_gio,so_lan").limit(20)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -260,7 +262,7 @@ async function render(){
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
   const KQ = await napKho(CP, buocLai);
   buocLai=false;
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -1052,6 +1054,85 @@ async function render(){
   const ngayHocTuDen=(a,b2)=>{let n=0,t=new Date(a+"T00:00:00Z"),h=new Date(b2+"T00:00:00Z");
     t.setUTCDate(t.getUTCDate()+1);
     while(t<=h){const w=t.getUTCDay(); if(w>=1&&w<=5)n++; t.setUTCDate(t.getUTCDate()+1);} return n;};
+
+  // ===== b12: SUC KHOE DU LIEU — noi ro dang tac o cua nao =====
+  // Ba cua giua "du lieu ton tai" va "CEO nhin thay":
+  //   cua 1 = co ai bam dau trang keo ve chua        (stg_raw.ts, view v_tuoi_du_lieu)
+  //   cua 2 = job GitHub da boc file thanh so chua   (ngay moi nhat trong bang da boc)
+  //   cua 3 = trinh duyet dang giu so cu             (nut ↻ o dau trang)
+  const maxNg=(arr,k)=>{let m=null;(arr||[]).forEach(r=>{const d=chiNgay(r[k]); if(d&&(!m||d>m))m=d;});return m;};
+  // tinh tuoi tu MOC THOI GIAN, khong tin cot so_gio may chu tra ve
+  const tDL={}; (tuoiDL||[]).forEach(r=>{
+    const t=r.lan_cuoi?new Date(r.lan_cuoi):null;
+    const g=(t&&!isNaN(t.getTime()))?((Date.now()-t.getTime())/3600000):(r.so_gio==null?null:+r.so_gio);
+    tDL[r.nguon]={gio:(g==null?null:Math.round(g)), luc:r.lan_cuoi};
+  });
+  // neu view v_tuoi_du_lieu chua duoc tao thi khong doan bua ve cua 1 — chi xet cua 2
+  const coTuoi=Array.isArray(tuoiDL)&&tuoiDL.length>0;
+  const lichNgay=d=>d?Math.round((new Date(homNay+"T00:00:00Z")-new Date(d+"T00:00:00Z"))/864e5):null;
+  const doTuoi=g=>g==null?"chưa bao giờ":(g<1?"vừa xong":(g<24?g+" giờ trước":Math.round(g/24)+" ngày trước"));
+
+  const SK=[
+   {ten:"Tomia — điểm danh",      kho:"Tomia",      den:bdNgay,              tay:true},
+   {ten:"SUPA — kiểm việc",       kho:"SUPA",       den:maxNg(supa,"ngay"),  tay:true},
+   {ten:"AMIS — tuyển sinh",      kho:"AMIS",       den:maxNg(lp,"ngay"),    tay:true},
+   {ten:"Harasocial — tin nhắn",  kho:"Harasocial", den:maxNg(hara,"ngay"),  tay:true},
+   {ten:"Google Analytics",       kho:null,         den:maxNg(ga,"day"),     tay:false},
+   {ten:"Meta Ads",               kho:null,         den:maxNg(mc,"day"),     tay:false}
+  ].map(x=>{
+    const t=x.kho?tDL[x.kho]:null, gio=t?t.gio:null;
+    const treHoc = x.den ? ngayHocTuDen(x.den,homNay) : null;   // so ngay HOC bi thieu
+    const treLich= lichNgay(x.den);
+    let cua=0, nhan="", mau="var(--ink2)";
+    if(x.tay&&coTuoi){
+      if(gio==null)            { cua=1; nhan="Chưa bao giờ được kéo về"; mau="#B42318"; }
+      else if(gio>30)          { cua=1; nhan="Chưa ai bấm dấu trang — "+doTuoi(gio); mau="#B42318"; }
+      else if(x.den==null)     { cua=2; nhan="Đã kéo về, chưa bóc ra số";  mau="#A96C05"; }
+      else if(treHoc>=1)       { cua=2; nhan="Đã kéo về, chờ job bóc số";  mau="#A96C05"; }
+      else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
+    }else{
+      if(x.den==null)          { cua=2; nhan="Chưa có số nào"; mau="#B42318"; }
+      else if(treLich>=3)      { cua=2; nhan="Job tự động chưa chạy — "+treLich+" ngày"; mau="#B42318"; }
+      else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
+    }
+    return Object.assign({},x,{gio:gio,cua:cua,nhan:nhan,mau:mau,treHoc:treHoc});
+  });
+
+  const skHong = SK.filter(x=>x.cua>0);
+  const skCua1 = SK.filter(x=>x.cua===1);
+  const skCua2 = SK.filter(x=>x.cua===2);
+  const tomiaSK = SK[0];
+
+  // cau "cach sua" cho the diem danh tre — phu thuoc dang tac o cua nao
+  const cachSuaTomia = (tomiaSK.cua===1)
+   ? '<b>Đang tắc ở cửa 1 — chưa ai kéo Tomia về.</b> Mở <b>hq.tomia.app</b> → bấm dấu trang '
+     +'<b>Kéo Tomia</b> (tự đồng bộ → tự xuất báo cáo → tự đưa lên kho). Số sẽ lên sau job bóc lúc <b>09:00</b> sáng mai, '
+     +'hoặc chạy ngay ở GitHub → Actions → <i>Keo du lieu</i> → <b>Run workflow</b>.'
+   : (tomiaSK.cua===2)
+   ? '<b>Đang tắc ở cửa 2 — file đã về kho ('+doTuoi(tomiaSK.gio)+') nhưng chưa ai bóc thành số.</b> '
+     +'Job tự bóc lúc <b>09:00</b> sáng mai. Cần ngay thì vào GitHub → Actions → <i>Keo du lieu</i> → '
+     +'<b>Run workflow</b>, chờ ~2 phút rồi bấm <b>↻ Tải lại số</b>.'
+   : '<b>Cả hai cửa đều thông.</b> Nếu vẫn thấy số cũ thì là cửa 3 — trình duyệt đang giữ số cũ: bấm <b>↻ Tải lại số</b> ở đầu trang.';
+
+  const skCard =
+   '<div class="card"'+(skHong.length?' style="border-color:'+(skCua1.length?'#B42318':'#A96C05')+'"':'')+'>'
+   +'<h2>'+(skHong.length?'⚠':'✓')+' Sức khoẻ dữ liệu — '+(skHong.length? skHong.length+'/6 nguồn có vấn đề' : 'cả 6 nguồn bình thường')+'</h2>'
+   +'<p class="sub">Số trên app chỉ mới bằng nguồn cũ nhất. Đọc dòng nào màu đỏ hoặc cam trước.</p>'
+   +'<div class="tw"><table style="min-width:620px"><thead><tr><th>Nguồn</th><th>Kéo về kho</th>'
+   +'<th>Số mới nhất đến ngày</th><th>Tình trạng</th></tr></thead><tbody>'
+   + SK.map(x=>'<tr><td>'+x.ten+'</td>'
+       +'<td class="mono">'+(x.tay?(coTuoi?doTuoi(x.gio):'<span style="opacity:.5">chưa bật</span>'):'<span style="opacity:.5">tự động</span>')+'</td>'
+       +'<td class="mono">'+(x.den||"—")+'</td>'
+       +'<td style="color:'+x.mau+'">'+(x.cua===0?"✓ ":(x.cua===1?"⚠ ":"⏳ "))+x.nhan+'</td></tr>').join("")
+   +'</tbody></table></div>'
+   +(skCua1.length? '<div class="q"><b>Cửa 1 — chưa ai bấm dấu trang:</b> '
+       +skCua1.map(x=>x.ten.split(" —")[0]).join(" · ")
+       +'. Việc của người trực buổi sáng. Mở trang nguồn, bấm dấu trang tương ứng.</div>' : "")
+   +(skCua2.length? '<div class="q"><b>Cửa 2 — đã về kho nhưng chưa bóc thành số:</b> '
+       +skCua2.map(x=>x.ten.split(" —")[0]).join(" · ")
+       +'. Job tự bóc lúc <b>09:00</b> mỗi sáng. Cần ngay: GitHub → Actions → <i>Keo du lieu</i> → <b>Run workflow</b> → chờ ~2 phút → bấm <b>↻ Tải lại số</b>.</div>' : "")
+   +'<p class="note" style="margin-top:10px">Số của <b>hôm nay ('+homNay+')</b> luôn chưa chốt — điểm danh còn đang diễn ra. '
+   +'Chỉ tin số từ <b>ngày học gần nhất trở về trước</b>.</p></div>';
   const treNgay = bdNgay ? ngayHocTuDen(bdNgay,homNay) : null;
   const bangTre = (treNgay!=null && treNgay>=1) ?
    '<div class="card" style="border-color:#A96C05"><h2>⏳ Dữ liệu điểm danh đang trễ</h2>'
@@ -1059,9 +1140,7 @@ async function render(){
    +'<p class="leg" style="margin-top:-6px;font-size:13.5px;color:var(--ink2)">Thiếu <b class="down">'+treNgay+' ngày học</b>. '
    +'Mọi con số về trẻ có mặt, vắng, trẻ nghỉ dài và <b>nhập học thực tế</b> ở dưới đều <b>đang thiếu '+treNgay+' ngày</b> — '
    +'đó là dữ liệu chưa về, <b>không phải</b> trường tuyển kém hay trẻ nghỉ nhiều.</p>'
-   +'<div class="q"><b>Cách sửa, 2 phút:</b> mở <b>hq.tomia.app</b> → bấm dấu trang <b>Kéo Tomia</b> '
-   +'(nó tự đồng bộ → tự xuất báo cáo → tự đưa lên kho). Sau đó vào GitHub → Actions → '
-   +'<i>Keo du lieu</i> → <b>Run workflow</b>, chờ ~2 phút rồi bấm <b>↻ Tải lại số</b> ở đầu trang.</div></div>' : "";
+   +'<div class="q">'+cachSuaTomia+'</div></div>' : "";
 
   const ngayCard = !ngayHocGan.length ? "" :
    '<div class="card"><h2>Từng ngày học — toàn cảnh</h2>'
@@ -1255,6 +1334,7 @@ async function render(){
   $("body").innerHTML=
    '<div class="zone" id="z1">'
    +'<p class="sub">Bốn thẻ. Mỗi thẻ trả lời được đúng một câu: <b>ai làm gì trong 48 giờ</b>. Thẻ nào không trả lời được thì nằm ở ③.</p>'
+   +skCard
    +bangTre
    +scCard
    +ngCard
@@ -1264,6 +1344,7 @@ async function render(){
 
    +'<div class="zone" id="z2">'
    +'<p class="sub">Đọc trong 5 phút. Bảng đầu cho thấy <i>từng ngày học</i>; bảng giữa hỏi <i>campus nào khác thường hôm đó</i>; bảng cuối hỏi <i>toàn hệ thống có kịp chỉ tiêu không</i>.</p>'
+   +skCard
    +bangTre
    +ngayCard
    +bdCard
