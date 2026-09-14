@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch:
+  repository_dispatch:
+    types: [kho-co-file-moi]
+
+concurrency:
+  group: keo-du-lieu
+  cancel-in-progress: false
 
 jobs:
   sync:
