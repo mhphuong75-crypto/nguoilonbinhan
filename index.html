@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-14 · b19";
+const BUILD="2026-09-14 · b20";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -855,6 +855,29 @@ async function render(){
     "Đã thăm chưa chốt":"Gọi trong 48h sau visit. Hỏi đúng một câu: điều gì khiến anh/chị chưa quyết?",
     "Hẹn rồi, chưa thấy kết quả":"Xác nhận lại lịch, hoặc hỏi vì sao không đến được. Ghi lại câu trả lời.",
     "Im lặng trên 14 ngày":"Một lần chạm cuối. Rồi đóng KÈM LÝ DO — kể cả lý do “không phù hợp”."};
+  // b20 — HOP DONG DONG: moi dong phai tra loi du 4 cau AI - VIEC GI - HAN - ROI DANH SACH KHI NAO
+  const VIEC={"Chưa ai chạm":"Chạm lần đầu. Khách chỉ nhắn tin thì nhắn, đừng gọi.",
+    "Đã thăm chưa chốt":"Gọi, hỏi đúng một câu: <i>điều gì khiến anh/chị chưa quyết?</i>",
+    "Hẹn rồi, chưa thấy kết quả":"Xác nhận lại lịch, hoặc hỏi vì sao không đến. Ghi câu trả lời vào CRM.",
+    "Im lặng trên 14 ngày":"Chạm lần cuối, rồi <b>đóng kèm lý do</b>."};
+  const HAN={"Chưa ai chạm":1,"Đã thăm chưa chốt":2,"Hẹn rồi, chưa thấy kết quả":2,"Im lặng trên 14 ngày":null};
+  const VISAO={"Chưa ai chạm":"Lead vào trong 90 ngày mà <b>chưa có lần chạm nào ghi trong CRM</b>.",
+    "Đã thăm chưa chốt":"Đã đến thăm campus nhưng <b>chưa đặt cọc</b>.",
+    "Hẹn rồi, chưa thấy kết quả":"Đã đặt lịch tham quan nhưng <b>chưa có kết quả ghi lại</b>.",
+    "Im lặng trên 14 ngày":"Không có hoạt động nào <b>trên 14 ngày</b>."};
+  const ROI={"Chưa ai chạm":"có một lần chạm được ghi vào CRM",
+    "Đã thăm chưa chốt":"đặt cọc, hoặc đóng kèm lý do",
+    "Hẹn rồi, chưa thấy kết quả":"ghi kết quả buổi hẹn vào CRM",
+    "Im lặng trên 14 ngày":"đóng kèm lý do — kể cả lý do “không phù hợp”"};
+  // chi hien ten khi do la NGUOI PHU TRACH THAT; con lai de trong co chu, khong doan
+  const aiLam=c=>{const t=CO[c];
+    if(t&&t.that&&(t.nguon==="người phụ trách"||t.nguon==="QLVH")) return t.that;
+    return '<span style="color:#A96C05">chưa gán người phụ trách</span>';};
+  const oHan=(k,im)=>{const h=HAN[k]; if(h===null) return '<b>tuần này</b>';
+    const con=h-(+im||0);
+    if(con<0) return '<b class="down">quá hạn '+Math.abs(con)+' ngày</b>';
+    if(con===0) return '<b class="down">hôm nay</b>';
+    return 'còn '+con+' ngày';};
   const vLoc=(viec||[]).filter(r=>hopCP(r.campus));
   const vRo={}; vLoc.forEach(r=>{(vRo[r.ro]=vRo[r.ro]||[]).push(r)});
   // ba ro dau la de CUU -> moi nhat truoc; ro "im lang" la de DONG -> lau nhat truoc
@@ -867,19 +890,27 @@ async function render(){
        (vRo[k]&&vRo[k].length)?("im lặng TB "+Math.round(vRo[k].reduce((s2,r)=>s2+(+r.im_lang||0),0)/vRo[k].length)+" ngày"):"không có ai")).join("")
    +"</div>"
    +RO.filter(k=>vRo[k]&&vRo[k].length).map(k=>{
-     const rows=vRo[k].slice(0,8);
-     return '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">'+k+' — '+fmt(vRo[k].length)+' hồ sơ</p>'
-       +'<div class="q" style="margin:0 0 8px">'+LUAT[k]+'</div>'
-       +'<div class="tw"><table><thead><tr><th>Phụ huynh / bé</th><th>Số điện thoại</th><th>Campus</th><th>Kênh</th><th>Lần chạm</th><th>Im lặng</th></tr></thead><tbody>'
-       +rows.map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+sdt(r.dien_thoai)+"</td><td>"+r.campus+"</td><td>"+(r.kenh||"—")
+     const rows=vRo[k].slice(0,5);
+     return '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">'+k+' — '+fmt(vRo[k].length)+' hồ sơ</p>'
+       +'<div class="q" style="margin:0 0 8px"><b>Vì sao ở đây:</b> '+VISAO[k]+'<br>'
+       +'<b>Việc phải làm:</b> '+VIEC[k]+'<br>'
+       +'<b>Rời danh sách khi:</b> '+ROI[k]+'. Không có đường thứ ba là “để đấy”.</div>'
+       +'<div class="tw"><table style="min-width:820px"><thead><tr><th>Phụ huynh / bé</th><th>Số điện thoại</th><th>Campus</th><th>Ai làm</th><th>Hạn</th><th>Lần chạm</th><th>Im lặng</th></tr></thead><tbody>'
+       +rows.map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+sdt(r.dien_thoai)+"</td><td>"+r.campus
+         +"</td><td>"+aiLam(r.campus)+"</td><td>"+oHan(k,r.im_lang)
          +'</td><td class="mono">'+fmt(r.so_cham)+'</td><td class="mono">'+fmt(r.im_lang)+" ngày</td></tr>").join("")
        +"</tbody></table></div>"
-       +(vRo[k].length>8?'<p class="leg">Hiện 8 hồ sơ '+(k==="Im lặng trên 14 ngày"?"im lặng lâu nhất":"mới nhất")+' trong '+fmt(vRo[k].length)+'. Lọc theo campus để thấy phần của mình.</p>':"")}).join("")
+       +'<p class="leg">Đang hiện <b>'+Math.min(5,vRo[k].length)+'</b> trong <b>'+fmt(vRo[k].length)+'</b> hồ sơ — '
+       +(k==="Im lặng trên 14 ngày"?"im lặng lâu nhất trước":"mới nhất trước, vì càng mới càng cứu được")+'. '
+       +'<b>Muốn xem đủ thì vào thẳng AMIS CRM</b> — app này cố tình không kéo hết danh sách chi tiết về đây. '
+       +'Lọc theo campus của bạn ở ô trên để thấy đúng phần mình.</p>'}).join("")
    +'<p class="leg"><b>“Lần chạm” chỉ đếm cuộc gọi ghi trong CRM.</b> Tin nhắn Zalo/Messenger không vào đây — nên một phụ huynh đang được nhắn rất kỹ vẫn hiện là <b>0 lần chạm</b>. '
    +'Trước khi trách ai, hỏi họ đã nhắn chưa.</p>'
-   +'<p class="leg"><b>Thứ tự:</b> ba rổ đầu xếp <b>mới nhất trước</b> — càng mới càng còn ấm, cứu được. '
-   +'Rổ “im lặng trên 14 ngày” xếp <b>lâu nhất trước</b>, vì việc ở đó không phải cứu mà là <b>đóng kèm lý do</b>. '
-   +'Số liệu 180 ngày: 60% ca chốt trong 14 ngày đầu, 79% trong 30 ngày — nhưng vẫn có 12% chốt sau 60 ngày, nên đừng xoá, chỉ hạ nhịp.</p>'
+   +'<p class="leg"><b>Cột “Ai làm”</b> chỉ hiện tên khi đó là <b>người phụ trách thật</b> (đã gán trong hệ thống). '
+   +'Campus nào ghi <b>“chưa gán người phụ trách”</b> nghĩa là chưa ai nhận — và đó mới là việc cần làm trước, '
+   +'vì một danh sách không có chủ thì không ai đóng.<br>'
+   +'<b>Hạn</b> tính từ luật của từng rổ: chạm lần đầu <b>24 giờ</b>, sau visit <b>48 giờ</b>, sau hẹn <b>48 giờ</b>. '
+   +'Số liệu 180 ngày: 60% ca chốt trong 14 ngày đầu, 79% trong 30 ngày — vẫn có 12% chốt sau 60 ngày, nên đừng xoá, chỉ hạ nhịp.</p>'
    +'<div class="q"><b>Quy tắc:</b> mỗi hồ sơ trong danh sách này chỉ rời khỏi đây theo hai đường — <b>lên bước tiếp</b>, hoặc <b>đóng kèm lý do</b>. Không có đường thứ ba là “để đấy”.</div></div>';
 
   // ----- THE: DANH SACH TUNG HO SO THEO TANG PHEU -----
