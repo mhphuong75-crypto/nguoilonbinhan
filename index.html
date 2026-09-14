@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-09 · b17";
+const BUILD="2026-09-14 · b18";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -654,13 +654,29 @@ async function render(){
     const o=scTheoCampus[k]||(scTheoCampus[k]={mo:0,nang:0,lau:0}); o.mo++; if(r.he_trong)o.nang++;
     if((+r.so_ngay_mo||0)>30)o.lau++});
   const scCampusRows=Object.entries(scTheoCampus).sort((a,b)=>b[1].nang-a[1].nang||b[1].mo-a[1].mo);
+  // ===== b18: 7 TIEU CHI "NGHIEM TRONG" DO PHUONG DINH NGHIA (14/09/2026) =====
+  // Doc tu TIEU DE ticket. Chi la GOI Y cho nguoi, khong phai ket luan cua may.
+  const TC_NT={
+   "Phụ huynh can thiệp":/phụ huynh|gia đình|khiếu nại|phản ánh|bức xúc/,
+   "Đi viện / nhập viện / cấp cứu":/nhập viện|bệnh viện|cấp cứu|đi viện|đi khám|khám bác/,
+   "Chảy máu, gãy tay chân":/chảy máu|ra máu|gãy|rạn xương|trật khớp|bó bột|khâu/,
+   "Khó thở, hô hấp":/khó thở|hô hấp|tím tái|viêm phổi|co giật|hen suyễn/,
+   "Tiêu chảy, đau bụng, nôn ói":/tiêu chảy|đi ngoài|đau bụng|nôn|ói|trớ/,
+   "Người tác động vào cơ thể":/đánh|cắn|cào|tát|đấm|véo|giật tóc|xô ngã|đẩy ngã/,
+   "Dị ứng nặng, uống thuốc gấp":/dị ứng|mề đay|mẩn|sưng phù|sốc phản vệ/
+  };
+  const bat=t=>{const x=String(t||"").toLowerCase(); return Object.keys(TC_NT).filter(k=>TC_NT[k].test(x));};
+  const scNghi = scMo.filter(r=>bat(r.tieu_de).length>0);
+  const scMoHo = scLoc.filter(r=>bat(r.tieu_de).length===0);
+  const scDemTC = Object.keys(TC_NT).map(k=>[k, scLoc.filter(r=>bat(r.tieu_de).indexOf(k)>=0).length]);
+
   const scCard = !scLoc.length ? "" :
    '<div class="card" style="border-color:#7f1d1d"><h2>🚨 An toàn &amp; sự cố</h2>'
    +'<p class="sub">Từ Tomia · '+nhanCP+' · ticket vận hành, hành vi, an toàn, sức khoẻ</p>'
    +'<p class="leg" style="margin-top:-6px">⏱ Toàn bộ ticket có trong các kỳ báo cáo đã kéo về. <b>Không đổi theo ô chọn thời gian</b> — sự cố chưa đóng thì không có hạn.</p>'
    +'<div class="kpis">'
    +kpi("Còn mở",fmt(scMo.length),"","chưa đóng, chưa hoàn tất")
-   +kpi("Nghiêm trọng còn mở",fmt(scNang.length),"","An toàn · Hành vi · hoặc mức Cao")
+   +kpi("Nghi nghiêm trọng",fmt(scNghi.length),"","khớp 7 tiêu chí — cần người xác nhận")
    +kpi("Chưa giao cho ai",fmt(scChuaGiao.length),"","không có người được giao")
    +kpi("Mở trung bình",fmt(scTBngay)+" ngày","","tính đến hôm nay")+"</div>"
    +(scNang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghiêm trọng &amp; còn mở — đọc từng dòng</p>'
@@ -672,13 +688,23 @@ async function render(){
        +(r.nguoi_duoc_giao||'<span style="color:#f87171">chưa giao</span>')+"</td></tr>").join("")
      +"</tbody></table></div>" : '<p class="leg">Không có sự cố nghiêm trọng nào đang mở.</p>')
    +(scCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Ticket còn mở, theo campus</p>'
-     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Còn mở</th><th>Nghiêm trọng</th><th>Mở quá 30 ngày</th></tr></thead><tbody>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Còn mở</th><th>An toàn/Hành vi/mức Cao</th><th>Mở quá 30 ngày</th></tr></thead><tbody>'
      +scCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.mo)+'</td><td class="mono">'+(v.nang?'<span class="down">'+v.nang+"</span>":"0")
        +'</td><td class="mono">'+fmt(v.lau)+"</td></tr>").join("")+"</tbody></table></div>" : "")
    +'<p class="leg"><b>Tên người dưới tên campus</b> lấy từ hệ thống — '
    +'<b>6 campus</b> là QLVH thật (ghi trong SUPA), <b>9 campus</b> có dấu <b>?</b> là <i>người ghi nhận nhiều nhất</i>, '
    +'không phải người chịu trách nhiệm. Muốn đúng thì gán người phụ trách vào bảng <code>nguoi_phu_trach</code> — dấu ? sẽ mất.</p>'
-   +'<p class="leg"><b>“Nghiêm trọng”</b> = phân loại An toàn hoặc Hành vi, hoặc mức độ Cao. Đây là quy ước của app, không phải của Tomia — Tomia chỉ ghi phân loại và mức độ rời nhau.</p>'
+   +'<details style="margin-top:14px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">📋 Thế nào là một sự cố NGHIÊM TRỌNG — bảng định nghĩa</summary>'
+   +'<p class="leg" style="margin-top:8px">Bảy tiêu chí dưới đây là chuẩn chung của ME School. Ai tạo ticket cũng đọc chuẩn này, ai đọc báo cáo cũng đọc chuẩn này.</p>'
+   +'<div class="tw"><table><thead><tr><th>Nghiêm trọng khi có</th><th>Ticket khớp</th></tr></thead><tbody>'
+   +scDemTC.map(function(x){return "<tr><td>"+x[0]+'</td><td class="mono">'+(x[1]?x[1]:'<span style="opacity:.4">0</span>')+"</td></tr>";}).join("")
+   +'</tbody></table></div>'
+   +'<p class="leg"><b>Vì sao app KHÔNG tự bôi đỏ:</b> máy chỉ đọc được phần người ta viết trong tiêu đề. '
+   +'Hiện có <b class="down">'+fmt(scMoHo.length)+'/'+fmt(scLoc.length)+' ticket</b> mà tiêu đề không mô tả được chuyện gì xảy ra '
+   +'(ví dụ chỉ ghi tên bé, hoặc “Trẻ bị thương”). Nếu app tự gán nhãn, nó đang ngầm nói rằng số còn lại không nghiêm trọng — '
+   +'trong khi thật ra là <i>chưa ai viết đủ để biết</i>. Với an toàn trẻ em thì không được phép đoán.</p>'
+   +'<div class="q"><b>Việc nằm ngoài app:</b> chỗ đúng để áp bảy tiêu chí này là <b>lúc tạo ticket trong Tomia</b> — một ô bắt buộc chọn. '
+   +'Khi đó app chỉ việc đọc, không phải đoán. <b>Chủ: chưa giao · Hạn: chưa có</b></div></details>'
    +'<div class="q"><b>Nguyên tắc thứ nhất:</b> an toàn trẻ em không đứng sau tăng trưởng. '
    +'Một ticket mức Cao còn mở sau 48 giờ là một quyết định đã bị hoãn, không phải một việc đang chờ. '
    +'Dòng nào ghi <i>chưa giao</i> — ai là người nhận nó trước khi hết ngày hôm nay?</div></div>';
@@ -695,38 +721,44 @@ async function render(){
   const ngCard = !ngLoc.length ? "" :
    '<div class="card"><h2>Trẻ nghỉ liên tục từ 3 buổi</h2>'
    +'<p class="sub">Từ Tomia · điểm danh chi tiết từng trẻ · '+nhanCP+'</p>'
-   +'<p class="leg" style="margin-top:-6px">⏱ Chuỗi nghỉ tính theo <b>ngày học liên tiếp</b> — đã bỏ thứ Bảy, Chủ nhật và ngày nghỉ lễ. Gọi hỏi thăm <b>từ buổi thứ tư</b>.</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Chuỗi nghỉ tính theo <b>ngày học liên tiếp</b> — đã bỏ thứ Bảy, Chủ nhật và ngày nghỉ lễ. Gọi hỏi thăm <b>từ buổi thứ tư</b>.<br>'
+     +'Cột <b>"Đã đi học lại?"</b> tính đến <b>'+(bdNgay||"—")+'</b> — ngày học gần nhất đã có điểm danh, <b>không phải hôm nay</b>. '
+     +'Nếu bé đi học lại sau ngày đó thì app chưa biết.</p>'
    +'<div class="kpis">'
    +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chưa quay lại, mới nghỉ trong vòng 7 ngày")
    +kpi("Nghỉ lâu, chưa quay lại",fmt(ngMat.length),"","quá 7 ngày — nghi đã nghỉ hẳn")
-   +kpi("Tổng chuỗi ≥3 buổi",fmt(ngLoc.length),"","toàn bộ dữ liệu điểm danh đã có")
    +kpi("Có ghi lý do",fmt(ngCoLyDo.length)+" / "+fmt(ngLoc.length),"","phần còn lại không ai biết vì sao")+"</div>"
    +(ngDang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang nghỉ dở — gọi hôm nay</p>'
-     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Đến</th><th>Số buổi</th><th>Lý do</th></tr></thead><tbody>'
+     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Đến</th><th>Số buổi</th><th>Đã đi học lại?</th><th>Lý do</th></tr></thead><tbody>'
      +ngDang.sort((a,b)=>(+b.so_buoi||0)-(+a.so_buoi||0)).slice(0,25).map(r=>
        "<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
        +"</td><td>"+(r.tu_ngay||"—")+"</td><td>"+(r.den_ngay||"—")
        +'</td><td class="mono">'+((+r.so_buoi||0)>=4?'<span class="down">':"<span>")+fmt(r.so_buoi)+"</span>"
+       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:#067647">rồi</span>')
        +"</td><td>"+(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>").join("")
      +"</tbody></table></div>" : "")
    +(ngMat.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghỉ lâu, chưa quay lại — đã ai gọi chưa?</p>'
-     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Buổi vắng đầu</th><th>Số buổi</th><th>Đã bao lâu</th><th>Lý do</th></tr></thead><tbody>'
+     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Buổi vắng đầu</th><th>Số buổi</th><th>Đã bao lâu</th><th>Đã đi học lại?</th><th>Lý do</th></tr></thead><tbody>'
      +ngMat.slice(0,20).map(r=>
        "<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
        +"</td><td>"+(r.tu_ngay||"—")+'</td><td class="mono">'+fmt(r.so_buoi)
-       +'</td><td class="mono"><span class="down">'+fmt(r.ngay_ke_tu_khi_nghi)+" ngày</span></td><td>"
+       +'</td><td class="mono"><span class="down">'+fmt(r.ngay_ke_tu_khi_nghi)+" ngày</span>"
+       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:#067647">rồi</span>')+"</td><td>"
        +(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>").join("")
      +"</tbody></table></div>"
      +(ngMat.length>20?'<p class="leg">Hiện 20 ca gần nhất trong '+fmt(ngMat.length)+'.</p>':"") : "")
    +(ngCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
-     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đang nghỉ dở</th><th>Tổng chuỗi</th><th>Buổi nghỉ TB/chuỗi</th><th>Có ghi lý do</th></tr></thead><tbody>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đang nghỉ dở</th><th>Buổi nghỉ TB/chuỗi</th><th>Có ghi lý do</th></tr></thead><tbody>'
      +ngCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+(v.dang?'<span class="down">'+v.dang+"</span>":"0")
-       +'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+(v.n?(v.buoi/v.n).toFixed(1):"—")
+       +'</td><td class="mono">'+(v.n?(v.buoi/v.n).toFixed(1):"—")
        +'</td><td class="mono">'+fmt(v.cly)+" / "+fmt(v.n)+"</td></tr>").join("")+"</tbody></table></div>" : "")
    +'<p class="leg"><b>“Chuỗi” là gì:</b> những <b>buổi học liền nhau</b> mà bé vắng. Cuối tuần và ngày nghỉ lễ không phải buổi học — không cắt chuỗi, cũng không cộng vào. '
    +'Nghỉ T6 rồi nghỉ tiếp T2 = <b>chuỗi 2 buổi</b>, không phải 4.<br>'
    +'<b>“Đang nghỉ dở”</b> = sau chuỗi đó bé <b>chưa có buổi đi học nào</b>, và buổi vắng cuối cách ngày học gần nhất của campus <b>không quá 7 ngày</b>. Đây là danh sách gọi hôm nay.<br>'
    +'<b>“Nghỉ lâu, chưa quay lại”</b> = cũng chưa đi học lại, nhưng đã quá 7 ngày. Một cuộc gọi không cứu được nữa — nhưng vẫn cần gọi để biết <b>vì sao</b>.</p>'
+   +'<p class="leg" style="border-left:3px solid #A96C05;padding-left:10px"><b>⚠ Giới hạn của cột “Lý do”:</b> Tomia chỉ ghi được <b>hai</b> giá trị — <i>Có phép</i> và <i>Không phép</i>. '
+   +'Không có <i>bảo lưu</i>, <i>ốm dài ngày</i>, <i>về quê</i>, <i>đi chơi</i>. Muốn biết ca nào cần gọi và ca nào không, phải xin Tomia bổ sung trường lý do — việc này nằm ngoài app. '
+   +'<b>Chủ: chưa giao · Hạn: chưa có</b></p>'
    +'<div class="q"><b>Câu hỏi:</b> trong danh sách “đang nghỉ dở” ở trên, bé nào đã có người gọi cho phụ huynh? '
    +'Nếu chưa có ai gọi và cũng không ai ghi lý do — thì ME School đang không biết bé đó ốm, đi du lịch, hay đã quyết định nghỉ.</div></div>';
 
@@ -1091,34 +1123,37 @@ async function render(){
   const bangChet=ds=>ds.filter(n=>{const i=TEN_NGUON.indexOf(n); return i>=0 && KQ[i] && KQ[i].error;});
 
   const SK=[
-   {ten:"Tomia — điểm danh",      kho:"Tomia",      den:bdNgay,              tay:true,
+   {ten:"Tomia — điểm danh",      kho:"Tomia",      den:bdNgay,              tay:true, do:"hoc",  han:1,
     bang:["v_diem_danh","mv_nghi_chuoi","v_su_co","mv_nhap_hoc"]},
-   {ten:"SUPA — kiểm việc",       kho:"SUPA",       den:maxNg(supa,"ngay"),  tay:true,
+   {ten:"SUPA — kiểm việc",       kho:"SUPA",       den:maxNg(supa,"ngay"),  tay:true, do:"hoc",  han:1,
     bang:["mv_supa"]},
-   {ten:"AMIS — tuyển sinh",      kho:"AMIS",       den:maxNg(tsi,"ngay"),   tay:true,
+   {ten:"AMIS — tuyển sinh",      kho:"AMIS",       den:maxNg(tsi,"ngay"),   tay:true, do:"lich", han:1,
     bang:["mv_lead_campus","mv_tuan_campus","mv_can_ly_do","mv_cohort_tuan","mv_viec_tuan","mv_danh_sach"]},
-   {ten:"Harasocial — tin nhắn",  kho:"Harasocial", den:maxNg(hara,"ngay"),  tay:true,
+   {ten:"Harasocial — tin nhắn",  kho:"Harasocial", den:maxNg(hara,"ngay"),  tay:true, do:"lich", han:1,
     bang:["v_harasocial"]},
-   {ten:"Google Analytics",       kho:null,         den:maxNg(ga,"day"),     tay:false,
+   {ten:"Google Analytics",       kho:null,         den:maxNg(ga,"day"),     tay:false, do:"lich", han:3,
     bang:["ga4_daily_channel"]},
-   {ten:"Meta Ads",               kho:null,         den:maxNg(mc,"day"),     tay:false,
+   {ten:"Meta Ads",               kho:null,         den:maxNg(mc,"day"),     tay:false, do:"lich", han:3,
     bang:["meta_campaign_daily"]}
   ].map(x=>{
     const t=x.kho?tDL[x.kho]:null, gio=t?t.gio:null;
     const chet=bangChet(x.bang||[]);
-    const treHoc = x.den ? ngayHocTuDen(x.den,homNay) : null;   // so ngay HOC bi thieu
+    // moi nguon co nhip rieng: diem danh/kiem viec theo NGAY HOC, lead/tin nhan/quang cao theo NGAY LICH
+    const treHoc = x.den ? ngayHocTuDen(x.den,homNay) : null;
     const treLich= lichNgay(x.den);
+    const qua = (x.do==="hoc") ? ((treHoc||0) >= (x.han||1)) : ((treLich||0) > (x.han||1));
+    const moTaTre = (x.do==="hoc") ? ((treHoc||0)+" ngày học") : ((treLich||0)+" ngày");
     let cua=0, nhan="", mau="var(--ink2)";
     if(chet.length){          cua=3; nhan="Máy chủ quá tải — thiếu "+chet.length+"/"+x.bang.length+" bảng"; mau="#B42318"; }
     else if(x.tay&&coTuoi){
       if(gio==null)            { cua=1; nhan="Chưa bao giờ được kéo về"; mau="#B42318"; }
       else if(gio>30)          { cua=1; nhan="Chưa ai bấm dấu trang — "+doTuoi(gio); mau="#B42318"; }
       else if(x.den==null)     { cua=2; nhan="Đã kéo về, chưa bóc ra số";  mau="#A96C05"; }
-      else if(treHoc>=1)       { cua=2; nhan="Đã kéo về, chờ job bóc số";  mau="#A96C05"; }
+      else if(qua)             { cua=2; nhan="Đã kéo về, chờ job bóc số — thiếu "+moTaTre;  mau="#A96C05"; }
       else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
     }else{
       if(x.den==null)          { cua=2; nhan="Chưa có số nào"; mau="#A96C05"; }
-      else if(treLich>=3)      { cua=2; nhan="Job tự động chưa chạy — "+treLich+" ngày"; mau="#B42318"; }
+      else if(qua)             { cua=2; nhan="Job tự động chưa chạy — "+moTaTre; mau="#B42318"; }
       else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
     }
     return Object.assign({},x,{gio:gio,cua:cua,nhan:nhan,mau:mau,treHoc:treHoc,chet:chet});
@@ -1465,14 +1500,26 @@ $("che").addEventListener("click",e=>{
   CHE=b.dataset.z; apDungChe(); window.scrollTo(0,0);
 });
 
-sb.auth.onAuthStateChange(async(_e,session)=>{
-  if(session){
-    $("login").classList.add("hidden"); $("app").classList.remove("hidden");
-    $("who").textContent=session.user.email;
-    chay();
+// b18: email ngoai danh sach van dang nhap duoc, nhung KHONG doc duoc du lieu (RLS).
+// Truoc day ho thay trang trang va bao "khong vao duoc" — gio noi thang ra.
+const DUOC_XEM=/@meschool\.vn$/i;
+const NGOAI_LE=["mhphuong75@gmail.com"];
+const coQuyen=e=>!!e&&(DUOC_XEM.test(e)||NGOAI_LE.indexOf(String(e).toLowerCase())>=0);
+function vao(session){
+  const em=session.user.email||"";
+  $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+  $("who").textContent=em;
+  if(!coQuyen(em)){
+    $("body").innerHTML='<div class="card" style="border-color:#A96C05">'
+      +'<h2>⚠ Email này chưa được cấp quyền xem dữ liệu</h2>'
+      +'<p class="sub">Bạn đã đăng nhập thành công bằng <b class="mono">'+em.replace(/</g,"&lt;")+'</b> — nhưng tài khoản này chưa được phép đọc số liệu ME School.</p>'
+      +'<p class="leg">Đây <b>không phải lỗi</b>. Dữ liệu về trẻ và phụ huynh chỉ mở cho email <b class="mono">@meschool.vn</b>.</p>'
+      +'<div class="q"><b>Cần làm gì:</b> đăng xuất, rồi đăng nhập lại bằng email <b>@meschool.vn</b> của bạn. '
+      +'Nếu bạn chưa có email công ty, nhắn Hiền hoặc Phuong để được cấp quyền.</div></div>';
+    return;
   }
-});
-(async()=>{const {data:{session}}=await sb.auth.getSession();
- if(session){$("login").classList.add("hidden");$("app").classList.remove("hidden");
- $("who").textContent=session.user.email;chay();}})();
+  chay();
+}
+sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
+(async()=>{const {data:{session}}=await sb.auth.getSession(); if(session) vao(session);})();
 </script></body></html>
