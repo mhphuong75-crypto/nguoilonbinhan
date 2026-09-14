@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-14 · b18";
+const BUILD="2026-09-14 · b19";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -718,11 +718,15 @@ async function render(){
     const o=ngTheoCampus[k]||(ngTheoCampus[k]={n:0,dang:0,buoi:0,cly:0});
     o.n++; if(r.dang_dien_ra)o.dang++; o.buoi+=+r.so_buoi||0; if(r.ly_do)o.cly++});
   const ngCampusRows=Object.entries(ngTheoCampus).sort((a,b)=>b[1].dang-a[1].dang||b[1].n-a[1].n);
+  // moc ngay hoc gan nhat — tinh tai cho, KHONG dung bdNgay (khai bao o duoi, se loi TDZ)
+  const ngMoc=(function(){let m=null;(dd||[]).forEach(function(r){
+    const d=String(r.ngay||"").slice(0,10);
+    if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&(!m||d>m))m=d;}); return m;})();
   const ngCard = !ngLoc.length ? "" :
    '<div class="card"><h2>Trẻ nghỉ liên tục từ 3 buổi</h2>'
    +'<p class="sub">Từ Tomia · điểm danh chi tiết từng trẻ · '+nhanCP+'</p>'
    +'<p class="leg" style="margin-top:-6px">⏱ Chuỗi nghỉ tính theo <b>ngày học liên tiếp</b> — đã bỏ thứ Bảy, Chủ nhật và ngày nghỉ lễ. Gọi hỏi thăm <b>từ buổi thứ tư</b>.<br>'
-     +'Cột <b>"Đã đi học lại?"</b> tính đến <b>'+(bdNgay||"—")+'</b> — ngày học gần nhất đã có điểm danh, <b>không phải hôm nay</b>. '
+     +'Cột <b>"Đã đi học lại?"</b> tính đến <b>'+(ngMoc||"—")+'</b> — ngày học gần nhất đã có điểm danh, <b>không phải hôm nay</b>. '
      +'Nếu bé đi học lại sau ngày đó thì app chưa biết.</p>'
    +'<div class="kpis">'
    +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chưa quay lại, mới nghỉ trong vòng 7 ngày")
