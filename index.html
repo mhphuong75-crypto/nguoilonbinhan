@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-14 · b20";
+const BUILD="2026-09-14 · b21";
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
@@ -752,16 +752,15 @@ async function render(){
      +"</tbody></table></div>"
      +(ngMat.length>20?'<p class="leg">Hiện 20 ca gần nhất trong '+fmt(ngMat.length)+'.</p>':"") : "")
    +(ngCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
-     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đang nghỉ dở</th><th>Buổi nghỉ TB/chuỗi</th><th>Có ghi lý do</th></tr></thead><tbody>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đang nghỉ dở</th><th>Số buổi nghỉ TB</th><th>Có ghi lý do</th></tr></thead><tbody>'
      +ngCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+(v.dang?'<span class="down">'+v.dang+"</span>":"0")
        +'</td><td class="mono">'+(v.n?(v.buoi/v.n).toFixed(1):"—")
        +'</td><td class="mono">'+fmt(v.cly)+" / "+fmt(v.n)+"</td></tr>").join("")+"</tbody></table></div>" : "")
-   +'<p class="leg"><b>“Chuỗi” là gì:</b> những <b>buổi học liền nhau</b> mà bé vắng. Cuối tuần và ngày nghỉ lễ không phải buổi học — không cắt chuỗi, cũng không cộng vào. '
-   +'Nghỉ T6 rồi nghỉ tiếp T2 = <b>chuỗi 2 buổi</b>, không phải 4.<br>'
-   +'<b>“Đang nghỉ dở”</b> = sau chuỗi đó bé <b>chưa có buổi đi học nào</b>, và buổi vắng cuối cách ngày học gần nhất của campus <b>không quá 7 ngày</b>. Đây là danh sách gọi hôm nay.<br>'
-   +'<b>“Nghỉ lâu, chưa quay lại”</b> = cũng chưa đi học lại, nhưng đã quá 7 ngày. Một cuộc gọi không cứu được nữa — nhưng vẫn cần gọi để biết <b>vì sao</b>.</p>'
-   +'<p class="leg" style="border-left:3px solid #A96C05;padding-left:10px"><b>⚠ Giới hạn của cột “Lý do”:</b> Tomia chỉ ghi được <b>hai</b> giá trị — <i>Có phép</i> và <i>Không phép</i>. '
-   +'Không có <i>bảo lưu</i>, <i>ốm dài ngày</i>, <i>về quê</i>, <i>đi chơi</i>. Muốn biết ca nào cần gọi và ca nào không, phải xin Tomia bổ sung trường lý do — việc này nằm ngoài app. '
+   +'<p class="leg"><b>Cột “Số buổi” chỉ đếm buổi học.</b> Thứ Bảy, Chủ nhật và ngày lễ không tính — nghỉ thứ Sáu rồi nghỉ tiếp thứ Hai là <b>2 buổi</b>, không phải 4.<br>'
+   +'<b>Đang nghỉ dở</b> = chưa đi học lại, buổi vắng cuối cách đây <b>không quá 7 ngày</b> — gọi hôm nay.<br>'
+   +'<b>Nghỉ lâu</b> = chưa đi học lại, đã quá 7 ngày — gọi để biết <b>vì sao</b>, không còn để cứu.</p>'
+   +'<p class="leg" style="border-left:3px solid #A96C05;padding-left:10px"><b>⚠ Cột “Lý do” chỉ có 2 giá trị</b> — <i>Có phép</i> / <i>Không phép</i>. '
+   +'Không có <i>bảo lưu</i>, <i>ốm dài ngày</i>, <i>về quê</i>. Muốn biết ca nào cần gọi, phải xin Tomia thêm trường lý do. '
    +'<b>Chủ: chưa giao · Hạn: chưa có</b></p>'
    +'<div class="q"><b>Câu hỏi:</b> trong danh sách “đang nghỉ dở” ở trên, bé nào đã có người gọi cho phụ huynh? '
    +'Nếu chưa có ai gọi và cũng không ai ghi lý do — thì ME School đang không biết bé đó ốm, đi du lịch, hay đã quyết định nghỉ.</div></div>';
