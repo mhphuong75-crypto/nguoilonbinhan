@@ -131,8 +131,58 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-14 · b21";
+const BUILD="2026-09-17 · b23";
 const $=id=>document.getElementById(id);
+
+// ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
+// Ghi mot dong moi khi: mo app, tai lai so, bung mot the, doi campus, doi khoang thoi gian, roi trang.
+// Chi Phuong doc duoc bang nay (RLS o phia may chu). Team da duoc thong bao app co ghi lai luot xem.
+// QUY TAC TUYET DOI: khoi nay KHONG BAO GIO duoc lam hong trang.
+// Moi loi deu bi nuot. Neu may chu tu choi ghi, app van chay y nguyen.
+const DC=(function(){
+  let ai="", vao0=0, daBat=false, hen=null;
+  const day=[];
+  function gui(){
+    try{
+      if(!day.length) return;
+      const lo=day.splice(0,day.length);
+      sb.from("dau_chan").insert(lo).then(function(){},function(){});
+    }catch(e){}
+  }
+  function ghi(viec,doiTuong,giay){
+    try{
+      if(!ai) return;
+      day.push({ai:ai, viec:viec,
+        doi_tuong:(doiTuong==null?null:String(doiTuong).replace(/\s+/g," ").trim().slice(0,120)),
+        giay:(giay==null?null:Math.round(giay*10)/10)});
+      if(hen) clearTimeout(hen);
+      if(day.length>=10) gui(); else hen=setTimeout(gui,3000);
+    }catch(e){}
+  }
+  function batDau(email){
+    try{
+      if(daBat) return; daBat=true;
+      ai=String(email||"").toLowerCase(); vao0=Date.now();
+      // bung the: bat su kien "toggle" cua <details> o pha capture, khong can sua tung the
+      document.addEventListener("toggle",function(ev){
+        try{
+          const t=ev.target;
+          if(!t||t.tagName!=="DETAILS"||!t.open) return;
+          const s=t.querySelector("summary");
+          ghi("bung_the", s?s.textContent:"(khong ten)");
+        }catch(e){}
+      },true);
+      window.addEventListener("pagehide",function(){
+        try{ ghi("roi_app",null,(Date.now()-vao0)/1000); gui(); }catch(e){}
+      });
+      document.addEventListener("visibilitychange",function(){
+        try{ if(document.visibilityState==="hidden") gui(); }catch(e){}
+      });
+    }catch(e){}
+  }
+  return {bat:batDau, ghi:ghi, gui:gui};
+})();
+let soLanVe=0;   // lan render dau tien = mo app; nhung lan sau = tai lai so
 const fmt=n=>n==null||isNaN(n)?"—":Math.round(n).toLocaleString("vi-VN");
 const vnd=n=>{if(n==null||isNaN(n))return "—";const k=n/1000;
  return (Math.abs(k)<10? k.toFixed(1).replace(".",",") : Math.round(k).toLocaleString("vi-VN"))+" ng";};
@@ -159,9 +209,9 @@ function chay(){
      +String((e&&e.stack)||e).replace(/</g,"&lt;")+'</pre></div>';
   });
 }
-$("period").onchange=chay;
-$("camp").onchange=chay;
-$("lai").onclick=()=>{ buocLai=true; chay(); };
+$("period").onchange=()=>{ DC.ghi("doi_thoi_gian",$("period").value); chay(); };
+$("camp").onchange=()=>{ DC.ghi("doi_campus",$("camp").value||"toàn hệ thống"); chay(); };
+$("lai").onclick=()=>{ DC.ghi("bam_tai_lai",null); buocLai=true; chay(); };
 
 function spark(series){
   if(!series.length) return '<div class="note">Không có dữ liệu trong khoảng này</div>';
@@ -191,7 +241,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","mv_lead_campus","v_diem_danh",
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
-  "v_tuoi_du_lieu"];
+  "v_tuoi_du_lieu","lan_lam_moi"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -222,7 +272,8 @@ function taoTruyVan(CP){ return [
     sb.from("v_nguoi").select("campus,ten_vui,ten_that,nguon_ten,vai_tro").limit(50),
     sb.from("mv_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000),
     sb.from("mv_nhap_hoc").select("ma_tre,ten_tre,lop,campus,ngay_dau").gte("ngay_dau","2026-06-01").order("ngay_dau",{ascending:false}).limit(3000),
-    sb.from("v_tuoi_du_lieu").select("nguon,lan_cuoi,so_gio,so_lan").limit(20)
+    sb.from("v_tuoi_du_lieu").select("nguon,lan_cuoi,so_gio,so_lan").limit(20),
+    sb.from("lan_lam_moi").select("ten,luc,giay").limit(5)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -269,7 +320,10 @@ async function render(){
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
   const KQ = await napKho(CP, buocLai);
   buocLai=false;
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL}] = KQ;
+  soLanVe++;
+  DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
+         (KHO&&KHO.tong)?KHO.tong/1000:null);
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -1147,6 +1201,15 @@ async function render(){
   const lichNgay=d=>d?Math.round((new Date(homNay+"T00:00:00Z")-new Date(d+"T00:00:00Z"))/864e5):null;
   const doTuoi=g=>g==null?"chưa bao giờ":(g<1?"vừa xong":(g<24?g+" giờ trước":Math.round(g/24)+" ngày trước"));
 
+  // b22 — CUA 2B: file da boc thanh so roi, nhung BANG TINH SAN (mv_*) chua duoc lam moi.
+  // App chi doc mv_*, nen neu lan lam moi cuoi cung XAY RA TRUOC luc file ve kho thi
+  // so cu la do buoc lam moi, KHONG phai job boc so tren GitHub. Hai cua khac nhau, hai cach sua khac nhau.
+  const lmLuc=(function(){
+    const r=(lamMoi||[]).filter(x=>x&&x.ten==="kho")[0];
+    const t=(r&&r.luc)?new Date(r.luc):null;
+    return (t&&!isNaN(t.getTime()))?t:null;})();
+  const lmGio = lmLuc ? Math.round((Date.now()-lmLuc.getTime())/3600000) : null;
+
   // b13: truy van CHET khac han voi truy van TRA VE RONG. Phai tach hai thu nay.
   const TEN_VIET={"mv_lead_campus":"phễu lead theo campus","mv_tuan_campus":"bảng tuần từng campus",
    "mv_can_ly_do":"lý do im lặng","mv_cohort_tuan":"cohort tuần","mv_viec_tuan":"việc trong tuần",
@@ -1177,20 +1240,23 @@ async function render(){
     const treLich= lichNgay(x.den);
     const qua = (x.do==="hoc") ? ((treHoc||0) >= (x.han||1)) : ((treLich||0) > (x.han||1));
     const moTaTre = (x.do==="hoc") ? ((treHoc||0)+" ngày học") : ((treLich||0)+" ngày");
+    // file nay ve kho luc nao — de so sanh voi lan lam moi bang tinh san
+    const veKho=(t&&t.luc)?new Date(t.luc):null;
+    const lamMoiTre = !!(lmLuc && veKho && !isNaN(veKho.getTime()) && lmLuc < veKho);
     let cua=0, nhan="", mau="var(--ink2)";
     if(chet.length){          cua=3; nhan="Máy chủ quá tải — thiếu "+chet.length+"/"+x.bang.length+" bảng"; mau="#B42318"; }
     else if(x.tay&&coTuoi){
       if(gio==null)            { cua=1; nhan="Chưa bao giờ được kéo về"; mau="#B42318"; }
       else if(gio>30)          { cua=1; nhan="Chưa ai bấm dấu trang — "+doTuoi(gio); mau="#B42318"; }
-      else if(x.den==null)     { cua=2; nhan="Đã kéo về, chưa bóc ra số";  mau="#A96C05"; }
-      else if(qua)             { cua=2; nhan="Đã kéo về, chờ job bóc số — thiếu "+moTaTre;  mau="#A96C05"; }
+      else if(x.den==null)     { cua=2; nhan=lamMoiTre?"Đã về kho, bảng tính sẵn chưa làm mới":"Đã kéo về, chưa bóc ra số";  mau="#A96C05"; }
+      else if(qua)             { cua=2; nhan=(lamMoiTre?"Đã về kho, bảng tính sẵn chưa làm mới — thiếu ":"Đã kéo về, chờ job bóc số — thiếu ")+moTaTre;  mau="#A96C05"; }
       else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
     }else{
       if(x.den==null)          { cua=2; nhan="Chưa có số nào"; mau="#A96C05"; }
       else if(qua)             { cua=2; nhan="Job tự động chưa chạy — "+moTaTre; mau="#B42318"; }
       else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
     }
-    return Object.assign({},x,{gio:gio,cua:cua,nhan:nhan,mau:mau,treHoc:treHoc,chet:chet});
+    return Object.assign({},x,{gio:gio,cua:cua,nhan:nhan,mau:mau,treHoc:treHoc,chet:chet,lamMoiTre:lamMoiTre});
   });
 
   const skHong = SK.filter(x=>x.cua>0);
@@ -1230,9 +1296,17 @@ async function render(){
    +(skCua1.length? '<div class="q"><b>Cửa 1 — chưa ai bấm dấu trang:</b> '
        +skCua1.map(x=>x.ten.split(" —")[0]).join(" · ")
        +'. Việc của người trực buổi sáng. Mở trang nguồn, bấm dấu trang tương ứng.</div>' : "")
-   +(skCua2.length? '<div class="q"><b>Cửa 2 — đã về kho nhưng chưa bóc thành số:</b> '
-       +skCua2.map(x=>x.ten.split(" —")[0]).join(" · ")
+   +(skCua2.filter(x=>x.lamMoiTre).length?
+      '<div class="q"><b>Cửa 2B — số đã bóc xong, nhưng bảng tính sẵn chưa làm mới:</b> '
+       +skCua2.filter(x=>x.lamMoiTre).map(x=>x.ten.split(" —")[0]).join(" · ")
+       +'.<br>Lần làm mới gần nhất: <b>'+(lmLuc?doTuoi(lmGio):"chưa bao giờ")+'</b> — <b>trước</b> lúc file về kho, nên app vẫn đang đọc số cũ. '
+       +'Máy tự làm mới lúc <b>09:10</b> và <b>09:45</b> mỗi sáng. '
+       +'<b>Bấm Run workflow trên GitHub KHÔNG sửa được việc này</b> — đó là cửa khác. Báo cho Phuong nếu quá 09:45 vẫn chưa mới.</div>' : "")
+   +(skCua2.filter(x=>!x.lamMoiTre).length? '<div class="q"><b>Cửa 2 — đã về kho nhưng chưa bóc thành số:</b> '
+       +skCua2.filter(x=>!x.lamMoiTre).map(x=>x.ten.split(" —")[0]).join(" · ")
        +'. Job tự bóc lúc <b>09:00</b> mỗi sáng. Cần ngay: GitHub → Actions → <i>Keo du lieu</i> → <b>Run workflow</b> → chờ ~2 phút → bấm <b>↻ Tải lại số</b>.</div>' : "")
+   +'<p class="note" style="margin-top:8px">Bảng tính sẵn làm mới lần cuối: <b class="mono">'
+       +(lmLuc? (lmLuc.toISOString().slice(0,16).replace("T"," ")+" UTC · "+doTuoi(lmGio)) : "chưa ghi nhận")+'</b></p>'
    +'<p class="note" style="margin-top:10px">Số của <b>hôm nay ('+homNay+')</b> luôn chưa chốt — điểm danh còn đang diễn ra. '
    +'Chỉ tin số từ <b>ngày học gần nhất trở về trước</b>.</p></details>';
   const treNgay = bdNgay ? ngayHocTuDen(bdNgay,homNay) : null;
@@ -1552,6 +1626,7 @@ function vao(session){
       +'Nếu bạn chưa có email công ty, nhắn Hiền hoặc Phuong để được cấp quyền.</div></div>';
     return;
   }
+  DC.bat(em);
   chay();
 }
 sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
