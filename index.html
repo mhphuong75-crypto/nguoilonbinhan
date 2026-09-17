@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-17 · b25";
+const BUILD="2026-09-17 · b26";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -462,14 +462,14 @@ async function render(){
     const o=cmp[k]; o.s+=+r.spend||0; o.i+=+r.impressions||0; o.re+=+r.reach||0;
     o.c+=+r.clicks||0; o.lc+=+r.link_clicks||0; o.res+=+r.results||0;
     if(r.result_type) o.rt=r.result_type});
-  const cmpRows=Object.values(cmp).sort((a,b)=>b.s-a.s).slice(0,20);
+  const cmpRows=Object.values(cmp).sort((a,b)=>b.s-a.s);
   const cmpSpend=cmpRows.reduce((s,x)=>s+x.s,0), cmpRes=cmpRows.reduce((s,x)=>s+x.res,0);
   const tired=cmpRows.filter(x=>x.re&&x.i/x.re>=2.5&&x.s>0);
   const noRes=cmpRows.filter(x=>x.s>0&&!x.res);
   const cmpCard = !cmpRows.length ? "" :
    '<div class="card"><h2>Meta theo chiến dịch</h2><p class="sub">'+cmpRows.length+' chiến dịch có chi tiêu · '+start+" → "+end+'</p>'
    +'<div class="tw"><table style="min-width:740px"><thead><tr><th>Chiến dịch</th><th>Chi tiêu</th><th>Tần suất</th><th>CPM</th><th>CTR</th><th>Kết quả</th><th>Giá/kết quả</th></tr></thead><tbody>'
-   +cmpRows.map(x=>{const f=x.re?x.i/x.re:null;
+   +cmpRows.slice(0,10).map(x=>{const f=x.re?x.i/x.re:null;
      return '<tr><td style="max-width:230px;white-space:normal">'+x.name
       +'<div style="font-size:11px;color:var(--muted)">'+x.acc+(x.obj?" · "+x.obj:"")+'</div>'
       +'</td><td class="mono">'+vnd(x.s)
@@ -479,6 +479,7 @@ async function render(){
       +'</td><td class="mono">'+(x.res?fmt(x.res)+' <span style="font-size:10px;color:var(--muted)">'+x.rt+'</span>':'<span class="down">0</span>')
       +'</td><td class="mono">'+(x.res?vnd(x.s/x.res):"—")+"</td></tr>"}).join("")
    +"</tbody></table></div>"
+   +(cmpRows.length>10?'<p class="leg">Hiện 10 chiến dịch chi nhiều nhất trong '+fmt(cmpRows.length)+' chiến dịch có chi tiêu.</p>':"")
    +'<p class="leg"><b>ng = nghìn đồng</b> (135.000 ng = 135 triệu) · <b>CPM</b> = tiền để quảng cáo hiện ra 1.000 lần · '
    +'<b>CTR</b> = bao nhiêu % người thấy thì bấm · <b>Kết quả</b> = việc Meta ghi nhận được (tin nhắn, lead…).</p>'
    +'<p class="note">Tần suất = mỗi người thấy quảng cáo bao nhiêu lần. Từ 2,5 trở lên là đang phát lại cho cùng một nhóm — tiền tăng, kết quả không tăng.</p>'
@@ -568,10 +569,11 @@ async function render(){
    '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">Chưa có dữ liệu — lần kéo tới sẽ có</p></div>'
    : '<div class="card"><h2>Việc phụ huynh làm trên website</h2><p class="sub">'+evRows.length+' loại sự kiện GA4 đang ghi nhận · '+start+" → "+end+'</p>'
    +'<div class="tw"><table><thead><tr><th>Sự kiện</th><th>Số lần</th><th>Người</th><th>Giơ tay?</th></tr></thead><tbody>'
-   +evRows.slice(0,20).map(([k,v])=>'<tr><td style="white-space:normal">'+tenSK(k)
+   +evRows.slice(0,10).map(([k,v])=>'<tr><td style="white-space:normal">'+tenSK(k)
      +'<div style="font-size:10.5px;color:var(--muted)" class="mono">'+k+'</div></td><td class="mono">'+fmt(v.c)+'</td><td class="mono">'+fmt(v.u)
      +'</td><td>'+(suspect.some(x=>x[0]===k)?'<span class="down">? sai</span>':isRaise(k)?'<span class="up">✓</span>':'<span style="color:var(--muted)">—</span>')+'</td></tr>').join("")
    +"</tbody></table></div>"
+   +(evRows.length>10?'<p class="leg">Hiện 10 sự kiện nhiều nhất trong '+fmt(evRows.length)+' loại.</p>':"")
    +'<p class="leg"><b>Số lần</b> = tổng số lần xảy ra · <b>Người</b> = số người khác nhau. '
    +'Lấy Số lần ÷ Người: nếu một sự kiện "giơ tay" ra tỷ lệ trên 10 thì gần như chắc chắn đo sai — không ai bấm gửi form 10 lần.</p>'
    +(suspect.length ? '<div class="gap"><b>Nghi ngờ đo sai:</b> '
@@ -777,6 +779,20 @@ async function render(){
   const ngMoc=(function(){let m=null;(dd||[]).forEach(function(r){
     const d=String(r.ngay||"").slice(0,10);
     if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&(!m||d>m))m=d;}); return m;})();
+  // trong danh sach cham soc, KHONG cat bo tre nao — chi hien 10 dong dau, phan con lai gap vao <details>
+  const rowND=r=>"<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
+       +"</td><td>"+(r.tu_ngay||"—")+"</td><td>"+(r.den_ngay||"—")
+       +'</td><td class="mono">'+((+r.so_buoi||0)>=4?'<span class="down">':"<span>")+fmt(r.so_buoi)+"</span>"
+       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:#067647">rồi</span>')
+       +"</td><td>"+(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>";
+  const rowNM=r=>"<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
+       +"</td><td>"+(r.tu_ngay||"—")+'</td><td class="mono">'+fmt(r.so_buoi)
+       +'</td><td class="mono"><span class="down">'+fmt(r.ngay_ke_tu_khi_nghi)+" ngày</span>"
+       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:#067647">rồi</span>')+"</td><td>"
+       +(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>";
+  const ngDangS=ngDang.slice().sort((a,b)=>(+b.so_buoi||0)-(+a.so_buoi||0));
+  const thNgD='<tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Đến</th><th>Số buổi</th><th>Đã đi học lại?</th><th>Lý do</th></tr>';
+  const thNgM='<tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Buổi vắng đầu</th><th>Số buổi</th><th>Đã bao lâu</th><th>Đã đi học lại?</th><th>Lý do</th></tr>';
   const ngCard = !ngLoc.length ? "" :
    '<div class="card"><h2>Trẻ nghỉ liên tục từ 3 buổi</h2>'
    +'<p class="sub">Từ Tomia · điểm danh chi tiết từng trẻ · '+nhanCP+'</p>'
@@ -787,25 +803,18 @@ async function render(){
    +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chưa quay lại, mới nghỉ trong vòng 7 ngày")
    +kpi("Nghỉ lâu, chưa quay lại",fmt(ngMat.length),"","quá 7 ngày — nghi đã nghỉ hẳn")
    +kpi("Có ghi lý do",fmt(ngCoLyDo.length)+" / "+fmt(ngLoc.length),"","phần còn lại không ai biết vì sao")+"</div>"
-   +(ngDang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang nghỉ dở — gọi hôm nay</p>'
-     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Đến</th><th>Số buổi</th><th>Đã đi học lại?</th><th>Lý do</th></tr></thead><tbody>'
-     +ngDang.sort((a,b)=>(+b.so_buoi||0)-(+a.so_buoi||0)).slice(0,25).map(r=>
-       "<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
-       +"</td><td>"+(r.tu_ngay||"—")+"</td><td>"+(r.den_ngay||"—")
-       +'</td><td class="mono">'+((+r.so_buoi||0)>=4?'<span class="down">':"<span>")+fmt(r.so_buoi)+"</span>"
-       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:#067647">rồi</span>')
-       +"</td><td>"+(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>").join("")
-     +"</tbody></table></div>" : "")
-   +(ngMat.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghỉ lâu, chưa quay lại — đã ai gọi chưa?</p>'
-     +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Buổi vắng đầu</th><th>Số buổi</th><th>Đã bao lâu</th><th>Đã đi học lại?</th><th>Lý do</th></tr></thead><tbody>'
-     +ngMat.slice(0,20).map(r=>
-       "<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
-       +"</td><td>"+(r.tu_ngay||"—")+'</td><td class="mono">'+fmt(r.so_buoi)
-       +'</td><td class="mono"><span class="down">'+fmt(r.ngay_ke_tu_khi_nghi)+" ngày</span>"
-       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:#067647">rồi</span>')+"</td><td>"
-       +(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>").join("")
+   +(ngDangS.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang nghỉ dở — gọi hôm nay ('+fmt(ngDangS.length)+' bé)</p>'
+     +'<div class="tw"><table><thead>'+thNgD+'</thead><tbody>'
+     +ngDangS.slice(0,10).map(rowND).join("")
      +"</tbody></table></div>"
-     +(ngMat.length>20?'<p class="leg">Hiện 20 ca gần nhất trong '+fmt(ngMat.length)+'.</p>':"") : "")
+     +(ngDangS.length>10 ? '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Xem '+fmt(ngDangS.length-10)+' bé còn lại đang nghỉ dở</summary>'
+       +'<div class="tw" style="margin-top:8px"><table><thead>'+thNgD+'</thead><tbody>'+ngDangS.slice(10).map(rowND).join("")+"</tbody></table></div></details>" : "") : "")
+   +(ngMat.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghỉ lâu, chưa quay lại — đã ai gọi chưa? ('+fmt(ngMat.length)+' bé)</p>'
+     +'<div class="tw"><table><thead>'+thNgM+'</thead><tbody>'
+     +ngMat.slice(0,10).map(rowNM).join("")
+     +"</tbody></table></div>"
+     +(ngMat.length>10 ? '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Xem '+fmt(ngMat.length-10)+' bé còn lại nghỉ lâu</summary>'
+       +'<div class="tw" style="margin-top:8px"><table><thead>'+thNgM+'</thead><tbody>'+ngMat.slice(10).map(rowNM).join("")+"</tbody></table></div></details>" : "") : "")
    +(ngCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
      +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đang nghỉ dở</th><th>Số buổi nghỉ TB</th><th>Có ghi lý do</th></tr></thead><tbody>'
      +ngCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+(v.dang?'<span class="down">'+v.dang+"</span>":"0")
@@ -982,7 +991,7 @@ async function render(){
        +'</td><td class="mono">'+fmt(v.reduce((s2,r)=>s2+(+r.goi_nghe_may||0),0))
        +'</td><td class="mono">'+fmt(v.reduce((s2,r)=>s2+(+r.goi_khong_nghe||0),0))+"</td></tr>"}).join("")
    +"</tbody></table></div>"
-   +dsTang.map(k=>{const v=dsT[k].slice(0,15);
+   +dsTang.map(k=>{const v=dsT[k].slice(0,10);
      return '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">'+k+" — "+fmt(dsT[k].length)+" hồ sơ</summary>"
        +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>Phụ huynh / bé</th><th>Số điện thoại</th><th>Campus</th><th>Kênh</th><th>Vào ngày</th><th>Chạm</th><th>Lần cuối — ai, làm gì, khi nào</th><th>Im lặng</th></tr></thead><tbody>'
        +v.map(r=>{const ai=(r.cham_cuoi_ai||"").replace(/\s*\(\d+\)\s*$/,"");
@@ -993,7 +1002,7 @@ async function render(){
          +'</td><td class="mono">'+fmt(r.so_cham)+(r.goi_khong_nghe?" ("+r.goi_khong_nghe+" không nghe)":"")
          +"</td><td>"+lc+'</td><td class="mono">'+fmt(r.im_lang)+"n</td></tr>"}).join("")
        +"</tbody></table></div>"
-       +(dsT[k].length>15?'<p class="leg">Hiện 15 hồ sơ mới nhất trong '+fmt(dsT[k].length)+' (im lặng ít ngày nhất trước).</p>':"")
+       +(dsT[k].length>10?'<p class="leg">Hiện 10 hồ sơ mới nhất trong '+fmt(dsT[k].length)+' (im lặng ít ngày nhất trước).</p>':"")
        +"</details>"}).join("")
    +'<p class="leg"><b>Số điện thoại</b> lấy từ module <i>Liên hệ</i> (PHỤ HUYNH) của AMIS, nối qua trường <i>Liên hệ</i> của hồ sơ tuyển sinh — bấm được để gọi thẳng trên điện thoại. '
    +'Khoảng <b>11% hồ sơ chưa có số</b>: đó là hồ sơ chưa gắn liên hệ nào trong CRM, không phải phụ huynh không cho số. '
@@ -1127,8 +1136,8 @@ async function render(){
                  : '<span class="down">● chưa thấy — đang chờ</span>')+'</td></tr>').join("")
          +'</tbody></table></div>';
      }).join("")
-   +'<p class="note" style="margin-top:10px">⏱ Danh sách này lấy từ CRM, hiện <b>đóng băng từ 04/09</b> (nút “Kéo AMIS” ngừng gửi phần học sinh–lớp). '
-   +'Tên và lớp có thể cũ; cột Tomia thì luôn mới. Khi nguồn CRM chảy lại, danh sách tự cập nhật.<br>'
+   +'<p class="note" style="margin-top:10px">⏱ Danh sách này lấy từ CRM (hồ sơ học sinh–lớp), <b>cập nhật ở lần bấm “Kéo AMIS” gần nhất</b> — đã chạy lại được sau khi sửa API sang g2. '
+   +'Cột Tomia luôn mới. Nếu muốn danh sách tự mới mỗi tuần, nhớ dùng đúng bản dấu trang “Kéo AMIS” mới nhất.<br>'
    +'Muốn xem chi tiết từng em (số điện thoại phụ huynh, ngày đóng tiền) → vào thẳng AMIS CRM.</p></details>';
 
   const hsCard = !H.length ? "" :
@@ -1561,6 +1570,7 @@ async function render(){
    +'Nếu không ai trả lời được thì thay đổi đó là ngẫu nhiên — hoặc đang có việc xảy ra mà chưa ai nói ra.</div></div>';
 
 
+  const SEC=t=>'<p style="margin:26px 4px 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);padding-bottom:6px">'+t+'</p>';
   $("body").innerHTML=
    '<div class="zone" id="z1">'
    +'<p class="sub">Bốn thẻ. Mỗi thẻ trả lời được đúng một câu: <b>ai làm gì trong 48 giờ</b>. Thẻ nào không trả lời được thì nằm ở ③.</p>'
@@ -1584,14 +1594,19 @@ async function render(){
    +'</div>'
 
    +'<div class="zone" id="z3">'
-   +'<p class="sub">Mở khi cần điều tra một câu hỏi cụ thể — không đọc hằng tuần. Ô thời gian ở đầu trang chỉ đổi các thẻ Website · Meta · Google.</p>'
+   +'<p class="sub">Mở khi cần điều tra một câu hỏi cụ thể — không đọc hằng tuần. Thứ tự các thẻ đi theo <b>dòng vận hành</b>: tuyển sinh → đi học & giữ chân → thu hút & website. Ô thời gian ở đầu trang chỉ đổi các thẻ Website · Meta · Google.</p>'
+
+   +SEC("A · Tuyển sinh — lead thành học sinh · theo campus")
+   +hsCard
    +dsCard
    +choCard
-   +hsCard
+
+   +SEC("B · Đi học & giữ chân · theo campus")
    +ddCard
    +spCard
-   +hrCard
+
    +moGap
+   +SEC("C · Thu hút — người lạ tìm tới ME · toàn hệ thống")
    +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'
    +kpi("Lượt vào web",fmt(ses),delta(ses,pses),"mỗi lần một người mở website")
@@ -1599,14 +1614,6 @@ async function render(){
    +kpi("Bấm từ Google",fmt(cl),delta(cl,pcl),"bấm vào web từ kết quả tìm kiếm")
    +kpi("Hiện trên Google",fmt(im),delta(im,pim),"số lần web xuất hiện, chưa ai bấm")+"</div>"
    +'<div style="margin-top:14px">'+spark(series)+"</div></div>"
-
-   +evCard
-
-   +wCard
-
-   +metaCard
-
-   +cmpCard
 
    +'<div class="card"><h2>Nguồn truy cập</h2><p class="sub">Phiên theo kênh · '+fmt(chTot)+" phiên</p>"
    +chRows.map(([k,v])=>'<div class="frow"><div class="fm"><span>'+k+'</span><span><b class="mono">'+fmt(v)
@@ -1630,6 +1637,16 @@ async function render(){
 
    +pageCard
 
+   +SEC("D · Tương tác & giơ tay trên web · toàn hệ thống")
+   +evCard
+   +wCard
+   +hrCard
+
+   +SEC("E · Quảng cáo Meta · toàn hệ thống")
+   +metaCard
+   +cmpCard
+
+   +SEC("Nguồn dữ liệu & chẩn đoán")
    +'<div class="card"><h2>Nguồn dữ liệu</h2><p class="sub">Số nào không có thì để trống, không bịa</p>'
    +'<div class="tw"><table><thead><tr><th>Nguồn</th><th>Đến ngày</th><th>Số ngày trễ</th></tr></thead><tbody>'
    +[["GA4",days[days.length-1]],["Search Console",gs.length?gs.reduce((a2,r)=>r.day>a2?r.day:a2,gs[0].day):null],
