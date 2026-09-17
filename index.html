@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-17 · b23";
+const BUILD="2026-09-17 · b25";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -241,7 +241,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","mv_lead_campus","v_diem_danh",
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
-  "v_tuoi_du_lieu","lan_lam_moi"];
+  "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -273,7 +273,8 @@ function taoTruyVan(CP){ return [
     sb.from("mv_supa").select("campus,bo_ma,bo_ten,ngay,so_phieu,so_dat,so_chua_dat,ty_le_dat").order("ngay",{ascending:false}).limit(2000),
     sb.from("mv_nhap_hoc").select("ma_tre,ten_tre,lop,campus,ngay_dau").gte("ngay_dau","2026-06-01").order("ngay_dau",{ascending:false}).limit(3000),
     sb.from("v_tuoi_du_lieu").select("nguon,lan_cuoi,so_gio,so_lan").limit(20),
-    sb.from("lan_lam_moi").select("ten,luc,giay").limit(5)
+    sb.from("lan_lam_moi").select("ten,luc,giay").limit(5),
+    sb.from("v_cho_nhap_hoc").select("ma_hs,ten_hs,campus,lop,tomia_da_di_hoc,tomia_ngay").limit(500)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -323,7 +324,7 @@ async function render(){
   soLanVe++;
   DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
          (KHO&&KHO.tong)?KHO.tong/1000:null);
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -1049,14 +1050,31 @@ async function render(){
     o.n++; o.ngay+=+r.so_ngay_im_lang||0; if(!r.ly_do||r.ly_do==="(chưa ghi lý do)")o.chua++});
   const ktRows=Object.entries(kt).sort((a,b)=>b[1].n-a[1].n);
   const ketTot=lyLoc.length;
+  // b24: so Tomia (tre di hoc buoi dau) cho DUNG tuan lich nay, dat canh so CRM.
+  // Khong dung chiNgay() vi no khai bao ben duoi (TDZ) -> parse ngay inline.
+  const _ngay=s=>{const m=String(s||"").match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:null;};
+  const _t0=new Date(homNay+"T00:00:00Z"); const _dow=(_t0.getUTCDay()+6)%7; // thu Hai = 0
+  const _mon=new Date(_t0); _mon.setUTCDate(_t0.getUTCDate()-_dow);
+  const _sun=new Date(_mon); _sun.setUTCDate(_mon.getUTCDate()+6);
+  const _s=_mon.toISOString().slice(0,10), _e=_sun.toISOString().slice(0,10);
+  const tomiaTuan=new Set((nhapHoc||[])
+    .filter(r=>r.campus&&hopCP(r.campus))
+    .filter(r=>{const d=_ngay(r.ngay_dau);return d&&d>=_s&&d<=_e;})
+    .map(r=>r.ma_tre)).size;
+  const coTomiaTuan=(nhapHoc||[]).length>0;
+  const chenhTomia=tuanNay?tomiaTuan-ctTuanCua(tuanNay.tuan):null;
   const ctCard = !twRows.length ? "" :
    '<div class="card"><h2>Tuần này so với chỉ tiêu</h2><p class="sub">'+nhanCP+' · mỗi tuần so với chỉ tiêu <b>của tháng chứa tuần đó</b> ÷ 4 · nguồn: file kế hoạch 2026</p>'
    +'<p class="leg" style="margin-top:-6px">⏱ Thẻ này luôn tính theo <b>tuần lịch</b> (thứ Hai → Chủ nhật), <b>không đổi theo ô chọn thời gian</b> ở đầu trang.</p>'
    +'<div class="kpis">'
    +kpi("Chỉ tiêu tuần",dec(tuanNay?ctTuanCua(tuanNay.tuan):ctTuan,1),"","chỉ tiêu tháng "+(tuanNay?+String(tuanNay.tuan).slice(5,7):thangNay)+" ("+fmt(tuanNay?ctThangCua(tuanNay.tuan):ctThang)+") ÷ 4")
-   +kpi("Đã đi học tuần này",fmt(tuanNay?tuanNay.dh:0),"",(tuanNay?tuanNay.tuan:"")+" — lead chuyển sang “Kết thúc thành công”")
-   +kpi("Chênh",(tuanNay?((tuanNay.dh-ctTuanCua(tuanNay.tuan)>=0?"+":"")+dec(tuanNay.dh-ctTuanCua(tuanNay.tuan),1)):"—"),"","thực tế trừ chỉ tiêu tuần")
+   +kpi("Đi học buổi đầu — Tomia",coTomiaTuan?fmt(tomiaTuan):"—","",'<b>trẻ thật sự đến lớp tuần này</b> — đếm theo mã trẻ')
+   +kpi("Chốt trên CRM",fmt(tuanNay?tuanNay.dh:0),"",'người bấm “Kết thúc thành công” — thường thấp hơn thực tế')
+   +kpi("Chênh (theo Tomia)",(chenhTomia==null||!coTomiaTuan)?"—":'<span class="'+(chenhTomia>=0?"up":"down")+'">'+(chenhTomia>=0?"+":"")+dec(chenhTomia,1)+"</span>","","thực tế Tomia trừ chỉ tiêu tuần")
    +kpi("Đang kẹt giữa phễu",fmt(ketTot),"","đã vào phễu nhưng chưa ra kết quả")+"</div>"
+   +(coTomiaTuan?'<div class="q" style="margin-top:6px"><b>Hai nguồn, hai con số:</b> “Tomia” đếm trẻ <b>đã đến lớp</b> (việc quan sát được, phủ cả 15 campus). '
+     +'“CRM” đếm lead ai đó <b>bấm chốt</b> (phụ thuộc người nhớ cập nhật). Khi hai số lệch nhau, tin Tomia. '
+     +'Tháng 9: Tomia đang cao hơn CRM khoảng <b>3 lần</b> — nên “chênh” tính theo Tomia mới là bức tranh thật.</div>':"")
    +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tuần</th><th>Cuộc gọi</th><th>Lead mới</th><th>Hẹn</th><th>Đã thăm</th><th>Đặt cọc</th><th>Đi học</th><th>Chỉ tiêu</th><th>vs chỉ tiêu</th></tr></thead><tbody>'
    +twRows.map(r=>{const ctR=ctTuanCua(r.tuan); const d=r.dh-ctR; const cls=d>=0?"up":"down";
      return "<tr><td>"+r.tuan+'</td><td class="mono">'+fmt(r.goi)+'</td><td class="mono">'+fmt(r.lead)+'</td><td class="mono">'+fmt(r.hen)
@@ -1077,6 +1095,41 @@ async function render(){
    +'Một lead được sửa lại vì lý do khác sẽ nhảy sang tuần mới. Số này đủ để thấy xu hướng, chưa đủ để chấm KPI cá nhân.</p>'
    +'<div class="q"><b>Câu hỏi cho từng campus:</b> trong 10 dòng trên, ai đã gọi lại lần cuối, ngày nào, và phụ huynh nói gì? '
    +'Nếu không ai trả lời được thì <b>đó mới là con số cần sửa</b>, không phải tỷ lệ chốt.</div></div>';
+
+  // ===== b25: THE "Da dong tien — da den lop chua?" (CRM chinh, Tomia kiem chung) =====
+  const cho=(choDS||[]).filter(r=>hopCP(r.campus));
+  const choDangCho=cho.filter(r=>!r.tomia_da_di_hoc);
+  const choDaDiHoc=cho.filter(r=>r.tomia_da_di_hoc);
+  // gom theo campus, campus nao con nhieu em THAT SU cho thi len truoc
+  const choCam={}; cho.forEach(r=>{const c=r.campus||"(chưa gán campus)";
+    const o=choCam[c]||(choCam[c]={cho:[],xong:[]}); (r.tomia_da_di_hoc?o.xong:o.cho).push(r);});
+  const choCamRows=Object.entries(choCam).sort((a,b)=>b[1].cho.length-a[1].cho.length);
+  const choCard = !cho.length ? "" :
+   '<details class="card">'
+   +'<summary>💳 Đã đóng tiền — đã đến lớp chưa? ('+choDangCho.length+' em thật sự đang chờ / '+cho.length+' hồ sơ)</summary>'
+   +'<p class="sub">Từ AMIS CRM (hồ sơ “Chờ nhập học”) · Tomia dùng để kiểm chứng · '+nhanCP+'</p>'
+   +'<div class="kpis">'
+   +kpi("Thật sự đang chờ",fmt(choDangCho.length),"",'<b>chưa thấy ở điểm danh Tomia</b> — đây là danh sách cần gọi')
+   +kpi("Tomia báo đã đi học",fmt(choDaDiHoc.length),"",'CRM còn ghi “chờ” nhưng trẻ đã đến lớp — <b>cần cập nhật CRM</b>')
+   +'</div>'
+   +'<div class="q" style="margin-top:4px"><b>Cách đọc:</b> CRM là nguồn chính (có lớp, có hồ sơ). '
+   +'Tomia là kiểm chứng: nếu một em đã xuất hiện trong điểm danh thì em đó <b>đã đi học rồi</b>, chỉ là chưa ai sửa CRM. '
+   +'Còn lại là <b>đã đóng tiền nhưng thật sự chưa tới lớp</b> — mới là việc cần làm.</div>'
+   + choCamRows.map(([c,o])=>{
+       const ds=o.cho.concat(o.xong);
+       return '<p class="sub" style="margin:14px 0 4px;text-transform:none;letter-spacing:0"><b>'+c+'</b> — '
+         +'<span class="down">'+o.cho.length+' đang chờ</span>'+(o.xong.length?' · <span style="opacity:.6">'+o.xong.length+' đã đi học (CRM cũ)</span>':'')+'</p>'
+         +'<div class="tw"><table><thead><tr><th>Bé</th><th>Lớp ghi trong CRM</th><th>Tomia kiểm chứng</th></tr></thead><tbody>'
+         +ds.map(r=>'<tr'+(r.tomia_da_di_hoc?' style="opacity:.5"':'')+'><td>'+(r.ten_hs||'(không tên)')+'</td>'
+             +'<td>'+(r.lop||'—')+'</td>'
+             +'<td>'+(r.tomia_da_di_hoc
+                 ? '<span style="color:#067647">✓ đã đi học'+(r.tomia_ngay?' ('+String(r.tomia_ngay).slice(0,10)+')':'')+'</span>'
+                 : '<span class="down">● chưa thấy — đang chờ</span>')+'</td></tr>').join("")
+         +'</tbody></table></div>';
+     }).join("")
+   +'<p class="note" style="margin-top:10px">⏱ Danh sách này lấy từ CRM, hiện <b>đóng băng từ 04/09</b> (nút “Kéo AMIS” ngừng gửi phần học sinh–lớp). '
+   +'Tên và lớp có thể cũ; cột Tomia thì luôn mới. Khi nguồn CRM chảy lại, danh sách tự cập nhật.<br>'
+   +'Muốn xem chi tiết từng em (số điện thoại phụ huynh, ngày đóng tiền) → vào thẳng AMIS CRM.</p></details>';
 
   const hsCard = !H.length ? "" :
    '<div class="card"><h2>Học sinh và tuyển sinh</h2><p class="sub">Từ AMIS CRM · '+nhanCP+' · cập nhật ở lần bấm “Kéo AMIS” gần nhất</p>'
@@ -1533,6 +1586,7 @@ async function render(){
    +'<div class="zone" id="z3">'
    +'<p class="sub">Mở khi cần điều tra một câu hỏi cụ thể — không đọc hằng tuần. Ô thời gian ở đầu trang chỉ đổi các thẻ Website · Meta · Google.</p>'
    +dsCard
+   +choCard
    +hsCard
    +ddCard
    +spCard
