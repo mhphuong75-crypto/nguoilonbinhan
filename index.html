@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-17 · b26";
+const BUILD="2026-09-18 · b27";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1072,25 +1072,42 @@ async function render(){
     .map(r=>r.ma_tre)).size;
   const coTomiaTuan=(nhapHoc||[]).length>0;
   const chenhTomia=tuanNay?tomiaTuan-ctTuanCua(tuanNay.tuan):null;
+  // b27: Tomia theo TUNG tuan + luy ke trong thang -> noi duoc so tuan voi so thang (37)
+  const _nhCP=(nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus))
+    .map(r=>({ma:r.ma_tre,d:_ngay(r.ngay_dau)})).filter(r=>r.d);
+  const _sunOf=w=>{const t=new Date(w+"T00:00:00Z");t.setUTCDate(t.getUTCDate()+6);return t;};
+  const tomiaWkN=w=>{const lo=w,hi=_sunOf(w).toISOString().slice(0,10);
+    const s=new Set();_nhCP.forEach(r=>{if(r.d>=lo&&r.d<=hi)s.add(r.ma);});return s.size;};
+  // luy ke: dem theo THANG cua ngay Chu nhat cua tuan (de tuan 31/08 chua tre thang 9 tinh vao thang 9)
+  const tomiaLuyKe=w=>{const sun=_sunOf(w);const mth=sun.getUTCMonth()+1,yr=sun.getUTCFullYear();
+    const hi=sun.toISOString().slice(0,10);const s=new Set();
+    _nhCP.forEach(r=>{const dt=new Date(r.d+"T00:00:00Z");
+      if(dt.getUTCFullYear()===yr&&dt.getUTCMonth()+1===mth&&r.d<=hi)s.add(r.ma);});return s.size;};
+  const luyKeThang=tuanNay?tomiaLuyKe(String(tuanNay.tuan).slice(0,10)):0;
   const ctCard = !twRows.length ? "" :
    '<div class="card"><h2>Tuần này so với chỉ tiêu</h2><p class="sub">'+nhanCP+' · mỗi tuần so với chỉ tiêu <b>của tháng chứa tuần đó</b> ÷ 4 · nguồn: file kế hoạch 2026</p>'
    +'<p class="leg" style="margin-top:-6px">⏱ Thẻ này luôn tính theo <b>tuần lịch</b> (thứ Hai → Chủ nhật), <b>không đổi theo ô chọn thời gian</b> ở đầu trang.</p>'
    +'<div class="kpis">'
    +kpi("Chỉ tiêu tuần",dec(tuanNay?ctTuanCua(tuanNay.tuan):ctTuan,1),"","chỉ tiêu tháng "+(tuanNay?+String(tuanNay.tuan).slice(5,7):thangNay)+" ("+fmt(tuanNay?ctThangCua(tuanNay.tuan):ctThang)+") ÷ 4")
-   +kpi("Đi học buổi đầu — Tomia",coTomiaTuan?fmt(tomiaTuan):"—","",'<b>trẻ thật sự đến lớp tuần này</b> — đếm theo mã trẻ')
-   +kpi("Chốt trên CRM",fmt(tuanNay?tuanNay.dh:0),"",'người bấm “Kết thúc thành công” — thường thấp hơn thực tế')
+   +kpi("Đi học tuần này — Tomia",coTomiaTuan?fmt(tomiaTuan):"—","",'<b>trẻ thật sự đến lớp tuần này</b> — đếm theo mã trẻ')
+   +kpi("Lũy kế tháng — Tomia",coTomiaTuan?fmt(luyKeThang):"—","",'tổng trẻ đi học buổi đầu <b>từ đầu tháng đến hết tuần này</b>')
+   +kpi("Chốt trên CRM tuần này",fmt(tuanNay?tuanNay.dh:0),"",'người bấm “Kết thúc thành công” — thường thấp hơn thực tế')
    +kpi("Chênh (theo Tomia)",(chenhTomia==null||!coTomiaTuan)?"—":'<span class="'+(chenhTomia>=0?"up":"down")+'">'+(chenhTomia>=0?"+":"")+dec(chenhTomia,1)+"</span>","","thực tế Tomia trừ chỉ tiêu tuần")
    +kpi("Đang kẹt giữa phễu",fmt(ketTot),"","đã vào phễu nhưng chưa ra kết quả")+"</div>"
-   +(coTomiaTuan?'<div class="q" style="margin-top:6px"><b>Hai nguồn, hai con số:</b> “Tomia” đếm trẻ <b>đã đến lớp</b> (việc quan sát được, phủ cả 15 campus). '
-     +'“CRM” đếm lead ai đó <b>bấm chốt</b> (phụ thuộc người nhớ cập nhật). Khi hai số lệch nhau, tin Tomia. '
-     +'Tháng 9: Tomia đang cao hơn CRM khoảng <b>3 lần</b> — nên “chênh” tính theo Tomia mới là bức tranh thật.</div>':"")
-   +'<div class="tw" style="margin-top:14px"><table><thead><tr><th>Tuần</th><th>Cuộc gọi</th><th>Lead mới</th><th>Hẹn</th><th>Đã thăm</th><th>Đặt cọc</th><th>Đi học</th><th>Chỉ tiêu</th><th>vs chỉ tiêu</th></tr></thead><tbody>'
-   +twRows.map(r=>{const ctR=ctTuanCua(r.tuan); const d=r.dh-ctR; const cls=d>=0?"up":"down";
-     return "<tr><td>"+r.tuan+'</td><td class="mono">'+fmt(r.goi)+'</td><td class="mono">'+fmt(r.lead)+'</td><td class="mono">'+fmt(r.hen)
-     +'</td><td class="mono">'+fmt(r.tq)+'</td><td class="mono">'+fmt(r.coc)+'</td><td class="mono">'+fmt(r.dh)
+   +(coTomiaTuan?'<div class="q" style="margin-top:6px"><b>Đọc bảng dưới:</b> cột <b>Tomia</b> = trẻ <b>thật sự đến lớp</b> tuần đó (đếm được, phủ 15 campus); cộng dồn xuống cột <b>Lũy kế</b> — bằng đúng con số cả tháng (VD tháng 9: 8 + 20 + 9 = <b>37</b>). '
+     +'Cột <b>CRM</b> = cùng nhóm trẻ nhưng chỉ tính lead ai đó <b>bấm “chốt”</b> — phụ thuộc người nhớ cập nhật, nên tháng 9 chỉ 15, thấp hơn Tomia ~2,5 lần. '
+     +'Cột <b>vs chỉ tiêu</b> tính theo Tomia (số thật). Khi hai nguồn lệch, tin Tomia.</div>':"")
+   +'<div class="tw" style="margin-top:14px"><table style="min-width:720px"><thead><tr><th>Tuần</th><th>Lead mới</th><th>Đặt cọc</th><th>Chỉ tiêu</th><th>Đi học · Tomia</th><th>Đi học · CRM</th><th>Lũy kế Tomia (tháng)</th><th>vs chỉ tiêu</th></tr></thead><tbody>'
+   +twRows.map(r=>{const w=String(r.tuan).slice(0,10);const ctR=ctTuanCua(r.tuan);
+     const tomW=coTomiaTuan?tomiaWkN(w):null;const lk=coTomiaTuan?tomiaLuyKe(w):null;
+     const base=(tomW==null?r.dh:tomW);const d=base-ctR;const cls=d>=0?"up":"down";
+     return "<tr><td>"+w+'</td><td class="mono">'+fmt(r.lead)+'</td><td class="mono">'+fmt(r.coc)
      +'</td><td class="mono" style="opacity:.6">'+dec(ctR,1)
+     +'</td><td class="mono"><b>'+(tomW==null?"—":fmt(tomW))+'</b></td><td class="mono" style="opacity:.7">'+fmt(r.dh)
+     +'</td><td class="mono">'+(lk==null?"—":fmt(lk))
      +'</td><td class="mono"><span class="'+cls+'">'+(d>=0?"+":"")+dec(d,1)+"</span></td></tr>"}).join("")
    +"</tbody></table></div>"
+   +'<p class="leg">Cột <b>Đi học · Tomia</b> in đậm là số thật để so với chỉ tiêu. <b>Lũy kế</b> reset đầu mỗi tháng (tính theo Chủ nhật của tuần). CRM để tham chiếu — chênh lệch chính là số hồ sơ chưa ai bấm “chốt” trên CRM.</p>'
    +(ktRows.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang kẹt — và không ai ghi vì sao</p>'
      +'<div class="tw"><table><thead><tr><th>Đang ở bước</th><th>Số lead</th><th>Im lặng TB (ngày)</th><th>Chưa ghi lý do</th></tr></thead><tbody>'
      +ktRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+Math.round(v.ngay/v.n)
