@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-18 · b27";
+const BUILD="2026-09-19 · b28";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1719,4 +1719,35 @@ function vao(session){
 }
 sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
 (async()=>{const {data:{session}}=await sb.auth.getSession(); if(session) vao(session);})();
+
+// b28: tu phat hien ban moi tren server -> hien thanh nhac "Tai lai" (khong ep reload giua chung)
+(function(){
+  var daNhac="";
+  async function kiemTraBanMoi(){
+    try{
+      var r=await fetch(location.pathname+"?_cb="+Date.now(),{cache:"no-store"});
+      if(!r.ok)return;
+      var t=await r.text();
+      var m=t.match(/BUILD="([^"]+)"/);
+      if(!m)return;
+      var moi=m[1];
+      if(moi===BUILD||moi===daNhac)return;
+      daNhac=moi;
+      var cu=document.getElementById("__banmoi"); if(cu)cu.remove();
+      var b=document.createElement("div"); b.id="__banmoi";
+      b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:2147483647;background:#0F5348;color:#fff;padding:10px 16px;font:14px/1.4 system-ui;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,.25)";
+      var sp=document.createElement("span"); sp.textContent="Có bản mới của app ("+moi+") — bấm để lấy số liệu & giao diện mới nhất.";
+      var nut=document.createElement("button"); nut.textContent="Tải lại ngay";
+      nut.style.cssText="background:#fff;color:#0F5348;border:0;border-radius:8px;padding:6px 14px;font-weight:600;cursor:pointer";
+      nut.onclick=function(){ location.replace(location.pathname+"?v="+encodeURIComponent(moi)); };
+      var x=document.createElement("button"); x.textContent="Để sau";
+      x.style.cssText="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:6px 12px;cursor:pointer";
+      x.onclick=function(){ b.remove(); };
+      b.appendChild(sp); b.appendChild(nut); b.appendChild(x);
+      document.body.appendChild(b);
+    }catch(e){}
+  }
+  setTimeout(kiemTraBanMoi,12000);
+  setInterval(kiemTraBanMoi,300000);
+})();
 </script></body></html>
