@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-19 · b28";
+const BUILD="2026-09-21 · b29";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1259,9 +1259,11 @@ async function render(){
       t.lead+=o.lead||0; t.dh+=o.dh||0; t.vang+=o.vang||0; t.ng+=o.ng||0; t.spc+=o.spc||0; t.tk+=o.tk||0;});
     return t;};
   // canh bao tre du lieu: dem so NGAY HOC da qua ma chua co diem danh
+  // b29: KHONG tinh hom nay (t<h) — hom nay diem danh con dang dien ra, chua the goi la "thieu".
+  // Chi dem ngay hoc (T2-T6) da HOAN TAT giua a va hom nay. Cuoi tuan + hom nay khong bao gio bi ke la thieu.
   const ngayHocTuDen=(a,b2)=>{let n=0,t=new Date(a+"T00:00:00Z"),h=new Date(b2+"T00:00:00Z");
     t.setUTCDate(t.getUTCDate()+1);
-    while(t<=h){const w=t.getUTCDay(); if(w>=1&&w<=5)n++; t.setUTCDate(t.getUTCDate()+1);} return n;};
+    while(t<h){const w=t.getUTCDay(); if(w>=1&&w<=5)n++; t.setUTCDate(t.getUTCDate()+1);} return n;};
 
   // ===== b12: SUC KHOE DU LIEU — noi ro dang tac o cua nao =====
   // Ba cua giua "du lieu ton tai" va "CEO nhin thay":
@@ -1303,7 +1305,7 @@ async function render(){
     bang:["v_diem_danh","mv_nghi_chuoi","v_su_co","mv_nhap_hoc"]},
    {ten:"SUPA — kiểm việc",       kho:"SUPA",       den:maxNg(supa,"ngay"),  tay:true, do:"hoc",  han:1,
     bang:["mv_supa"]},
-   {ten:"AMIS — tuyển sinh",      kho:"AMIS",       den:maxNg(tsi,"ngay"),   tay:true, do:"lich", han:1,
+   {ten:"AMIS — tuyển sinh",      kho:"AMIS",       den:maxNg(tsi,"ngay"),   tay:true, do:"hoc",  han:1,
     bang:["mv_lead_campus","mv_tuan_campus","mv_can_ly_do","mv_cohort_tuan","mv_viec_tuan","mv_danh_sach"]},
    {ten:"Harasocial — tin nhắn",  kho:"Harasocial", den:maxNg(hara,"ngay"),  tay:true, do:"lich", han:1,
     bang:["v_harasocial"]},
