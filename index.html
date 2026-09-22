@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-21 · b29";
+const BUILD="2026-09-22 · b30";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -241,7 +241,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","mv_lead_campus","v_diem_danh",
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
-  "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc"];
+  "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -274,7 +274,8 @@ function taoTruyVan(CP){ return [
     sb.from("mv_nhap_hoc").select("ma_tre,ten_tre,lop,campus,ngay_dau").gte("ngay_dau","2026-06-01").order("ngay_dau",{ascending:false}).limit(3000),
     sb.from("v_tuoi_du_lieu").select("nguon,lan_cuoi,so_gio,so_lan").limit(20),
     sb.from("lan_lam_moi").select("ten,luc,giay").limit(5),
-    sb.from("v_cho_nhap_hoc").select("ma_hs,ten_hs,campus,lop,tomia_da_di_hoc,tomia_ngay").limit(500)
+    sb.from("v_cho_nhap_hoc").select("ma_hs,ten_hs,campus,lop,tomia_da_di_hoc,tomia_ngay").limit(500),
+    sb.from("tomia_archived").select("campus_code,ma_tre,ten,archived_at").limit(5000)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -324,7 +325,7 @@ async function render(){
   soLanVe++;
   DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
          (KHO&&KHO.tong)?KHO.tong/1000:null);
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -768,8 +769,18 @@ async function render(){
 
   // ----- THE: TRE NGHI LIEN TUC (Tomia, sheet diem danh chi tiet) -----
   const ngLoc=(nghi||[]).filter(r=>hopCP(r.campus));
-  const ngDang=ngLoc.filter(r=>r.dang_dien_ra);
-  const ngMat=ngLoc.filter(r=>r.chua_quay_lai&&!r.dang_dien_ra).sort((a,b)=>(+a.ngay_ke_tu_khi_nghi||0)-(+b.ngay_ke_tu_khi_nghi||0));
+  // ----- doi chieu Tomia "luu tru" (da nghi han) — bo khoi danh sach can goi -----
+  const ltInfo={}; (luuTru||[]).forEach(r=>{ltInfo[String(r.ma_tre)]=r;});
+  const laLuuTru=r=>Object.prototype.hasOwnProperty.call(ltInfo,String(r.ma_tre));
+  const ngDang=ngLoc.filter(r=>r.dang_dien_ra&&!laLuuTru(r));
+  const ngMat=ngLoc.filter(r=>r.chua_quay_lai&&!r.dang_dien_ra&&!laLuuTru(r)).sort((a,b)=>(+a.ngay_ke_tu_khi_nghi||0)-(+b.ngay_ke_tu_khi_nghi||0));
+  // tre dang bi gan la "nghi" (dang do hoac chua quay lai) nhung THUC TE da luu tru tren Tomia
+  const _ltRaw=ngLoc.filter(r=>(r.dang_dien_ra||r.chua_quay_lai)&&laLuuTru(r));
+  const _ltSeen={}; const ngLuuTru=[];
+  _ltRaw.sort((a,b)=>String(b.den_ngay||"").localeCompare(String(a.den_ngay||""))).forEach(r=>{
+    const k=String(r.ma_tre); if(_ltSeen[k])return; _ltSeen[k]=1;
+    ngLuuTru.push(Object.assign({},r,{_lt:ltInfo[k]}));});
+  const coLuuTru=(luuTru||[]).length>0;
   const ngCoLyDo=ngLoc.filter(r=>r.ly_do&&String(r.ly_do).trim());
   const ngTheoCampus={}; ngLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";
     const o=ngTheoCampus[k]||(ngTheoCampus[k]={n:0,dang:0,buoi:0,cly:0});
@@ -790,6 +801,10 @@ async function render(){
        +'</td><td class="mono"><span class="down">'+fmt(r.ngay_ke_tu_khi_nghi)+" ngày</span>"
        +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:#067647">rồi</span>')+"</td><td>"
        +(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>";
+  const rowLT=r=>"<tr style=\"opacity:.72\"><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
+       +"</td><td>"+(r.tu_ngay||"—")+"</td><td>"+(r.den_ngay||"—")
+       +'</td><td class="mono">'+fmt(r.so_buoi)+"</td><td>"+((r._lt&&r._lt.archived_at)||'<span style="opacity:.5">—</span>')+"</td></tr>";
+  const thLT='<tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Buổi vắng cuối</th><th>Số buổi</th><th>Lưu trữ Tomia ngày</th></tr>';
   const ngDangS=ngDang.slice().sort((a,b)=>(+b.so_buoi||0)-(+a.so_buoi||0));
   const thNgD='<tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Đến</th><th>Số buổi</th><th>Đã đi học lại?</th><th>Lý do</th></tr>';
   const thNgM='<tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Buổi vắng đầu</th><th>Số buổi</th><th>Đã bao lâu</th><th>Đã đi học lại?</th><th>Lý do</th></tr>';
@@ -800,8 +815,9 @@ async function render(){
      +'Cột <b>"Đã đi học lại?"</b> tính đến <b>'+(ngMoc||"—")+'</b> — ngày học gần nhất đã có điểm danh, <b>không phải hôm nay</b>. '
      +'Nếu bé đi học lại sau ngày đó thì app chưa biết.</p>'
    +'<div class="kpis">'
-   +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chưa quay lại, mới nghỉ trong vòng 7 ngày")
-   +kpi("Nghỉ lâu, chưa quay lại",fmt(ngMat.length),"","quá 7 ngày — nghi đã nghỉ hẳn")
+   +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chưa quay lại, mới nghỉ trong vòng 7 ngày — đã bỏ trẻ lưu trữ")
+   +kpi("Nghỉ lâu, chưa quay lại",fmt(ngMat.length),"","quá 7 ngày — đã bỏ trẻ lưu trữ")
+   +(ngLuuTru.length?kpi("Đã lọc — nghỉ hẳn",fmt(ngLuuTru.length),"","đã lưu trữ trên Tomia · không cần gọi"):"")
    +kpi("Có ghi lý do",fmt(ngCoLyDo.length)+" / "+fmt(ngLoc.length),"","phần còn lại không ai biết vì sao")+"</div>"
    +(ngDangS.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang nghỉ dở — gọi hôm nay ('+fmt(ngDangS.length)+' bé)</p>'
      +'<div class="tw"><table><thead>'+thNgD+'</thead><tbody>'
@@ -815,6 +831,11 @@ async function render(){
      +"</tbody></table></div>"
      +(ngMat.length>10 ? '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Xem '+fmt(ngMat.length-10)+' bé còn lại nghỉ lâu</summary>'
        +'<div class="tw" style="margin-top:8px"><table><thead>'+thNgM+'</thead><tbody>'+ngMat.slice(10).map(rowNM).join("")+"</tbody></table></div></details>" : "") : "")
+   +(ngLuuTru.length ? '<details style="margin:16px 0 0;border-left:3px solid #067647;padding-left:10px">'
+     +'<summary style="cursor:pointer;font-size:13px;color:#067647;font-weight:600">✓ Đã nghỉ hẳn — đã lưu trữ trên Tomia, KHÔNG cần gọi ('+fmt(ngLuuTru.length)+' bé)</summary>'
+     +'<p class="leg" style="margin:8px 0 6px">Những bé này app vẫn đang gắn nhãn "chưa quay lại", nhưng đối chiếu với danh sách <b>lưu trữ</b> kéo từ Tomia thì các em <b>đã nghỉ hẳn</b>. Đã tách khỏi danh sách gọi ở trên để đội ngũ không mất công gọi nhầm.</p>'
+     +'<div class="tw"><table><thead>'+thLT+'</thead><tbody>'+ngLuuTru.map(rowLT).join("")+"</tbody></table></div></details>" : "")
+   +(coLuuTru ? '<p class="leg" style="margin-top:8px">📥 Nguồn lưu trữ: bảng <code>tomia_archived</code> · '+fmt((luuTru||[]).length)+' bé · cập nhật thủ công 1 tuần/lần từ Tomia (hiện có: Tân Thuận).</p>' : '')
    +(ngCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
      +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đang nghỉ dở</th><th>Số buổi nghỉ TB</th><th>Có ghi lý do</th></tr></thead><tbody>'
      +ngCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+(v.dang?'<span class="down">'+v.dang+"</span>":"0")
