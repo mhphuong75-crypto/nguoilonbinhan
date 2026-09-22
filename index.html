@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-22 · b31";
+const BUILD="2026-09-22 · b32";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -241,7 +241,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","mv_lead_campus","v_diem_danh",
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
-  "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived"];
+  "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -275,7 +275,8 @@ function taoTruyVan(CP){ return [
     sb.from("v_tuoi_du_lieu").select("nguon,lan_cuoi,so_gio,so_lan").limit(20),
     sb.from("lan_lam_moi").select("ten,luc,giay").limit(5),
     sb.from("v_cho_nhap_hoc").select("ma_hs,ten_hs,campus,lop,tomia_da_di_hoc,tomia_ngay").limit(500),
-    sb.from("tomia_archived").select("campus_code,ma_tre,ten,archived_at").limit(5000)
+    sb.from("tomia_archived").select("campus_code,ma_tre,ten,archived_at").limit(5000),
+    sb.from("fin_campus_thang").select("campus_code,campus_ten,thang,dt_kh,dt_th,eb_kh,eb_th,siso_kh,siso_th,luong").limit(2000)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -325,7 +326,7 @@ async function render(){
   soLanVe++;
   DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
          (KHO&&KHO.tong)?KHO.tong/1000:null);
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -822,7 +823,7 @@ async function render(){
    +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chưa quay lại, mới nghỉ trong vòng 7 ngày — đã bỏ trẻ lưu trữ")
    +kpi("Nghỉ lâu, chưa quay lại",fmt(ngMat.length),"","quá 7 ngày — đã bỏ trẻ lưu trữ")
    +(ngLuuTru.length?kpi("Đã lọc — nghỉ hẳn",fmt(ngLuuTru.length),"","đã lưu trữ trên Tomia · không cần gọi"):"")
-   +(ngXacMinh.length?kpi("⚠ Cần xác minh đã nghỉ?",fmt(ngXacMinh.length),"","nghỉ ≥7 ngày, không note, chưa chuyển lưu trữ"):"")
+   +(ngXacMinh.length?kpi("⚠ Cần xác minh đã nghỉ?",fmt(ngXacMinh.length),"","nghỉ ≥7 ngày, chưa quay lại, chưa chuyển lưu trữ"):"")
    +kpi("Có ghi lý do",fmt(ngCoLyDo.length)+" / "+fmt(ngLoc.length),"","phần còn lại không ai biết vì sao")+"</div>"
    +(ngXacMinh.length ? '<div style="margin:16px 0 4px;border:1px solid #A96C05;border-left:4px solid #A96C05;border-radius:8px;padding:12px 14px;background:rgba(169,108,5,.06)">'
      +'<p style="margin:0 0 4px;font-weight:700;color:#A96C05">⚠ Nghi đã nghỉ hẳn nhưng chưa ai chuyển vào "kho lưu trữ" — '+fmt(ngXacMinh.length)+' bé</p>'
@@ -1621,6 +1622,49 @@ async function render(){
 
 
   const SEC=t=>'<p style="margin:26px 4px 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);padding-bottom:6px">'+t+'</p>';
+  // ----- THE: HIEU QUA LUONG THEO CAMPUS (tu file KHNS: Du lieu thang + so cai luong) -----
+  const finAgg={};
+  (finCampus||[]).forEach(r=>{const k=r.campus_code; if(!k)return;
+    const o=finAgg[k]||(finAgg[k]={ten:r.campus_ten||k,dt:0,luong:0,eb:0,dtkh:0,ebkh:0,maxth:0,siso:null,sisokh:null});
+    o.dt+=+r.dt_th||0; o.luong+=+r.luong||0; o.eb+=+r.eb_th||0; o.dtkh+=+r.dt_kh||0; o.ebkh+=+r.eb_kh||0;
+    if((+r.thang||0)>=o.maxth){o.maxth=+r.thang||0; o.siso=r.siso_th; o.sisokh=r.siso_kh;}});
+  const finArr=Object.entries(finAgg).map(([k,o])=>({code:k,ten:o.ten,dt:o.dt,luong:o.luong,eb:o.eb,dtkh:o.dtkh,ebkh:o.ebkh,
+    siso:o.siso,ratio:o.dt?o.luong/o.dt:0,ebm:o.dt?o.eb/o.dt:0})).filter(x=>x.dt>0).sort((a,b)=>a.ratio-b.ratio);
+  const finThangMax=Math.max(0,...(finCampus||[]).map(r=>+r.thang||0));
+  const tyB=v=>(v/1e9).toFixed(2), pc=v=>(v*100).toFixed(1)+"%";
+  const finSysDT=finArr.reduce((a,x)=>a+x.dt,0), finSysL=finArr.reduce((a,x)=>a+x.luong,0), finSysEB=finArr.reduce((a,x)=>a+x.eb,0);
+  const finLo=finArr.filter(x=>x.eb<0).length, finVuot=finArr.filter(x=>x.ratio>0.45).length;
+  const finMauR=x=> x.eb<0||x.ratio>0.55 ? "#B42318" : (x.ratio>0.45 ? "#A96C05" : "#067647");
+  const finRow=x=>{const c=finMauR(x);
+    return "<tr><td>"+x.ten+'</td><td class="mono">'+tyB(x.dt)
+      +'</td><td class="mono" style="color:'+c+';font-weight:600">'+pc(x.ratio)
+      +'</td><td class="mono" style="color:'+c+'">'+pc(x.ebm)
+      +'</td><td class="mono">'+tyB(x.eb)
+      +'</td><td class="mono">'+(x.siso!=null?fmt(x.siso):"—")+"</td></tr>";};
+  const finCard = !finArr.length ? "" :
+   '<div class="card"><h2>Hiệu quả lương theo campus</h2>'
+   +'<p class="sub">Từ file KHNS · lũy kế T1–T'+finThangMax+'/2026 (số thực) · lương = chi phí tiền lương &amp; bảo hiểm toàn bộ nhân sự (sổ cái) · doanh thu &amp; EBITDA từ model tài chính</p>'
+   +'<div class="kpis">'
+   +kpi("%Lương/DT toàn hệ thống",pc(finSysDT?finSysL/finSysDT:0),"","càng thấp margin càng khỏe")
+   +kpi("EBITDA% toàn hệ thống",pc(finSysDT?finSysEB/finSysDT:0),"","lợi nhuận sau phân bổ")
+   +kpi("Campus đang lỗ",fmt(finLo)+" / "+fmt(finArr.length),"","EBITDA âm lũy kế")
+   +kpi("Vượt ngưỡng 45%",fmt(finVuot)+" / "+fmt(finArr.length),"","lương/DT trên 45% → margin mỏng")+"</div>"
+   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid #067647;border-radius:8px;padding:12px 14px;background:rgba(6,118,71,.05)">'
+   +'<p style="margin:0 0 4px;font-weight:700">Đòn bẩy số 1: tỷ lệ Lương/Doanh thu</p>'
+   +'<p class="leg" style="margin:0">Trên toàn hệ thống, tỷ lệ lương/DT giải thích phần lớn chênh lệch margin giữa các campus (tương quan −0.91). '
+   +'Ngưỡng rõ: <b style="color:#067647">≤45% → EBITDA dương khỏe</b>; <b style="color:#A96C05">45–55% → margin mỏng</b>; <b style="color:#B42318">&gt;55% → lỗ</b>. '
+   +'Với các campus lỗ, gốc thường là <b>doanh thu quá thấp so với bộ khung nhân sự cố định</b> (campus nhỏ/mới) — cách chữa là <b>kéo sĩ số lên điểm hòa vốn</b>, không phải cắt lương (cắt lương → giảm chất lượng → mất HS).</p></div>'
+   +'<div class="tw"><table><thead><tr><th>Campus</th><th>DT lũy kế (tỷ)</th><th>%Lương/DT</th><th>EBITDA%</th><th>EBITDA (tỷ)</th><th>Sĩ số</th></tr></thead><tbody>'
+   +finArr.map(finRow).join("")
+   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+tyB(finSysDT)
+   +'</td><td class="mono">'+pc(finSysDT?finSysL/finSysDT:0)+'</td><td class="mono">'+pc(finSysDT?finSysEB/finSysDT:0)
+   +'</td><td class="mono">'+tyB(finSysEB)+'</td><td></td></tr>'
+   +"</tbody></table></div>"
+   +'<p class="leg" style="margin-top:10px">Xanh = lương/DT ≤45% &amp; EBITDA dương · Cam = 45–55% · Đỏ = &gt;55% hoặc EBITDA âm. '
+   +'Lương theo <i>vị trí</i> (GV / văn phòng / bếp…) chỉ có trong kế hoạch, chưa tách được ở số thực — sổ cái ghi theo thành phần lương, không theo vị trí.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> nhóm campus đỏ (lương/DT &gt;55%) — mỗi campus cần thêm bao nhiêu HS để lương/DT về ≤45%? '
+   +'Đó là con số tuyển sinh cụ thể cần giao, thay vì mục tiêu chung chung.</div></div>';
+
   $("body").innerHTML=
    '<div class="zone" id="z1">'
    +'<p class="sub">Bốn thẻ. Mỗi thẻ trả lời được đúng một câu: <b>ai làm gì trong 48 giờ</b>. Thẻ nào không trả lời được thì nằm ở ③.</p>'
@@ -1654,6 +1698,9 @@ async function render(){
    +SEC("B · Đi học & giữ chân · theo campus")
    +ddCard
    +spCard
+
+   +SEC("F · Hiệu quả lương & margin · theo campus (từ KHNS)")
+   +finCard
 
    +moGap
    +SEC("C · Thu hút — người lạ tìm tới ME · toàn hệ thống")
