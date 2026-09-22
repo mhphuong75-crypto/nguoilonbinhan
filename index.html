@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-22 · b30";
+const BUILD="2026-09-22 · b31";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -781,6 +781,10 @@ async function render(){
     const k=String(r.ma_tre); if(_ltSeen[k])return; _ltSeen[k]=1;
     ngLuuTru.push(Object.assign({},r,{_lt:ltInfo[k]}));});
   const coLuuTru=(luuTru||[]).length>0;
+  // ALERT: nghi da nghi han nhung CHUA ai chuyen vao "kho luu tru" — vang >=7 ngay, chua quay lai, chua co trong luu tru.
+  // Luu y: cot ly_do chi la "co phep/khong phep", KHONG phan biet nghi han -> khong dung de loc.
+  const ngXacMinh=ngMat.filter(r=>(+r.ngay_ke_tu_khi_nghi||0)>=7)
+    .sort((a,b)=>(+b.ngay_ke_tu_khi_nghi||0)-(+a.ngay_ke_tu_khi_nghi||0));
   const ngCoLyDo=ngLoc.filter(r=>r.ly_do&&String(r.ly_do).trim());
   const ngTheoCampus={}; ngLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";
     const o=ngTheoCampus[k]||(ngTheoCampus[k]={n:0,dang:0,buoi:0,cly:0});
@@ -818,7 +822,13 @@ async function render(){
    +kpi("Đang nghỉ dở",fmt(ngDang.length),"","chưa quay lại, mới nghỉ trong vòng 7 ngày — đã bỏ trẻ lưu trữ")
    +kpi("Nghỉ lâu, chưa quay lại",fmt(ngMat.length),"","quá 7 ngày — đã bỏ trẻ lưu trữ")
    +(ngLuuTru.length?kpi("Đã lọc — nghỉ hẳn",fmt(ngLuuTru.length),"","đã lưu trữ trên Tomia · không cần gọi"):"")
+   +(ngXacMinh.length?kpi("⚠ Cần xác minh đã nghỉ?",fmt(ngXacMinh.length),"","nghỉ ≥7 ngày, không note, chưa chuyển lưu trữ"):"")
    +kpi("Có ghi lý do",fmt(ngCoLyDo.length)+" / "+fmt(ngLoc.length),"","phần còn lại không ai biết vì sao")+"</div>"
+   +(ngXacMinh.length ? '<div style="margin:16px 0 4px;border:1px solid #A96C05;border-left:4px solid #A96C05;border-radius:8px;padding:12px 14px;background:rgba(169,108,5,.06)">'
+     +'<p style="margin:0 0 4px;font-weight:700;color:#A96C05">⚠ Nghi đã nghỉ hẳn nhưng chưa ai chuyển vào "kho lưu trữ" — '+fmt(ngXacMinh.length)+' bé</p>'
+     +'<p class="leg" style="margin:0">Các bé này đã nghỉ <b>≥7 ngày</b> và <b>chưa đi học lại</b> (đã loại các bé đã lưu trữ'+(coLuuTru?"":" — hiện mới có dữ liệu lưu trữ của Tân Thuận")+'). Rất có thể đã nghỉ hẳn nhưng campus quên khai báo lưu trữ trên Tomia → vẫn bị đếm là "vắng", làm sai sĩ số &amp; số nghỉ. '
+     +'<b>Việc cần làm:</b> gọi xác minh từng bé trong danh sách <b>"Nghỉ lâu, chưa quay lại"</b> ngay dưới — nếu đã nghỉ thì chuyển vào lưu trữ Tomia + ghi lý do nghỉ (cho exit interview); nếu còn học thì ghi note. '
+     +'<i>Cột "Lý do" chỉ là có phép/không phép, không cho biết bé đã nghỉ hẳn hay chưa — nên phải gọi.</i></p></div>' : "")
    +(ngDangS.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang nghỉ dở — gọi hôm nay ('+fmt(ngDangS.length)+' bé)</p>'
      +'<div class="tw"><table><thead>'+thNgD+'</thead><tbody>'
      +ngDangS.slice(0,10).map(rowND).join("")
