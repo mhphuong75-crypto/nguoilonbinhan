@@ -87,6 +87,7 @@ background:var(--surface);color:var(--ink);margin-bottom:10px;text-align:center}
 color:var(--muted);font-weight:500;white-space:nowrap}
 .seg>button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);font-weight:600}
 .zone{display:none}.zone.on{display:block}
+.dom{display:none}.dom.on{display:block}
 .zone>.sub:first-child{margin:14px 0 0;font-size:12.5px;color:var(--muted)}
 td.bd{text-align:right;line-height:1.35;padding:8px}
 .bdg{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
@@ -122,6 +123,14 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
     <button data-z="2">② Tuần này ra sao</button>
     <button data-z="3">③ Đào sâu</button>
   </div><span id="tuoi" style="font-size:11px;color:var(--muted)"></span></div>
+  <div class="row" style="margin-top:2px"><span style="font-size:11px;color:var(--muted);align-self:center;margin-right:2px">Theo mảng:</span><div class="seg" id="mang">
+    <button data-dom="tuyensinh">Tuyển sinh &amp; tăng trưởng</button>
+    <button data-dom="hocsinhnghi">Học sinh nghỉ</button>
+    <button data-dom="tomia">Tomia</button>
+    <button data-dom="checklist">Checklist</button>
+    <button data-dom="channel">Channel</button>
+    <button data-dom="nhansu">Nhân sự</button>
+  </div></div>
 </div></header>
 <main class="wrap" id="body"></main>
 </div>
@@ -131,7 +140,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-22 · b34";
+const BUILD="2026-09-22 · b35";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1745,6 +1754,37 @@ async function render(){
        +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>Phụ huynh/Lead</th><th>Campus</th><th>Giai đoạn</th><th>Im lặng</th><th>Số chạm</th><th>Người chạm cuối</th></tr></thead><tbody>'+caStale.slice(10).map(rowCa).join("")+"</tbody></table></div></details>":""):"")
    +'</div>';
 
+  // ----- Channel cards tach thanh bien de dung o ca z3 va tab Channel -----
+  const webCard='<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
+   +'<div class="kpis">'
+   +kpi("Lượt vào web",fmt(ses),delta(ses,pses),"mỗi lần một người mở website")
+   +kpi("Số người",fmt(usr),delta(usr,pusr),"người khác nhau, không tính lặp")
+   +kpi("Bấm từ Google",fmt(cl),delta(cl,pcl),"bấm vào web từ kết quả tìm kiếm")
+   +kpi("Hiện trên Google",fmt(im),delta(im,pim),"số lần web xuất hiện, chưa ai bấm")+"</div>"
+   +'<div style="margin-top:14px">'+spark(series)+"</div></div>";
+  const chanCard='<div class="card"><h2>Nguồn truy cập</h2><p class="sub">Phiên theo kênh · '+fmt(chTot)+" phiên</p>"
+   +chRows.map(([k,v])=>'<div class="frow"><div class="fm"><span>'+k+'</span><span><b class="mono">'+fmt(v)
+     +'</b> <span style="color:var(--muted)">'+pct(v/chTot,1)+"</span></span></div>"
+     +'<div class="bar"><i style="width:'+(v/chRows[0][1]*100).toFixed(1)+'%"></i></div></div>').join("")
+   +'<p class="leg"><b>Organic Search</b> = tự tìm thấy trên Google · <b>Direct</b> = gõ thẳng địa chỉ hoặc bookmark · '
+   +'<b>Paid Social</b> = từ quảng cáo Facebook · <b>Referral</b> = trang khác dẫn sang.</p>'
+   +'<p class="note">Paid Search và Paid Social gần như bằng 0 — quảng cáo hầu như không đưa ai về website.</p></div>';
+  const kwCard='<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">Xếp theo <b>lượt nhấp</b> — số người thật sự vào web, không phải số lần xuất hiện</p>'
+   +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Hiển thị</th><th>Nhấp</th><th>CTR</th><th>Vị trí</th></tr></thead><tbody>'
+   +gq.slice().sort((a,b)=>(+b.clicks||0)-(+a.clicks||0)||(+b.impressions||0)-(+a.impressions||0)).slice(0,8).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
+     +'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+dec(q.position,1)+"</td></tr>").join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Hiện</b> = số lần web xuất hiện trên Google · <b>Bấm</b> = số lần có người bấm vào · '
+   +'<b>CTR</b> = bấm ÷ hiện · <b>Vị trí</b> = thứ hạng trung bình, 1 là cao nhất (có số lẻ vì là trung bình).</p>'
+   +'<div class="q"><b>Câu hỏi:</b> từ khoá thương hiệu chỉ chiếm '+pct(allCl?brandCl/allCl:0,1)
+   +' lượt nhấp trên toàn bộ '+fmt(gq.length)+' từ khoá. Người tìm thơ và truyện cho con — họ có phải phụ huynh đang chọn trường không?</div></div>';
+  const nhanSuNote='<div class="card" style="border-left:4px solid #A96C05"><h2>Nhân sự — đang chờ nguồn dữ liệu</h2>'
+   +'<p class="sub">Thẻ "Hiệu quả lương" ở trên đã có (tài chính). Phần còn lại cần nguồn nhân sự chưa nối.</p>'
+   +'<p class="leg">Chưa có trong pipeline: <b>số GV/NV theo vị trí & theo lớp</b>, <b>lớp nào thiếu giáo viên</b>, <b>tỷ lệ trẻ/cô theo lớp</b>, <b>turnover · tuyển mới · nghỉ việc</b>. '
+   +'Tomia có <i>tổng số</i> GV/NV mỗi trường (không theo lớp/vị trí); AMIS có thể có phân hệ nhân sự. '
+   +'Bảng phân tích tháng (HR × tài chính: DT, lợi nhuận, %lương, lương TB theo vị trí, vào/ra/turnover, so tháng trước, cảnh báo) sẽ dựng khi nối được nguồn HR.</p>'
+   +'<div class="q"><b>Cần chốt:</b> nguồn nhân sự lấy từ Tomia (danh sách GV/NV) hay AMIS (phân hệ nhân sự)? Chốt xong tôi dựng "Kéo HR" như 4 dấu trang hiện có.</div></div>';
+
   $("body").innerHTML=
    '<div class="zone" id="z1">'
    +'<p class="sub">Bốn thẻ. Mỗi thẻ trả lời được đúng một câu: <b>ai làm gì trong 48 giờ</b>. Thẻ nào không trả lời được thì nằm ở ③.</p>'
@@ -1788,34 +1828,10 @@ async function render(){
 
    +moGap
    +SEC("C · Thu hút — người lạ tìm tới ME · toàn hệ thống")
-   +'<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
-   +'<div class="kpis">'
-   +kpi("Lượt vào web",fmt(ses),delta(ses,pses),"mỗi lần một người mở website")
-   +kpi("Số người",fmt(usr),delta(usr,pusr),"người khác nhau, không tính lặp")
-   +kpi("Bấm từ Google",fmt(cl),delta(cl,pcl),"bấm vào web từ kết quả tìm kiếm")
-   +kpi("Hiện trên Google",fmt(im),delta(im,pim),"số lần web xuất hiện, chưa ai bấm")+"</div>"
-   +'<div style="margin-top:14px">'+spark(series)+"</div></div>"
-
-   +'<div class="card"><h2>Nguồn truy cập</h2><p class="sub">Phiên theo kênh · '+fmt(chTot)+" phiên</p>"
-   +chRows.map(([k,v])=>'<div class="frow"><div class="fm"><span>'+k+'</span><span><b class="mono">'+fmt(v)
-     +'</b> <span style="color:var(--muted)">'+pct(v/chTot,1)+"</span></span></div>"
-     +'<div class="bar"><i style="width:'+(v/chRows[0][1]*100).toFixed(1)+'%"></i></div></div>').join("")
-   +'<p class="leg"><b>Organic Search</b> = tự tìm thấy trên Google · <b>Direct</b> = gõ thẳng địa chỉ hoặc bookmark · '
-   +'<b>Paid Social</b> = từ quảng cáo Facebook · <b>Referral</b> = trang khác dẫn sang.</p>'
-   +'<p class="note">Paid Search và Paid Social gần như bằng 0 — quảng cáo hầu như không đưa ai về website.</p></div>'
-
-   +'<div class="card"><h2>Từ khoá dẫn traffic</h2><p class="sub">Xếp theo <b>lượt nhấp</b> — số người thật sự vào web, không phải số lần xuất hiện</p>'
-   +'<div class="tw"><table><thead><tr><th>Từ khoá</th><th>Hiển thị</th><th>Nhấp</th><th>CTR</th><th>Vị trí</th></tr></thead><tbody>'
-   +gq.slice().sort((a,b)=>(+b.clicks||0)-(+a.clicks||0)||(+b.impressions||0)-(+a.impressions||0)).slice(0,8).map(q=>"<tr><td>"+q.query+'</td><td class="mono">'+fmt(q.impressions)+'</td><td class="mono">'+fmt(q.clicks)
-     +'</td><td class="mono">'+pct(q.ctr,2)+'</td><td class="mono">'+dec(q.position,1)+"</td></tr>").join("")
-   +"</tbody></table></div>"
-   +'<p class="leg"><b>Hiện</b> = số lần web xuất hiện trên Google · <b>Bấm</b> = số lần có người bấm vào · '
-   +'<b>CTR</b> = bấm ÷ hiện · <b>Vị trí</b> = thứ hạng trung bình, 1 là cao nhất (có số lẻ vì là trung bình).</p>'
-   +'<div class="q"><b>Câu hỏi:</b> từ khoá thương hiệu chỉ chiếm '+pct(allCl?brandCl/allCl:0,1)
-   +' lượt nhấp trên toàn bộ '+fmt(gq.length)+' từ khoá. Người tìm thơ và truyện cho con — họ có phải phụ huynh đang chọn trường không?</div></div>'
-
+   +webCard
+   +chanCard
+   +kwCard
    +nearCard
-
    +pageCard
 
    +SEC("D · Tương tác & giơ tay trên web · toàn hệ thống")
@@ -1840,7 +1856,16 @@ async function render(){
        return "<tr><td>"+nm+'</td><td class="mono">'+(d||"—")+'</td><td class="mono">'+(lag==null?"—":lag)+"</td></tr>"}).join("")
    +"</tbody></table></div>"
    +'<p class="note">Chưa nối: giáo viên · tài chính.<br>Bản dựng: <b class="mono">'+BUILD+'</b> — nếu số này khác bản tôi nói, trình duyệt đang giữ bản cũ: bấm Ctrl+Shift+R (Windows) hoặc Cmd+Shift+R (Mac).</p></div>'
-   +dongGap+cdCard+'</div>';
+   +dongGap+cdCard+'</div>'
+
+   +'<div class="zone" id="zdom">'
+   +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — phễu + kết nối phụ huynh")+hsCard+caCard+dsCard+choCard+cohCard+ctCard+'</div>'
+   +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — nghỉ liên tục + đã lắng nghe (exit)")+ngCard+ngHocCard+'</div>'
+   +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
+   +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
+   +'<div class="dom" data-dom="channel">'+SEC("Channel — Website · Google · Meta · Messenger")+webCard+chanCard+kwCard+nearCard+pageCard+evCard+wCard+hrCard+metaCard+cmpCard+'</div>'
+   +'<div class="dom" data-dom="nhansu">'+SEC("Nhân sự & hiệu quả lương")+finCard+nhanSuNote+'</div>'
+   +'</div>';
   if(KHO&&KHO.t){const gio=KHO.t.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
     const phut=Math.round((Date.now()-KHO.t.getTime())/60000);
     $("tuoi").innerHTML='Số liệu lấy lúc <b>'+gio+'</b>'+(phut>0?" · "+phut+" phút trước":"")
@@ -1848,16 +1873,24 @@ async function render(){
   apDungChe();
 }
 
-let CHE="1";
+let CHE="1", DOM=null;   // DOM=null: dang o che do doc (1/2/3). DOM!=null: dang o tab mang.
 function apDungChe(){
-  ["1","2","3"].forEach(z=>{const el=$("z"+z); if(el) el.className="zone"+(z===CHE?" on":"")});
-  document.querySelectorAll("#che > button").forEach(b=>{b.className=(b.dataset.z===CHE?"on":"")});
-  // o thoi gian chi co nghia o che do 3 -> an di cho khoi hieu nham
-  $("oTG").style.display = (CHE==="3") ? "inline-flex" : "none";
+  const dom=!!DOM;
+  ["1","2","3"].forEach(z=>{const el=$("z"+z); if(el) el.className="zone"+(!dom&&z===CHE?" on":"")});
+  const zd=$("zdom"); if(zd) zd.className="zone"+(dom?" on":"");
+  document.querySelectorAll("#che > button").forEach(b=>{b.className=(!dom&&b.dataset.z===CHE?"on":"")});
+  document.querySelectorAll("#mang > button").forEach(b=>{b.className=(dom&&b.dataset.dom===DOM?"on":"")});
+  document.querySelectorAll("#zdom .dom").forEach(d=>{d.className="dom"+(d.dataset.dom===DOM?" on":"")});
+  // o thoi gian chi co nghia khi co the Website/Meta/Google: che do 3, hoac tab Channel/Tuyển sinh
+  $("oTG").style.display = ((!dom&&CHE==="3")||DOM==="channel"||DOM==="tuyensinh") ? "inline-flex" : "none";
 }
 $("che").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b||!b.dataset.z)return;
-  CHE=b.dataset.z; apDungChe(); window.scrollTo(0,0);
+  CHE=b.dataset.z; DOM=null; apDungChe(); window.scrollTo(0,0);
+});
+$("mang").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b||!b.dataset.dom)return;
+  DOM=b.dataset.dom; apDungChe(); window.scrollTo(0,0);
 });
 
 // b18: email ngoai danh sach van dang nhap duoc, nhung KHONG doc duoc du lieu (RLS).
