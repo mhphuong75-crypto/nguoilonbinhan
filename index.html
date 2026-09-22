@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-22 · b33";
+const BUILD="2026-09-22 · b34";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1707,6 +1707,44 @@ async function render(){
    +'<p class="leg" style="margin-top:10px">⏱ CRM chưa lưu <b>ngày thôi học</b> nên chưa dựng được dòng thời gian "nghỉ theo tháng" (đây là số lũy kế, không phải theo kỳ). Khi kéo được danh sách lưu trữ Tomia (có ngày) cho tất cả trường, tôi sẽ thêm timeline.</p>'
    +'</div>';
 
+  // ----- THE: KET NOI PHU HUYNH (cham soc lead tuyen sinh, tu mv_danh_sach) -----
+  const caLoc=(ds||[]).filter(r=>hopCP(r.campus));
+  const caN=caLoc.length;
+  const caCham=caLoc.filter(r=>(+r.so_cham||0)>0).length;
+  const caNghe=caLoc.filter(r=>(+r.goi_nghe_may||0)>0).length;
+  const caIm=caLoc.filter(r=>(+r.im_lang||0)>=14).length;
+  const caPctCham=caN?caCham/caN:0, caPctNghe=caN?caNghe/caN:0;
+  const caTheoCampus={}; caLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";const o=caTheoCampus[k]||(caTheoCampus[k]={n:0,cham:0,nghe:0,im:0});o.n++;if((+r.so_cham||0)>0)o.cham++;if((+r.goi_nghe_may||0)>0)o.nghe++;o.im+=(+r.im_lang||0);});
+  const caCampusRows=Object.entries(caTheoCampus).sort((a,b)=>b[1].n-a[1].n);
+  const caStale=caLoc.filter(r=>(+r.im_lang||0)>=14).sort((a,b)=>(+b.im_lang||0)-(+a.im_lang||0));
+  const rowCa=r=>"<tr><td>"+(r.ten||"—")+"</td><td>"+nhan(r.campus)+"</td><td>"+(r.giai_doan||"—")
+    +'</td><td class="mono"><span class="down">'+fmt(r.im_lang)+' ngày</span></td><td class="mono">'+fmt(r.so_cham)
+    +"</td><td>"+(r.cham_cuoi_ai||'<span style="opacity:.5">chưa ai</span>')+"</td></tr>";
+  const caCard = !caN ? "" :
+   '<div class="card"><h2>Kết nối phụ huynh</h2>'
+   +'<p class="sub">Từ CRM · lead đang trong phễu tuyển sinh · '+nhanCP+' · đo chất lượng chăm sóc: đã chạm chưa, có nghe máy, im lặng bao lâu</p>'
+   +'<div class="kpis">'
+   +kpi("Lead đang chăm",fmt(caN),"","trong phễu tuyển sinh")
+   +kpi("Đã có người chạm",pct(caPctCham,0),"","gọi/nhắn ít nhất 1 lần")
+   +kpi("Có nghe máy",pct(caPctNghe,0),"","gọi được phụ huynh bắt máy")
+   +kpi("Im lặng ≥14 ngày",fmt(caIm),"","nguội — nguy cơ mất lead")+"</div>"
+   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid '+(caPctCham<0.7?"#B42318":"#A96C05")+';border-radius:8px;padding:12px 14px;background:rgba(180,35,24,.05)">'
+   +'<p style="margin:0 0 4px;font-weight:700;color:'+(caPctCham<0.7?"#B42318":"#A96C05")+'">Mới '+pct(caPctCham,0)+' lead được chạm — phần còn lại chưa ai kết nối</p>'
+   +'<p class="leg" style="margin:0">Lead trong phễu mà không ai gọi = tiền quảng cáo đã đốt để có lead rồi bỏ nguội. '
+   +'<b>Việc cần làm:</b> mỗi lead im lặng ≥14 ngày (bên dưới) — giao đích danh 1 người gọi trong 48h, hoặc đóng lead và ghi lý do để biết CAC thật.</p></div>'
+   +(caCampusRows.length>1?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Lead</th><th>% đã chạm</th><th>% nghe máy</th><th>Im lặng TB</th></tr></thead><tbody>'
+     +caCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.n)
+       +'</td><td class="mono" style="color:'+(v.n&&v.cham/v.n<0.7?"#B42318":"#067647")+'">'+pct(v.n?v.cham/v.n:0,0)
+       +'</td><td class="mono">'+pct(v.n?v.nghe/v.n:0,0)+'</td><td class="mono">'+(v.n?Math.round(v.im/v.n):0)+" ngày</td></tr>").join("")
+     +"</tbody></table></div>":"")
+   +(caStale.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Im lặng lâu nhất — cần gọi ('+fmt(caStale.length)+' lead)</p>'
+     +'<div class="tw"><table><thead><tr><th>Phụ huynh/Lead</th><th>Campus</th><th>Giai đoạn</th><th>Im lặng</th><th>Số chạm</th><th>Người chạm cuối</th></tr></thead><tbody>'
+     +caStale.slice(0,10).map(rowCa).join("")+"</tbody></table></div>"
+     +(caStale.length>10?'<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Xem '+fmt(caStale.length-10)+' lead im lặng còn lại</summary>'
+       +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>Phụ huynh/Lead</th><th>Campus</th><th>Giai đoạn</th><th>Im lặng</th><th>Số chạm</th><th>Người chạm cuối</th></tr></thead><tbody>'+caStale.slice(10).map(rowCa).join("")+"</tbody></table></div></details>":""):"")
+   +'</div>';
+
   $("body").innerHTML=
    '<div class="zone" id="z1">'
    +'<p class="sub">Bốn thẻ. Mỗi thẻ trả lời được đúng một câu: <b>ai làm gì trong 48 giờ</b>. Thẻ nào không trả lời được thì nằm ở ③.</p>'
@@ -1734,6 +1772,7 @@ async function render(){
 
    +SEC("A · Tuyển sinh — lead thành học sinh · theo campus")
    +hsCard
+   +caCard
    +dsCard
    +choCard
 
