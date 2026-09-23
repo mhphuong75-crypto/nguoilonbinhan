@@ -140,7 +140,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-23 · b39";
+const BUILD="2026-09-23 · b40";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1840,7 +1840,7 @@ async function render(){
   const cdTally={}; hrA.forEach(r=>{const k=viChuan(r.vi_tri);cdTally[k]=(cdTally[k]||0)+1;});
   const cdArr=Object.entries(cdTally).sort((a,b)=>b[1]-a[1]);
   // sĩ số ĐANG ĐI HỌC theo mã campus (cho chuẩn trẻ/cô) — chỉ nhóm "Đang đi học"
-  const sisoBy={}; (tsi||[]).forEach(r=>{if(!/đang đi học/i.test(r.nhom||""))return;const c=hrCampus(r.campus);sisoBy[c[0]]=(sisoBy[c[0]]||0)+(+r.so_hs||0);});
+  const sisoBy={}; (hs||[]).forEach(r=>{if(!/đang đi học/i.test(r.nhom||""))return;const c=hrCampus(r.campus);sisoBy[c[0]]=(sisoBy[c[0]]||0)+(+r.so_hs||0);});
   const CHUAN=5.0;
 
   const nhanSuTrongCard = !hcTong ? "" :
