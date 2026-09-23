@@ -140,7 +140,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-23 · b38";
+const BUILD="2026-09-23 · b39";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -289,7 +289,7 @@ function taoTruyVan(CP){ return [
     sb.from("fin_campus_thang").select("campus_code,campus_ten,thang,dt_kh,dt_th,eb_kh,eb_th,siso_kh,siso_th,luong").limit(2000),
     sb.from("v_hocsinh").select("ma_hs,ten_hs,campus,lop,ly_do_nghi,phu_trach,dien_thoai").ilike("lop","%Nghỉ học%").limit(1000),
     sb.from("v_hs_nghi_campus").select("campus,so_nghi,da_lang_nghe").limit(50),
-    sb.from("v_hr_active").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,gioi_tinh,trang_thai").limit(2000),
+    sb.from("v_hr_active").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,gioi_tinh,trang_thai,cap_nhat").limit(2000),
     sb.from("v_hr_nghiviec").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,ngay_nghi,ly_do").limit(3000)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
