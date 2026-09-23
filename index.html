@@ -140,7 +140,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-23 · b37";
+const BUILD="2026-09-23 · b38";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1813,8 +1813,8 @@ async function render(){
     if(/linh đàm|linh dam/.test(s))return["LD","Linh Đàm"];
     return["HQ","Khối văn phòng / BGH"];}
   const isGV=v=>/giáo viên|giao vien/i.test(v||"");
-  const isCare=v=>/bảo mẫu|bao mau|nuôi dưỡng|nuoi duong|chăm sóc|cham soc|tiếp đón|tiep don|phụ bếp|phu bep|(^|\s)bếp|(^|\s)bep|lái xe|lai xe|bảo vệ|bao ve/i.test(v||"");
-  const nhomVT=v=>isGV(v)?"gv":(isCare(v)?"cs":"ql");
+  const viChuan=v=>{v=(v||"").trim();return v||"(chưa cập nhật chức danh)";};
+  const isBlank=v=>!(v||"").trim();
   const ym=d=>String(d||"").slice(0,7);
   const _now=new Date();
   const mStr=(y,m)=>y+"-"+("0"+m).slice(-2);
@@ -1826,44 +1826,57 @@ async function render(){
   const raThang=m=>hrN.filter(r=>ym(r.ngay_nghi)===m).length;
   const hcTong=hrA.length;
   const tvRate=m=>hcTong?raThang(m)/hcTong:null;
+  // thời điểm dữ liệu HR được kéo về
+  const hrTs=hrA.reduce((a,r)=>{const t=r.cap_nhat||"";return t>a?t:a;},"");
+  const hrLuc=hrTs?(hrTs.slice(8,10)+"/"+hrTs.slice(5,7)+" "+hrTs.slice(11,16)):"—";
   // gom theo cơ sở
   const hrBy={};
-  hrA.forEach(r=>{const c=hrCampus(r.co_so);const o=hrBy[c[0]]||(hrBy[c[0]]={code:c[0],ten:c[1],hc:0,gv:0,cs:0,ql:0,vao:0});o.hc++;o[nhomVT(r.vi_tri)]++;if(ym(r.ngay_bat_dau)===M0)o.vao++;});
+  hrA.forEach(r=>{const c=hrCampus(r.co_so);const o=hrBy[c[0]]||(hrBy[c[0]]={code:c[0],ten:c[1],hc:0,gv:0,trong:0,vao:0});o.hc++;if(isGV(r.vi_tri))o.gv++;if(isBlank(r.vi_tri))o.trong++;if(ym(r.ngay_bat_dau)===M0)o.vao++;});
   const raBy={}; hrN.forEach(r=>{if(ym(r.ngay_nghi)===M0){const c=hrCampus(r.co_so);raBy[c[0]]=(raBy[c[0]]||0)+1;}});
   const hrArr=Object.values(hrBy).sort((a,b)=>b.hc-a.hc);
   const tongGV=hrA.filter(r=>isGV(r.vi_tri)).length;
-  const tongCS=hrA.filter(r=>isCare(r.vi_tri)).length;
-  const tongQL=hcTong-tongGV-tongCS;
-  // sĩ số CRM theo mã campus (cho chuẩn trẻ/cô)
-  const sisoBy={}; (tsi||[]).forEach(r=>{const c=hrCampus(r.campus);sisoBy[c[0]]=(sisoBy[c[0]]||0)+(+r.so_hs||0);});
+  const tongTrong=hrA.filter(r=>isBlank(r.vi_tri)).length;
+  // đếm theo CHỨC DANH thật (không gộp)
+  const cdTally={}; hrA.forEach(r=>{const k=viChuan(r.vi_tri);cdTally[k]=(cdTally[k]||0)+1;});
+  const cdArr=Object.entries(cdTally).sort((a,b)=>b[1]-a[1]);
+  // sĩ số ĐANG ĐI HỌC theo mã campus (cho chuẩn trẻ/cô) — chỉ nhóm "Đang đi học"
+  const sisoBy={}; (tsi||[]).forEach(r=>{if(!/đang đi học/i.test(r.nhom||""))return;const c=hrCampus(r.campus);sisoBy[c[0]]=(sisoBy[c[0]]||0)+(+r.so_hs||0);});
   const CHUAN=5.0;
 
   const nhanSuTrongCard = !hcTong ? "" :
    '<div class="card"><h2>Nhân sự — bức tranh tháng này ('+M0+')</h2>'
-   +'<p class="sub">Từ AMIS (bấm "Kéo HR") · đang làm việc = EmployeeStatusID 1 · mặc định <b>tháng hiện tại</b>, so 3 tháng liền kề · đã bỏ PII</p>'
+   +'<p class="sub">Từ AMIS · đang làm việc (EmployeeStatusID 1) · <b>dữ liệu kéo lúc '+hrLuc+'</b> · mặc định tháng hiện tại, so 3 tháng liền kề · đã bỏ PII</p>'
    +'<div class="kpis">'
    +kpi("Đang làm việc",fmt(hcTong),"","tổng nhân sự")
    +kpi("Giáo viên",fmt(tongGV),"",pct(hcTong?tongGV/hcTong:0,0)+" tổng NS")
-   +kpi("Tuyển mới (còn làm) "+M0,fmt(vaoThang(M0)),"","vào trong tháng, hiện còn làm")
-   +kpi("Nghỉ việc "+M0,fmt(raThang(M0)),"","rời trong tháng")
-   +kpi("Turnover "+M0,pct(tvRate(M0),1),"","nghỉ ÷ tổng nhân sự")+"</div>"
-   +'<div class="tw"><table style="min-width:560px"><thead><tr><th>Cơ sở</th><th>Nhân sự</th><th>Giáo viên</th><th>Chăm sóc</th><th>Quản lý/VP</th><th>Vào '+M0+'</th><th>Ra '+M0+'</th></tr></thead><tbody>'
-   +hrArr.map(o=>"<tr><td>"+o.ten+'</td><td class="mono">'+fmt(o.hc)+'</td><td class="mono">'+fmt(o.gv)+'</td><td class="mono">'+fmt(o.cs)+'</td><td class="mono">'+fmt(o.ql)+'</td><td class="mono">'+(o.vao||"")+'</td><td class="mono">'+(raBy[o.code]||"")+"</td></tr>").join("")
-   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(hcTong)+'</td><td class="mono">'+fmt(tongGV)+'</td><td class="mono">'+fmt(tongCS)+'</td><td class="mono">'+fmt(tongQL)+'</td><td class="mono">'+fmt(vaoThang(M0))+'</td><td class="mono">'+fmt(raThang(M0))+'</td></tr>'
+   +kpi("⚠ Chưa có chức danh",fmt(tongTrong),"","AMIS bỏ trống ô vị trí — cần điền")
+   +kpi("Tuyển mới "+M0,fmt(vaoThang(M0)),"","vào tháng, hiện còn làm")
+   +kpi("Nghỉ / Turnover "+M0,fmt(raThang(M0))+" · "+pct(tvRate(M0),1),"","rời trong tháng")+"</div>"
+   +'<div class="tw"><table style="min-width:560px"><thead><tr><th>Cơ sở</th><th>Nhân sự</th><th>Giáo viên</th><th>Chưa có chức danh</th><th>Vào '+M0+'</th><th>Ra '+M0+'</th></tr></thead><tbody>'
+   +hrArr.map(o=>"<tr><td>"+o.ten+'</td><td class="mono">'+fmt(o.hc)+'</td><td class="mono">'+fmt(o.gv)+'</td><td class="mono" style="color:'+(o.trong?"#B42318":"var(--muted)")+'">'+(o.trong||"")+'</td><td class="mono">'+(o.vao||"")+'</td><td class="mono">'+(raBy[o.code]||"")+"</td></tr>").join("")
+   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(hcTong)+'</td><td class="mono">'+fmt(tongGV)+'</td><td class="mono">'+fmt(tongTrong)+'</td><td class="mono">'+fmt(vaoThang(M0))+'</td><td class="mono">'+fmt(raThang(M0))+'</td></tr>'
    +"</tbody></table></div>"
    +'<p class="leg"><b>Xu hướng 3 tháng (toàn hệ thống):</b> '
    +M3.map(m=>m+": vào "+vaoThang(m)+" · ra "+raThang(m)+" · turnover "+pct(tvRate(m),1)).join("  |  ")+'</p>'
-   +'<p class="leg">Giáo viên = vị trí có chữ "Giáo viên"; Chăm sóc = bảo mẫu/nuôi dưỡng/chăm sóc/tiếp đón/bếp/lái xe; còn lại là Quản lý/VP. '
-   +'"Tuyển mới" đếm người vào trong tháng <i>hiện còn làm</i> (roster là ảnh chụp hiện tại) nên có thể thấp hơn số tuyển thật nếu có người vào rồi nghỉ ngay.</p>'
-   +'<div class="q"><b>Câu hỏi:</b> cơ sở nào có <b>ra > vào</b> tháng này? Đó là nơi biên chế đang co — trước khi kết luận, hỏi: người nghỉ là GV hay hỗ trợ, và ai đã nói chuyện với họ trước khi họ đi?</div></div>';
+   +'<p class="leg">Giáo viên = vị trí có chữ "Giáo viên". <b style="color:#B42318">Chưa có chức danh</b> = AMIS để trống ô vị trí — đây là khoảng mù cần đội HR điền, KHÔNG phải "quản lý". Chi tiết từng chức danh ở bảng ngay dưới.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> cơ sở nào <b>ra > vào</b>, và ai đã nói chuyện với người nghỉ trước khi họ đi? Ô "chưa có chức danh" — giao ai rà & điền trong tuần này?</div></div>';
+
+  // ----- Theo CHỨC DANH thật (không gộp) -----
+  const nhanSuCDCard = !hcTong ? "" :
+   '<div class="card"><h2>Nhân sự theo chức danh (đúng chức danh AMIS — không gộp)</h2>'
+   +'<p class="sub">Toàn hệ thống · '+fmt(cdArr.length)+' chức danh · dữ liệu kéo lúc '+hrLuc+'</p>'
+   +'<div class="tw"><table style="min-width:420px"><thead><tr><th>Chức danh</th><th>Số người</th><th>% tổng</th></tr></thead><tbody>'
+   +cdArr.map(function(e){var k=e[0],n=e[1];var blank=/chưa cập nhật/i.test(k);return "<tr><td"+(blank?' style="color:#B42318"':"")+">"+(blank?"⚠ "+k:k)+'</td><td class="mono">'+fmt(n)+'</td><td class="mono">'+pct(n/hcTong,0)+"</td></tr>";}).join("")
+   +"</tbody></table></div>"
+   +'<div class="q"><b>Câu hỏi:</b> cơ cấu này có khớp mô hình lớp chuẩn của ME không — và '+fmt(tongTrong)+' hồ sơ trống chức danh thuộc cơ sở nào, ai chịu trách nhiệm điền?</div></div>';
 
   // ----- GV so với chuẩn trẻ/cô -----
   const gvArr=hrArr.filter(o=>o.code!=="HQ").map(o=>{const siso=sisoBy[o.code]||0;const can=siso?siso/CHUAN:null;return {ten:o.ten,gv:o.gv,siso:siso,can:can,chenh:(can==null?null:o.gv-can),tre_co:o.gv?siso/o.gv:null};});
   const gvThieu=gvArr.filter(x=>x.chenh!=null&&x.chenh<-0.5);
   const nhanSuGVCard = !hcTong ? "" :
    '<div class="card"><h2>Giáo viên so với chuẩn trẻ/cô</h2>'
-   +'<p class="sub">GV thực từ AMIS · sĩ số từ CRM (thiếu Tân Thuận & Linh Đàm — CRM không dùng ở 2 cơ sở này) · chuẩn giả định <b>'+String(CHUAN).replace(".",",")+' trẻ/cô</b></p>'
-   +'<div class="tw"><table style="min-width:520px"><thead><tr><th>Cơ sở</th><th>GV hiện có</th><th>Sĩ số (CRM)</th><th>Trẻ/GV</th><th>GV cần @'+String(CHUAN).replace(".",",")+'</th><th>Chênh</th></tr></thead><tbody>'
+   +'<p class="sub">GV thực từ AMIS · sĩ số <b>đang đi học</b> từ CRM (thiếu Tân Thuận &amp; Linh Đàm — 2 cơ sở này không dùng CRM) · chuẩn giả định <b>'+String(CHUAN).replace(".",",")+' trẻ/cô</b></p>'
+   +'<div class="tw"><table style="min-width:520px"><thead><tr><th>Cơ sở</th><th>GV hiện có</th><th>Sĩ số đang học</th><th>Trẻ/GV</th><th>GV cần @'+String(CHUAN).replace(".",",")+'</th><th>Chênh</th></tr></thead><tbody>'
    +gvArr.map(x=>{const c=x.chenh==null?"":(x.chenh<-0.5?"#B42318":x.chenh>1.5?"#A96C05":"#067647");
       return "<tr><td>"+x.ten+'</td><td class="mono">'+fmt(x.gv)+'</td><td class="mono">'+(x.siso||'<span style="opacity:.5">—</span>')+'</td><td class="mono">'+(x.tre_co==null?"—":dec(x.tre_co,1))+'</td><td class="mono">'+(x.can==null?"—":dec(x.can,1))+'</td><td class="mono" style="color:'+c+'">'+(x.chenh==null?"—":(x.chenh>0?"+":"")+dec(x.chenh,1))+"</td></tr>";}).join("")
    +"</tbody></table></div>"
@@ -1890,9 +1903,8 @@ async function render(){
   const nhanSuFinCard = (!hcTong||!hrFinRows.length) ? "" :
    '<div class="card"><h2>HR × Tài chính theo cơ sở</h2>'
    +'<p class="sub">Tài chính đến <b>'+finLastLbl+'/2026</b> (từ KHNS) · headcount &amp; turnover <b>hiện tại</b> (AMIS) · so cột Δ với '+(prevM?("T"+prevM):"tháng trước")+'</p>'
-   +'<div class="tw"><table style="min-width:720px"><thead><tr><th>Cơ sở</th><th>DT '+finLastLbl+' (tỷ)</th><th>%Lương/DT</th><th>Δ</th><th>%EBITDA</th><th>NS</th><th>Lương TB/người (tr)</th><th>Ra/Turnover</th><th>Cảnh báo</th></tr></thead><tbody>'
+   +'<div class="tw"><table style="min-width:660px"><thead><tr><th>Cơ sở</th><th>%Lương/DT</th><th>Δ</th><th>%EBITDA</th><th>NS</th><th>Lương TB/người (tr)</th><th>Ra/Turnover</th><th>Cảnh báo</th></tr></thead><tbody>'
    +hrFinRows.map(r=>"<tr><td>"+r.ten+'</td>'
-      +'<td class="mono">'+ty(r.dt)+'</td>'
       +'<td class="mono" style="color:'+rColor2(r.rt)+'">'+pc(r.rt)+'</td>'
       +'<td class="mono" style="color:'+(r.drt==null?"var(--muted)":(r.drt>0.03?"#B42318":r.drt<-0.03?"#067647":"var(--muted)"))+'">'+(r.drt==null?"—":(r.drt>0?"+":"")+(r.drt*100).toFixed(1).replace(".",",")+"đ")+'</td>'
       +'<td class="mono" style="color:'+eColor2(r.em)+'">'+pc(r.em)+'</td>'
@@ -1901,13 +1913,13 @@ async function render(){
       +'<td class="mono">'+(r.ra||0)+" / "+pct(r.tv,1)+'</td>'
       +'<td style="font-size:12px;color:#A96C05">'+r.al+"</td></tr>").join("")
    +"</tbody></table></div>"
-   +'<p class="leg">DT theo <b>tỷ đồng</b>; %Lương/DT càng thấp margin càng khỏe (ngưỡng 45%/55%); Δ là điểm % thay đổi so tháng trước. '
+   +'<p class="leg">%Lương/DT càng thấp margin càng khỏe (ngưỡng 45%/55%); Δ là điểm % thay đổi so tháng trước. (Đã bỏ cột doanh thu theo yêu cầu — chỉ giữ tỷ lệ.) '
    +'Lương TB/người = tổng chi phí lương cơ sở ('+finLastLbl+') ÷ headcount hiện tại — <i>trung bình toàn cơ sở, chưa tách theo vị trí</i> (số thực chưa tách lương theo vị trí). '
    +'Tài chính đang trễ (đến '+finLastLbl+'): để khớp tháng, cần kéo tài chính tháng mới vào <code>fin_campus_thang</code>.</p>'
    +'<div class="q"><b>Câu hỏi:</b> cơ sở nào <b>vừa lương/DT cao vừa turnover cao</b>? Đó là bẫy kép — chi phí nhân sự lớn mà người vẫn rời; chữa bằng giữ người (eNPS) hay bằng kéo sĩ số?</div></div>';
 
   const nhanSuHTML = hcTong
-    ? (nhanSuTrongCard + nhanSuGVCard + nhanSuFinCard)
+    ? (nhanSuTrongCard + nhanSuCDCard + nhanSuGVCard + nhanSuFinCard)
     : ('<div class="card" style="border-left:4px solid #A96C05"><h2>Nhân sự — chưa có dữ liệu, bấm "Kéo HR"</h2>'
        +'<p class="sub">Pipeline đã sẵn sàng (bảng + view). Chỉ còn 1 bước: kéo dữ liệu HR từ AMIS về.</p>'
        +'<p class="leg"><b>Cách làm (mỗi tháng 1 lần):</b> mở AMIS → <b>Thông tin nhân sự</b> → bấm dấu trang <b>Kéo HR</b> → chờ "KÉO HR XONG ✅" → tải lại app. '
