@@ -91,6 +91,24 @@ color:var(--muted);font-weight:500;white-space:nowrap}
 .zone>.sub:first-child{margin:14px 0 0;font-size:12.5px;color:var(--muted)}
 td.bd{text-align:right;line-height:1.35;padding:8px}
 .bdg{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
+/* ===== MOBILE: thu gọn header cố định (trước đây chiếm ~1/2 màn hình) ===== */
+@media(max-width:640px){
+  .hin{padding:8px 12px}
+  .brand small{font-size:10px}
+  .row{margin-top:7px;gap:6px}
+  /* Hai dải nút (chế độ + mảng) trượt ngang 1 dòng thay vì xuống 2–3 dòng */
+  .row:has(#che), .row:has(#mang){flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .row:has(#che)::-webkit-scrollbar, .row:has(#mang)::-webkit-scrollbar{display:none}
+  .seg{flex-wrap:nowrap;padding:2px}
+  .seg>button{padding:5px 9px;font-size:12px}
+  select,button{padding:6px 9px;font-size:12.5px}
+  /* "Theo mảng:" label ẩn trên mobile để 1 dòng gọn */
+  #mang{scroll-snap-type:x proximity}
+  /* Nút thu/mở header — chỉ hiện trên mobile */
+  #hToggle{display:inline-flex;align-items:center;gap:5px;margin-left:auto;font-size:12px;padding:5px 9px}
+  header.collapsed .row{display:none}
+}
+#hToggle{display:none}
 </style></head><body>
 
 <div id="login" class="login">
@@ -104,7 +122,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 
 <div id="app" class="hidden">
 <header><div class="hin">
-  <div class="brand"><span class="dot"></span><div>nguoilonbinhan.meschool<small id="who">—</small></div></div>
+  <div style="display:flex;align-items:center"><div class="brand"><span class="dot"></span><div>nguoilonbinhan.meschool<small id="who">—</small></div></div><button id="hToggle" title="Thu gọn / mở thanh điều khiển">⋯ Bộ lọc</button></div>
   <div class="row">
     <span id="oTG" style="display:none;gap:8px;align-items:center">
     <select id="period">
@@ -140,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-23 · b40";
+const BUILD="2026-09-24 · b41";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -251,7 +269,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
-  "v_hr_active","v_hr_nghiviec"];
+  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -290,7 +308,9 @@ function taoTruyVan(CP){ return [
     sb.from("v_hocsinh").select("ma_hs,ten_hs,campus,lop,ly_do_nghi,phu_trach,dien_thoai").ilike("lop","%Nghỉ học%").limit(1000),
     sb.from("v_hs_nghi_campus").select("campus,so_nghi,da_lang_nghe").limit(50),
     sb.from("v_hr_active").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,gioi_tinh,trang_thai,cap_nhat").limit(2000),
-    sb.from("v_hr_nghiviec").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,ngay_nghi,ly_do").limit(3000)
+    sb.from("v_hr_nghiviec").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,ngay_nghi,ly_do").limit(3000),
+    sb.from("v_hr_hopdong").select("co_so,loai_hop_dong,loai_nhom,so_nguoi").limit(500),
+    sb.from("v_ph_ketnoi").select("campus,tinh_trang,loai,so_the").limit(500)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -340,7 +360,7 @@ async function render(){
   soLanVe++;
   DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
          (KHO&&KHO.tong)?KHO.tong/1000:null);
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi},{data:hrHopDong},{data:phKN}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -566,7 +586,12 @@ async function render(){
    +'<p class="leg"><b>Cách đọc:</b> mỗi dòng là một lần phụ huynh bấm nút liên lạc trên web. '
    +'Đây <b>chưa phải lead</b> — bấm gọi không có nghĩa là đã nói chuyện được. '
    +'Nhưng đây là số ME School tự đo, không phụ thuộc bên nào.</p>'
-   +'<div class="q"><b>Câu hỏi:</b> '+fmt(wTot)+' lượt giơ tay trong kỳ này — bao nhiêu trong số đó có tên trong AMIS?</div></div>';
+   +'<div class="q"><b>Câu hỏi:</b> '+fmt(wTot)+' lượt giơ tay trong kỳ này — bao nhiêu trong số đó có tên trong AMIS?</div>'
+   +'<div class="gap" style="border-left-color:#0F5348"><b>Cách trả lời câu này (làm thủ công, 10 phút):</b><br>'
+   +'1. Mở AMIS CRM → Tuyển sinh → lọc lead <b>tạo trong đúng '+start+' → '+endW+'</b> → đếm số lead mới = <b>A</b>.<br>'
+   +'2. Con số giơ tay ở trên = <b>'+fmt(wTot)+'</b> = <b>B</b> (số cú bấm liên lạc trên web).<br>'
+   +'3. Tỷ lệ <b>A ÷ B</b> = bao nhiêu cú giơ tay biến thành lead có tên. Nếu A ≪ B → phần lớn người bấm gọi/nhắn nhưng <b>không ai kịp lưu vào CRM</b> → mất dấu.<br>'
+   +'<i>Muốn tự động khớp từng người:</i> phải thêm ô SĐT vào form web (hiện web chỉ ghi "có bấm", không ghi "ai bấm") → khi đó mới nối được web ↔ AMIS theo số điện thoại. <b>Chủ: chưa giao · Hạn: chưa có.</b></div></div>';
 
   // ----- the: su kien website -----
   const TENSK={
@@ -600,6 +625,10 @@ async function render(){
       +' phiên — tỷ lệ <b class="mono">'+pct(ses?raiseTot/ses:0,2)+'</b>.'
       +(keTot?' GA4 đếm được <b class="mono">'+fmt(keTot)+'</b> key event.':'')
       +'<br>Ai nhận những lượt giơ tay này, và sau bao lâu thì có người gọi lại?</div>'
+      +'<div class="gap" style="border-left-color:#0F5348"><b>Cách đo "ai nhận & sau bao lâu gọi lại":</b><br>'
+      +'1. <b>Ai nhận:</b> giơ tay qua Zalo/Messenger → xem thẻ "Messenger &amp; Zalo" (người xử lý). Giơ tay qua form/hotline → hiện web <b>không ghi người nhận</b>; để đo, gán mỗi kênh cho 1 người trực (VD Zalo → Hiền, hotline → lễ tân campus) và ghi rõ trong SOP.<br>'
+      +'2. <b>Sau bao lâu gọi lại:</b> lấy giờ giơ tay (cột thời gian ở web_click) trừ giờ "lần chạm đầu" ghi trong AMIS của lead trùng SĐT → ra <b>thời gian phản hồi</b>. Mục tiêu ME: gọi lại trong <b>4 giờ</b> (Contact rate 4h).<br>'
+      +'3. Chưa nối được tự động vì web chưa lưu SĐT — tạm thời mỗi trực ca ghi tay: nhận lúc mấy giờ, gọi lại lúc mấy giờ. <b>Đây là số cần cho Campus Health (Contact rate).</b></div>'
     : '<div class="gap"><b>Không có một sự kiện nào là chỗ để phụ huynh giơ tay.</b> '
       +'Toàn bộ '+evRows.length+' sự kiện đang ghi nhận đều là hành vi xem trang — không có form, không có nút gọi, không có Zalo, không có đặt lịch.<br>'
       +'Nghĩa là <span class="big mono">'+fmt(ses)+'</span> phiên trong kỳ này đi vào website và <b>không có cách nào để lại tên.</b><br>'
@@ -916,7 +945,7 @@ async function render(){
   const spBo={}; spLoc.forEach(r=>{const k=r.bo_ma;
     const o=spBo[k]||(spBo[k]={ten:r.bo_ten||k,ph:0,dat:0,chua:0});
     o.ph+=+r.so_phieu||0; o.dat+=+r.so_dat||0; o.chua+=+r.so_chua_dat||0; if(r.bo_ten)o.ten=r.bo_ten});
-  const spCam={}; spLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";
+  const spCam={}; spLoc.forEach(r=>{const k=(r.campus&&String(r.campus).trim())||"(phiếu chưa ghi cơ sở)";
     const o=spCam[k]||(spCam[k]={ph:0,dat:0,chua:0,cuoi:""});
     o.ph+=+r.so_phieu||0; o.dat+=+r.so_dat||0; o.chua+=+r.so_chua_dat||0;
     if(r.ngay>o.cuoi)o.cuoi=r.ngay});
@@ -955,6 +984,9 @@ async function render(){
    +'Ví dụ Thảo Điền, checklist an toàn lớp học: <b>48 lần kiểm</b> → <b>324 câu</b> → <b>48 câu chưa đạt</b>. Hai số 48 bằng nhau là trùng hợp, không liên quan.</p>'
    +'<p class="leg"><b>Cách đọc:</b> tỷ lệ đạt cao không có nghĩa là an toàn — nó có nghĩa là <b>người đi kiểm đã trả lời “đã hoàn thành”</b>. '
    +'Đối chiếu campus có tỷ lệ đạt cao nhưng vẫn có ticket sự cố ở thẻ trên: đó là chỗ checklist đang không nhìn thấy thứ cần nhìn.</p>'
+   +(spCam["(phiếu chưa ghi cơ sở)"]?'<p class="leg" style="border-left:3px solid #A96C05;padding-left:10px"><b>⚠ "(phiếu chưa ghi cơ sở)"</b> = có '+fmt(spCam["(phiếu chưa ghi cơ sở)"].ph)+' lần kiểm mà bản ghi SUPA <b>không gắn tên cơ sở</b> — nên app không biết đặt vào campus nào. '
+     +'Đây là lý do bảng có dòng "không có địa điểm". Nguyên nhân: người đi kiểm chọn bộ checklist nhưng <b>bỏ trống ô cơ sở</b> trên SUPA, hoặc checklist đó là cấp hệ thống (không thuộc 1 campus). '
+     +'<b>Việc cần làm:</b> yêu cầu SUPA bắt buộc chọn cơ sở khi tạo phiếu, để mọi lần kiểm đều truy được về campus.</p>':"")
    +'<div class="q"><b>Câu hỏi:</b> campus nào lâu nhất chưa có lần kiểm nào? Và trong số câu “chưa đạt”, câu nào lặp lại nhiều lần — '
    +'vì một câu trượt liên tục không phải lỗi người làm, mà là lỗi thiết kế quy trình.</div></div>';
 
@@ -1194,9 +1226,10 @@ async function render(){
    +kpi("Thật sự đang chờ",fmt(choDangCho.length),"",'<b>chưa thấy ở điểm danh Tomia</b> — đây là danh sách cần gọi')
    +kpi("Tomia báo đã đi học",fmt(choDaDiHoc.length),"",'CRM còn ghi “chờ” nhưng trẻ đã đến lớp — <b>cần cập nhật CRM</b>')
    +'</div>'
-   +'<div class="q" style="margin-top:4px"><b>Cách đọc:</b> CRM là nguồn chính (có lớp, có hồ sơ). '
-   +'Tomia là kiểm chứng: nếu một em đã xuất hiện trong điểm danh thì em đó <b>đã đi học rồi</b>, chỉ là chưa ai sửa CRM. '
-   +'Còn lại là <b>đã đóng tiền nhưng thật sự chưa tới lớp</b> — mới là việc cần làm.</div>'
+   +'<div class="q" style="margin-top:4px"><b>Cách đọc — vì sao có hai con số ('+choDangCho.length+' vs '+cho.length+'):</b> '
+   +'<b>'+cho.length+'</b> = tổng hồ sơ CRM trạng thái "Chờ nhập học" (đã đóng tiền). Trong đó Tomia điểm danh thấy <b>'+choDaDiHoc.length+' em đã thật sự tới lớp</b> (CRM chưa cập nhật) → trừ ra còn <b>'+choDangCho.length+' em thật sự đang chờ</b>. '
+   +'Vậy '+cho.length+' là con số hồ sơ, '+choDangCho.length+' là con số việc cần làm (danh sách cần gọi). Hai số không mâu thuẫn — chỉ là "hồ sơ" vs "thực tế đã đến lớp".<br>'
+   +'CRM là nguồn chính (có lớp, có hồ sơ); Tomia là kiểm chứng. Danh sách dưới đây <b>xếp theo cơ sở còn nhiều em đang chờ nhất</b>, trong mỗi cơ sở "đang chờ" đứng trên "đã đi học".</div>'
    + choCamRows.map(([c,o])=>{
        const ds=o.cho.concat(o.xong);
        return '<p class="sub" style="margin:14px 0 4px;text-transform:none;letter-spacing:0"><b>'+c+'</b> — '
@@ -1702,7 +1735,19 @@ async function render(){
   const nghiMauChua=(hocSinh||[]).filter(r=>!_hasLD(r));   // mau chua co ly do (toi da 1000 dong)
   const nghiLyDo={}; (hocSinh||[]).filter(_hasLD).forEach(r=>{const k=String(r.ly_do_nghi).trim();nghiLyDo[k]=(nghiLyDo[k]||0)+1;});
   const nghiLyRows=Object.entries(nghiLyDo).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  // Tách 3 loại nghỉ: tốt nghiệp (ra đúng lộ trình) · ngắn ngày/trải nghiệm · churn thật (mất thật sự)
+  const _loaiNghi=v=>{v=String(v||"").toLowerCase();
+    if(/tốt nghiệp|tot nghiep|lên lớp 1|len lop 1|hoàn thành chương trình|hoan thanh chuong trinh|ra trường|graduat|đủ tuổi/.test(v))return"totnghiep";
+    if(/ngắn ngày|ngan ngay|trải nghiệm|trai nghiem|thử|thu |hè|he |summer|tạm|tam |ngắn hạn/.test(v))return"nganngay";
+    return"churn";};
+  const nghiLoai={totnghiep:0,nganngay:0,churn:0};
+  const nghiChurnDS=[]; // hs churn thật, dùng để map exit call
+  (hocSinh||[]).forEach(r=>{const ld=_hasLD(r); const cat=ld?_loaiNghi(r.ly_do_nghi):"churn";
+    if(ld)nghiLoai[cat]++; if(cat==="churn")nghiChurnDS.push(r);});
+  const nghiChurnCoLD=nghiChurnDS.filter(_hasLD).length;
+  const nghiChurnChuaLD=nghiChurnDS.filter(r=>!_hasLD(r));
   const rowChua=r=>"<tr><td>"+(r.ten_hs||r.ma_hs||"—")+"</td><td>"+_stripCp(r.campus)+"</td><td>"+(r.phu_trach||'<span style="opacity:.5">chưa gán</span>')+"</td></tr>";
+  const rowChurn=r=>"<tr><td>"+(r.ten_hs||r.ma_hs||"—")+"</td><td>"+_stripCp(r.campus)+"</td><td>"+(r.ly_do_nghi&&String(r.ly_do_nghi).trim()?r.ly_do_nghi:'<span class="down">chưa lắng nghe</span>')+"</td><td>"+(r.phu_trach||'<span style="opacity:.5">chưa gán</span>')+"</td></tr>";
   const ngHocCard = !nghiTong ? "" :
    '<div class="card"><h2>Học sinh nghỉ — đã lắng nghe (exit) chưa?</h2>'
    +'<p class="sub">Từ CRM (AMIS) · học sinh trạng thái "Nghỉ học" · toàn hệ thống (lũy kế) · "đã lắng nghe" = có ghi lý do nghỉ</p>'
@@ -1721,52 +1766,73 @@ async function render(){
      +'</td><td class="mono" style="color:'+(n&&l/n<0.5?"#B42318":"#067647")+'">'+pct(n?l/n:0,0)+"</td></tr>";}).join("")
    +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(nghiTong)+'</td><td class="mono">'+fmt(nghiLd)+'</td><td class="mono">'+pct(nghiPct,0)+"</td></tr>"
    +"</tbody></table></div>"
+   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Tách 3 loại nghỉ — chỉ "churn thật" mới là mất mát cần chữa</p>'
+   +'<div class="tw"><table style="min-width:460px"><thead><tr><th>Loại nghỉ</th><th>Số HS (đã ghi lý do)</th><th>Ý nghĩa</th></tr></thead><tbody>'
+   +'<tr><td>🎓 Tốt nghiệp / lên lớp 1</td><td class="mono">'+fmt(nghiLoai.totnghiep)+'</td><td style="font-size:12px;color:#067647">ra đúng lộ trình — KHÔNG phải churn</td></tr>'
+   +'<tr><td>⏳ Ngắn ngày / trải nghiệm</td><td class="mono">'+fmt(nghiLoai.nganngay)+'</td><td style="font-size:12px;color:var(--muted)">vốn chỉ học tạm — churn "nhẹ"</td></tr>'
+   +'<tr style="font-weight:700"><td>🔴 Churn thật (mất thật sự)</td><td class="mono">'+fmt(nghiLoai.churn)+'</td><td style="font-size:12px;color:#B42318">chuyển trường / không hài lòng / lý do khác — cần chữa</td></tr>'
+   +'</tbody></table></div>'
+   +'<p class="leg">Tách như vậy vì <b>gộp tốt nghiệp vào churn sẽ thổi phồng con số mất HS</b> và làm dịu cảm giác sai. Con số cần theo dõi để giữ chân là <b style="color:#B42318">churn thật</b>. '
+   +'(Chỉ tính được trên nhóm đã ghi lý do; HS chưa ai hỏi lý do mặc định xếp vào "churn thật" để không bỏ sót — gọi exit xong sẽ phân loại lại.)</p>'
    +(nghiLyRows.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lý do nghỉ đã ghi nhận (mẫu)</p>'
      +'<div class="tw"><table><thead><tr><th>Lý do</th><th>Số HS</th></tr></thead><tbody>'
      +nghiLyRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v)+"</td></tr>").join("")+"</tbody></table></div>":"")
-   +(nghiMauChua.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Chưa ai hỏi lý do — cần gọi exit (20 HS)</p>'
-     +'<div class="tw"><table><thead><tr><th>Học sinh</th><th>Campus</th><th>Phụ trách</th></tr></thead><tbody>'
-     +nghiMauChua.slice(0,20).map(rowChua).join("")+"</tbody></table></div>"
-     +(nghiChuaN>20?'<p class="note" style="margin-top:6px">Chỉ hiện 20 HS. <b>Còn '+fmt(nghiChuaN-20)+' HS chưa lắng nghe — mở CRM để gọi exit toàn bộ.</b></p>':""):"")
-   +'<p class="leg" style="margin-top:10px">⏱ CRM chưa lưu <b>ngày thôi học</b> nên chưa dựng được dòng thời gian "nghỉ theo tháng" (đây là số lũy kế, không phải theo kỳ). Khi kéo được danh sách lưu trữ Tomia (có ngày) cho tất cả trường, tôi sẽ thêm timeline.</p>'
+   +(nghiChurnDS.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Học sinh churn thật — đã gọi exit chưa? ('+fmt(nghiChurnDS.length)+' em · '+fmt(nghiChurnChuaLD.length)+' chưa lắng nghe)</p>'
+     +'<div class="tw"><table><thead><tr><th>Học sinh</th><th>Campus</th><th>Lý do (exit)</th><th>Phụ trách gọi</th></tr></thead><tbody>'
+     +nghiChurnDS.slice().sort((a,b)=>(_hasLD(a)?1:0)-(_hasLD(b)?1:0)).slice(0,20).map(rowChurn).join("")+"</tbody></table></div>"
+     +(nghiChurnDS.length>20?'<p class="note" style="margin-top:6px">Chỉ hiện 20 em (ưu tiên "chưa lắng nghe" lên trên). <b>Còn '+fmt(nghiChurnDS.length-20)+' em — mở CRM để gọi exit toàn bộ.</b> Cột "Phụ trách gọi" trống = chưa ai được giao gọi exit em này.</p>':""):"")
+   +'<p class="leg" style="margin-top:10px">⏱ CRM chưa lưu <b>ngày thôi học</b> nên chưa dựng được "nghỉ theo tháng / theo tuần" từ nguồn sống (đây là số lũy kế). '
+   +'<b>Để có churn theo tháng &amp; theo tuần by campus:</b> nguồn chuẩn là sheet <b>"HS nghỉ học"</b> trong file KHNS hằng tháng (có tháng + cơ sở) — cần đẩy sheet đó lên Supabase thì bảng churn theo kỳ mới tự dựng. Theo tuần cần thêm ngày thôi học từng em (Tomia lưu trữ hoặc CRM bổ sung trường ngày).</p>'
    +'</div>';
 
-  // ----- THE: KET NOI PHU HUYNH (cham soc lead tuyen sinh, tu mv_danh_sach) -----
-  const caLoc=(ds||[]).filter(r=>hopCP(r.campus));
-  const caN=caLoc.length;
-  const caCham=caLoc.filter(r=>(+r.so_cham||0)>0).length;
-  const caNghe=caLoc.filter(r=>(+r.goi_nghe_may||0)>0).length;
-  const caIm=caLoc.filter(r=>(+r.im_lang||0)>=14).length;
-  const caPctCham=caN?caCham/caN:0, caPctNghe=caN?caNghe/caN:0;
-  const caTheoCampus={}; caLoc.forEach(r=>{const k=r.campus||"(chưa rõ)";const o=caTheoCampus[k]||(caTheoCampus[k]={n:0,cham:0,nghe:0,im:0});o.n++;if((+r.so_cham||0)>0)o.cham++;if((+r.goi_nghe_may||0)>0)o.nghe++;o.im+=(+r.im_lang||0);});
-  const caCampusRows=Object.entries(caTheoCampus).sort((a,b)=>b[1].n-a[1].n);
-  const caStale=caLoc.filter(r=>(+r.im_lang||0)>=14).sort((a,b)=>(+b.im_lang||0)-(+a.im_lang||0));
-  const rowCa=r=>"<tr><td>"+(r.ten||"—")+"</td><td>"+nhan(r.campus)+"</td><td>"+(r.giai_doan||"—")
-    +'</td><td class="mono"><span class="down">'+fmt(r.im_lang)+' ngày</span></td><td class="mono">'+fmt(r.so_cham)
-    +"</td><td>"+(r.cham_cuoi_ai||'<span style="opacity:.5">chưa ai</span>')+"</td></tr>";
-  const caCard = !caN ? "" :
-   '<div class="card"><h2>Kết nối phụ huynh</h2>'
-   +'<p class="sub">Từ CRM · lead đang trong phễu tuyển sinh · '+nhanCP+' · đo chất lượng chăm sóc: đã chạm chưa, có nghe máy, im lặng bao lâu</p>'
+  // ----- THE: KET NOI PHU HUYNH (nhat ky cham soc PH hien huu, tu CRM phan he hoc sinh -> v_ph_ketnoi) -----
+  // ĐÚNG NGHĨA: campus gọi/chạm PHỤ HUYNH HIỆN HỮU mỗi ngày — để tìm lead mới (giới thiệu),
+  // mời Google review, hoặc lắng nghe-chăm sóc. KHÔNG phải nuôi lead tiềm năng trong phễu.
+  const _kntt=s=>{s=String(s||"").toLowerCase();
+    if(/hoàn thành|hoan thanh|done|xong/.test(s))return"hoan_thanh";
+    if(/đang|dang|in.?progress|processing/.test(s))return"dang_cham";
+    if(/chưa|chua|not|mới|moi|new/.test(s))return"chua_cham";
+    return"khac";};
+  const caRows=(phKN||[]).filter(r=>hopCP(r.campus));
+  const caTong=caRows.reduce((a,r)=>a+(+r.so_the||0),0);
+  const caSt={hoan_thanh:0,dang_cham:0,chua_cham:0,khac:0};
+  caRows.forEach(r=>{caSt[_kntt(r.tinh_trang)]+=(+r.so_the||0);});
+  const caLoai={}; caRows.forEach(r=>{const k=(r.loai||"").trim();if(k){caLoai[k]=(caLoai[k]||0)+(+r.so_the||0);}});
+  const caLoaiRows=Object.entries(caLoai).sort((a,b)=>b[1]-a[1]);
+  const caCam={}; caRows.forEach(r=>{const k=r.campus||"(chưa gán)";const o=caCam[k]||(caCam[k]={tong:0,ht:0,dc:0,cc:0});o.tong+=(+r.so_the||0);const st=_kntt(r.tinh_trang);if(st==="hoan_thanh")o.ht+=(+r.so_the||0);else if(st==="dang_cham")o.dc+=(+r.so_the||0);else if(st==="chua_cham")o.cc+=(+r.so_the||0);});
+  const caCamRows=Object.entries(caCam).sort((a,b)=>b[1].tong-a[1].tong);
+  const caPctHT=caTong?caSt.hoan_thanh/caTong:0;
+  const caEmpty =
+   '<div class="card" style="border-left:4px solid #A96C05"><h2>Kết nối phụ huynh — chưa có dữ liệu, bấm "Kéo Kết nối phụ huynh"</h2>'
+   +'<p class="sub">Đây là <b>nhật ký chăm sóc phụ huynh hiện hữu</b> trong CRM (phân hệ Học sinh) — <b>không phải</b> nuôi lead tiềm năng trong phễu.</p>'
+   +'<p class="leg"><b>Kết nối phụ huynh đúng nghĩa</b> = mỗi ngày campus chủ động gọi/chạm các phụ huynh <b>đang có con học</b> để: '
+   +'(1) <b>tìm lead mới</b> qua giới thiệu, (2) <b>mời viết Google review</b>, (3) <b>lắng nghe – chăm sóc</b> để giữ chân. Đây là ADN của ME School, đo bằng "thẻ chăm sóc" trong CRM.</p>'
+   +'<p class="leg"><b>Cách lấy (mỗi ngày/tuần 1 lần):</b> mở AMIS CRM → <b>Thẻ chăm sóc</b> (customer-subscription) → bấm dấu trang <b>Kéo Kết nối phụ huynh</b> → chờ "XONG ✅" → tải lại app. '
+   +'Chỉ đẩy <b>số tổng theo cơ sở &amp; tình trạng</b> — không có tên/SĐT phụ huynh.</p>'
+   +'<div class="q"><b>Câu hỏi khi có số:</b> cơ sở nào <b>bỏ bê</b> việc gọi phụ huynh hiện hữu (tỷ lệ hoàn thành thấp)? '
+   +'Và trong các cuộc gọi đã làm — bao nhiêu ra <b>lead giới thiệu</b>, bao nhiêu ra <b>Google review</b>? Đó mới là thước đo ADN, không phải số cuộc gọi.</div></div>';
+  const caCard = !caTong ? caEmpty :
+   '<div class="card"><h2>Kết nối phụ huynh — chăm sóc phụ huynh hiện hữu</h2>'
+   +'<p class="sub">Từ CRM AMIS · <b>thẻ chăm sóc phụ huynh đang có con học</b> · '+nhanCP+' · mục tiêu: tìm lead giới thiệu · mời Google review · lắng nghe giữ chân</p>'
    +'<div class="kpis">'
-   +kpi("Lead đang chăm",fmt(caN),"","trong phễu tuyển sinh")
-   +kpi("Đã có người chạm",pct(caPctCham,0),"","gọi/nhắn ít nhất 1 lần")
-   +kpi("Có nghe máy",pct(caPctNghe,0),"","gọi được phụ huynh bắt máy")
-   +kpi("Im lặng ≥14 ngày",fmt(caIm),"","nguội — nguy cơ mất lead")+"</div>"
-   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid '+(caPctCham<0.7?"#B42318":"#A96C05")+';border-radius:8px;padding:12px 14px;background:rgba(180,35,24,.05)">'
-   +'<p style="margin:0 0 4px;font-weight:700;color:'+(caPctCham<0.7?"#B42318":"#A96C05")+'">Mới '+pct(caPctCham,0)+' lead được chạm — phần còn lại chưa ai kết nối</p>'
-   +'<p class="leg" style="margin:0">Lead trong phễu mà không ai gọi = tiền quảng cáo đã đốt để có lead rồi bỏ nguội. '
-   +'<b>Việc cần làm:</b> mỗi lead im lặng ≥14 ngày (bên dưới) — giao đích danh 1 người gọi trong 48h, hoặc đóng lead và ghi lý do để biết CAC thật.</p></div>'
-   +(caCampusRows.length>1?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
-     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Lead</th><th>% đã chạm</th><th>% nghe máy</th><th>Im lặng TB</th></tr></thead><tbody>'
-     +caCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.n)
-       +'</td><td class="mono" style="color:'+(v.n&&v.cham/v.n<0.7?"#B42318":"#067647")+'">'+pct(v.n?v.cham/v.n:0,0)
-       +'</td><td class="mono">'+pct(v.n?v.nghe/v.n:0,0)+'</td><td class="mono">'+(v.n?Math.round(v.im/v.n):0)+" ngày</td></tr>").join("")
+   +kpi("Tổng thẻ chăm sóc",fmt(caTong),"","việc gọi/chạm PH hiện hữu")
+   +kpi("Đã hoàn thành",pct(caPctHT,0),"",fmt(caSt.hoan_thanh)+" thẻ đã làm xong")
+   +kpi("Đang chăm",fmt(caSt.dang_cham),"","đang làm dở")
+   +kpi("Chưa ai làm",fmt(caSt.chua_cham),"","PH chưa được gọi — bỏ bê")+"</div>"
+   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid '+(caPctHT<0.6?"#B42318":caPctHT<0.8?"#A96C05":"#067647")+';border-radius:8px;padding:12px 14px;background:rgba(15,83,72,.04)">'
+   +'<p style="margin:0 0 4px;font-weight:700;color:'+(caPctHT<0.6?"#B42318":caPctHT<0.8?"#A96C05":"#067647")+'">'+pct(caPctHT,0)+' thẻ chăm sóc đã hoàn thành'+(caSt.chua_cham?' — còn '+fmt(caSt.chua_cham)+' PH chưa ai gọi':'')+'</p>'
+   +'<p class="leg" style="margin:0">Đây là ADN ME School: gọi phụ huynh hiện hữu để <b>xin giới thiệu (lead mới)</b>, <b>mời Google review</b>, và <b>lắng nghe giữ chân</b>. '
+   +'PH chưa ai gọi = cơ hội lead giới thiệu &amp; review đang bỏ lỡ. <b>Việc cần làm:</b> cơ sở tỷ lệ hoàn thành thấp nhất (bên dưới) — giao chỉ tiêu số cuộc gọi/tuần và ghi kết quả (ra lead? ra review?).</p></div>'
+   +(caLoaiRows.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo mục đích</p>'
+     +'<div class="tw"><table><thead><tr><th>Mục đích chăm sóc</th><th>Số thẻ</th><th>Tỷ lệ</th></tr></thead><tbody>'
+     +caLoaiRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(caTong?v/caTong:0,0)+"</td></tr>").join("")
      +"</tbody></table></div>":"")
-   +(caStale.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Im lặng lâu nhất — cần gọi (20 lead '+(caStale.length>20?'/ '+fmt(caStale.length):"")+')</p>'
-     +'<div class="tw"><table><thead><tr><th>Phụ huynh/Lead</th><th>Campus</th><th>Giai đoạn</th><th>Im lặng</th><th>Số chạm</th><th>Người chạm cuối</th></tr></thead><tbody>'
-     +caStale.slice(0,20).map(rowCa).join("")+"</tbody></table></div>"
-     +(caStale.length>20?'<p class="note" style="margin-top:6px">Chỉ hiện 20 lead im lặng lâu nhất. <b>Còn '+fmt(caStale.length-20)+' lead nữa — mở CRM để xử lý toàn bộ.</b></p>':""):"")
-   +'</div>';
+   +(caCamRows.length>1?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo cơ sở — tỷ lệ hoàn thành thấp trước</p>'
+     +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Tổng thẻ</th><th>Hoàn thành</th><th>Đang chăm</th><th>Chưa làm</th><th>% hoàn thành</th></tr></thead><tbody>'
+     +caCamRows.slice().sort((a,b)=>(a[1].tong?a[1].ht/a[1].tong:1)-(b[1].tong?b[1].ht/b[1].tong:1)).map(([k,v])=>{const p=v.tong?v.ht/v.tong:0;return "<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.tong)+'</td><td class="mono">'+fmt(v.ht)+'</td><td class="mono">'+fmt(v.dc)+'</td><td class="mono" style="color:'+(v.cc?"#B42318":"var(--muted)")+'">'+fmt(v.cc)+'</td><td class="mono" style="color:'+(p<0.6?"#B42318":p<0.8?"#A96C05":"#067647")+'">'+pct(p,0)+"</td></tr>";}).join("")
+     +"</tbody></table></div>":"")
+   +'<p class="leg">Dữ liệu là <b>số tổng theo cơ sở &amp; tình trạng</b> (không có tên/SĐT phụ huynh). Muốn xem từng thẻ → vào thẳng AMIS CRM → Thẻ chăm sóc.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> tỷ lệ hoàn thành cao nhưng có ra <b>lead giới thiệu</b> và <b>Google review</b> không — hay chỉ "gọi cho xong"? Nếu CRM chưa tách được kết quả (lead/review/lắng nghe), đó là trường cần thêm để đo đúng ADN.</div></div>';
 
   // ----- Channel cards tach thanh bien de dung o ca z3 va tab Channel -----
   const webCard='<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
@@ -1813,6 +1879,15 @@ async function render(){
     if(/linh đàm|linh dam/.test(s))return["LD","Linh Đàm"];
     return["HQ","Khối văn phòng / BGH"];}
   const isGV=v=>/giáo viên|giao vien/i.test(v||"");
+  const isQL=v=>/quản lý|quan ly|giám đốc|hiệu trưởng|hiệu phó|trưởng|phó phòng|phó ban|manager|director|điều hành|hiệu tr|BGH/i.test(v||"");
+  const isHT=v=>/bảo mẫu|cấp dưỡng|bảo vệ|tạp vụ|y tế|kế toán|hành chính|lễ tân|trợ giảng|nhân viên|văn thư|thủ quỹ|marketing|tuyển sinh|chăm sóc|kỹ thuật|IT/i.test(v||"");
+  // Vùng thị trường: HCM → HN → HP → Khối VP (để sắp xếp)
+  const VUNG={TT:["HCM",0],HVT:["HCM",0],TAD:["HCM",0],TD:["HCM",0],NTT:["HCM",0],CC:["HCM",0],MGB:["HCM",0],PCT:["HCM",0],
+    HT:["HN",1],KM:["HN",1],QTG:["HN",1],QA:["HN",1],LD:["HN",1],VD:["HN",1],VSIP:["HP",2],HQ:["VP",3]};
+  const vungCua=code=>(VUNG[code]||["?",4]);
+  // Xếp: theo vùng (HCM→HN→HP→VP) rồi sĩ số cao→thấp; không có sĩ số thì theo headcount
+  const sapVung=(a,b)=>{const va=vungCua(a.code)[1],vb=vungCua(b.code)[1];if(va!==vb)return va-vb;
+    const sa=sisoBy[a.code]||0,sb2=sisoBy[b.code]||0;if(sa!==sb2)return sb2-sa;return (b.hc||0)-(a.hc||0);};
   const viChuan=v=>{v=(v||"").trim();return v||"(chưa cập nhật chức danh)";};
   const isBlank=v=>!(v||"").trim();
   const ym=d=>String(d||"").slice(0,7);
@@ -1831,17 +1906,20 @@ async function render(){
   const hrLuc=hrTs?(hrTs.slice(8,10)+"/"+hrTs.slice(5,7)+" "+hrTs.slice(11,16)):"—";
   // gom theo cơ sở
   const hrBy={};
-  hrA.forEach(r=>{const c=hrCampus(r.co_so);const o=hrBy[c[0]]||(hrBy[c[0]]={code:c[0],ten:c[1],hc:0,gv:0,trong:0,vao:0});o.hc++;if(isGV(r.vi_tri))o.gv++;if(isBlank(r.vi_tri))o.trong++;if(ym(r.ngay_bat_dau)===M0)o.vao++;});
+  hrA.forEach(r=>{const c=hrCampus(r.co_so);const o=hrBy[c[0]]||(hrBy[c[0]]={code:c[0],ten:c[1],hc:0,gv:0,ql:0,ht:0,khac:0,trong:0,vao:0});o.hc++;
+    if(isGV(r.vi_tri))o.gv++;else if(isQL(r.vi_tri))o.ql++;else if(isHT(r.vi_tri))o.ht++;else o.khac++;
+    if(isBlank(r.vi_tri))o.trong++;if(ym(r.ngay_bat_dau)===M0)o.vao++;});
   const raBy={}; hrN.forEach(r=>{if(ym(r.ngay_nghi)===M0){const c=hrCampus(r.co_so);raBy[c[0]]=(raBy[c[0]]||0)+1;}});
+  const raBy3={}; hrN.forEach(r=>{if(M3.indexOf(ym(r.ngay_nghi))>=0){const c=hrCampus(r.co_so);raBy3[c[0]]=(raBy3[c[0]]||0)+1;}});
+  const raThang3=M3.reduce((a,m)=>a+raThang(m),0);
   const hrArr=Object.values(hrBy).sort((a,b)=>b.hc-a.hc);
   const tongGV=hrA.filter(r=>isGV(r.vi_tri)).length;
   const tongTrong=hrA.filter(r=>isBlank(r.vi_tri)).length;
   // đếm theo CHỨC DANH thật (không gộp)
   const cdTally={}; hrA.forEach(r=>{const k=viChuan(r.vi_tri);cdTally[k]=(cdTally[k]||0)+1;});
   const cdArr=Object.entries(cdTally).sort((a,b)=>b[1]-a[1]);
-  // sĩ số ĐANG ĐI HỌC theo mã campus (cho chuẩn trẻ/cô) — chỉ nhóm "Đang đi học"
-  const sisoBy={}; (hs||[]).forEach(r=>{if(!/đang đi học/i.test(r.nhom||""))return;const c=hrCampus(r.campus);sisoBy[c[0]]=(sisoBy[c[0]]||0)+(+r.so_hs||0);});
-  const CHUAN=5.0;
+  // sĩ số + số lớp ĐANG ĐI HỌC theo mã campus — chỉ nhóm "Đang đi học"
+  const sisoBy={}, lopBy={}; (hs||[]).forEach(r=>{if(!/đang đi học/i.test(r.nhom||""))return;const c=hrCampus(r.campus);sisoBy[c[0]]=(sisoBy[c[0]]||0)+(+r.so_hs||0);lopBy[c[0]]=(lopBy[c[0]]||0)+(+r.so_lop||0);});
 
   const nhanSuTrongCard = !hcTong ? "" :
    '<div class="card"><h2>Nhân sự — bức tranh tháng này ('+M0+')</h2>'
@@ -1852,9 +1930,9 @@ async function render(){
    +kpi("⚠ Chưa có chức danh",fmt(tongTrong),"","AMIS bỏ trống ô vị trí — cần điền")
    +kpi("Tuyển mới "+M0,fmt(vaoThang(M0)),"","vào tháng, hiện còn làm")
    +kpi("Nghỉ / Turnover "+M0,fmt(raThang(M0))+" · "+pct(tvRate(M0),1),"","rời trong tháng")+"</div>"
-   +'<div class="tw"><table style="min-width:560px"><thead><tr><th>Cơ sở</th><th>Nhân sự</th><th>Giáo viên</th><th>Chưa có chức danh</th><th>Vào '+M0+'</th><th>Ra '+M0+'</th></tr></thead><tbody>'
-   +hrArr.map(o=>"<tr><td>"+o.ten+'</td><td class="mono">'+fmt(o.hc)+'</td><td class="mono">'+fmt(o.gv)+'</td><td class="mono" style="color:'+(o.trong?"#B42318":"var(--muted)")+'">'+(o.trong||"")+'</td><td class="mono">'+(o.vao||"")+'</td><td class="mono">'+(raBy[o.code]||"")+"</td></tr>").join("")
-   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(hcTong)+'</td><td class="mono">'+fmt(tongGV)+'</td><td class="mono">'+fmt(tongTrong)+'</td><td class="mono">'+fmt(vaoThang(M0))+'</td><td class="mono">'+fmt(raThang(M0))+'</td></tr>'
+   +'<div class="tw"><table style="min-width:620px"><thead><tr><th>Cơ sở</th><th>Nhân sự</th><th>Giáo viên</th><th>Chưa có chức danh</th><th>Vào '+M0+'</th><th>Ra '+M0+'</th><th>Ra 3 tháng</th></tr></thead><tbody>'
+   +hrArr.map(o=>"<tr><td>"+o.ten+'</td><td class="mono">'+fmt(o.hc)+'</td><td class="mono">'+fmt(o.gv)+'</td><td class="mono" style="color:'+(o.trong?"#B42318":"var(--muted)")+'">'+(o.trong||"")+'</td><td class="mono">'+(o.vao||"")+'</td><td class="mono">'+(raBy[o.code]||"")+'</td><td class="mono" style="color:'+((raBy3[o.code]||0)>=3?"#B42318":"var(--muted)")+'">'+(raBy3[o.code]||"")+"</td></tr>").join("")
+   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(hcTong)+'</td><td class="mono">'+fmt(tongGV)+'</td><td class="mono">'+fmt(tongTrong)+'</td><td class="mono">'+fmt(vaoThang(M0))+'</td><td class="mono">'+fmt(raThang(M0))+'</td><td class="mono">'+fmt(raThang3)+'</td></tr>'
    +"</tbody></table></div>"
    +'<p class="leg"><b>Xu hướng 3 tháng (toàn hệ thống):</b> '
    +M3.map(m=>m+": vào "+vaoThang(m)+" · ra "+raThang(m)+" · turnover "+pct(tvRate(m),1)).join("  |  ")+'</p>'
@@ -1870,20 +1948,65 @@ async function render(){
    +"</tbody></table></div>"
    +'<div class="q"><b>Câu hỏi:</b> cơ cấu này có khớp mô hình lớp chuẩn của ME không — và '+fmt(tongTrong)+' hồ sơ trống chức danh thuộc cơ sở nào, ai chịu trách nhiệm điền?</div></div>';
 
-  // ----- GV so với chuẩn trẻ/cô -----
-  const gvArr=hrArr.filter(o=>o.code!=="HQ").map(o=>{const siso=sisoBy[o.code]||0;const can=siso?siso/CHUAN:null;return {ten:o.ten,gv:o.gv,siso:siso,can:can,chenh:(can==null?null:o.gv-can),tre_co:o.gv?siso/o.gv:null};});
-  const gvThieu=gvArr.filter(x=>x.chenh!=null&&x.chenh<-0.5);
-  const nhanSuGVCard = !hcTong ? "" :
-   '<div class="card"><h2>Giáo viên so với chuẩn trẻ/cô</h2>'
-   +'<p class="sub">GV thực từ AMIS · sĩ số <b>đang đi học</b> từ CRM (thiếu Tân Thuận &amp; Linh Đàm — 2 cơ sở này không dùng CRM) · chuẩn giả định <b>'+String(CHUAN).replace(".",",")+' trẻ/cô</b></p>'
-   +'<div class="tw"><table style="min-width:520px"><thead><tr><th>Cơ sở</th><th>GV hiện có</th><th>Sĩ số đang học</th><th>Trẻ/GV</th><th>GV cần @'+String(CHUAN).replace(".",",")+'</th><th>Chênh</th></tr></thead><tbody>'
-   +gvArr.map(x=>{const c=x.chenh==null?"":(x.chenh<-0.5?"#B42318":x.chenh>1.5?"#A96C05":"#067647");
-      return "<tr><td>"+x.ten+'</td><td class="mono">'+fmt(x.gv)+'</td><td class="mono">'+(x.siso||'<span style="opacity:.5">—</span>')+'</td><td class="mono">'+(x.tre_co==null?"—":dec(x.tre_co,1))+'</td><td class="mono">'+(x.can==null?"—":dec(x.can,1))+'</td><td class="mono" style="color:'+c+'">'+(x.chenh==null?"—":(x.chenh>0?"+":"")+dec(x.chenh,1))+"</td></tr>";}).join("")
+  // ----- Loại hợp đồng: chính thức (FT) vs thời vụ/thử việc (PT) — từ v_hr_hopdong -----
+  const hdRows=(hrHopDong||[]);
+  const isFT=v=>/không xác định|khong xac dinh|chính thức|chinh thuc|xác định thời hạn|xac dinh thoi han|dài hạn|dai han|vô thời hạn|vo thoi han|12 tháng|24 tháng|36 tháng/i.test(v||"");
+  const isPT=v=>/thời vụ|thoi vu|thử việc|thu viec|khoán|khoan|cộng tác|cong tac|bán thời gian|ban thoi gian|part|mùa vụ|mua vu|ngắn hạn|ngan han|học việc|hoc viec|dịch vụ|dich vu/i.test(v||"");
+  const hdTong=hdRows.reduce((a,r)=>a+(+r.so_nguoi||0),0);
+  let hdFT=0,hdPT=0,hdKhac=0;
+  const hdLoai={}; hdRows.forEach(r=>{const n=+r.so_nguoi||0;const k=(r.loai_hop_dong||"(chưa rõ)").trim();hdLoai[k]=(hdLoai[k]||0)+n;
+    if(isFT(r.loai_hop_dong))hdFT+=n;else if(isPT(r.loai_hop_dong))hdPT+=n;else hdKhac+=n;});
+  const hdLoaiRows=Object.entries(hdLoai).sort((a,b)=>b[1]-a[1]);
+  const nhanSuHDCard = !hdTong ? "" :
+   '<div class="card"><h2>Loại hợp đồng — chính thức (full-time) vs thời vụ (part-time)</h2>'
+   +'<p class="sub">Từ AMIS · menu <b>Hợp đồng</b> · '+fmt(hdTong)+' hợp đồng đang hiệu lực'+(hcTong&&Math.abs(hdTong-hcTong)>3?' · lệch '+fmt(Math.abs(hdTong-hcTong))+' so với '+fmt(hcTong)+' người đang làm (xem chú thích)':'')+'</p>'
+   +'<div class="kpis">'
+   +kpi("Chính thức (FT)",fmt(hdFT),"",pct(hdTong?hdFT/hdTong:0,0)+" — không/có xác định thời hạn")
+   +kpi("Thời vụ / thử việc (PT)",fmt(hdPT),"",pct(hdTong?hdPT/hdTong:0,0)+" — thời vụ, thử việc, khoán, CTV")
+   +kpi("Chưa phân loại",fmt(hdKhac),"","loại HĐ không khớp nhóm nào")
+   +kpi("Tổng hợp đồng",fmt(hdTong),"","đang hiệu lực")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table style="min-width:420px"><thead><tr><th>Loại hợp đồng (AMIS)</th><th>Số người</th><th>% tổng</th><th>Nhóm</th></tr></thead><tbody>'
+   +hdLoaiRows.map(([k,v])=>{const g=isFT(k)?'<span style="color:#067647">Chính thức</span>':isPT(k)?'<span style="color:#A96C05">Thời vụ</span>':'<span style="color:var(--muted)">—</span>';return "<tr><td>"+k+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(hdTong?v/hdTong:0,0)+'</td><td style="font-size:12px">'+g+"</td></tr>";}).join("")
    +"</tbody></table></div>"
-   +'<p class="leg">Chênh <b style="color:#B42318">âm</b> = thiếu GV so với chuẩn; <b style="color:#A96C05">dương lớn</b> = dư so với chuẩn (có thể đúng nếu lớp nhỏ tuổi cần tỉ lệ thấp hơn). '
-   +(gvThieu.length?'Đang thiếu theo chuẩn: <b>'+gvThieu.map(x=>x.ten).join(", ")+'</b>. ':"")
-   +'Chưa có dữ liệu GV <i>theo từng lớp</i> (không nguồn sống) — nên chỉ so ở mức cơ sở, chưa chỉ được "lớp nào thiếu".</p>'
-   +'<div class="q"><b>Câu hỏi:</b> chênh lệch trẻ/GV giữa các cơ sở là <b>thiết kế sư phạm theo độ tuổi</b>, hay <b>biên chế trôi theo lịch sử</b>? Nếu là cái sau — chuẩn hoá về '+String(CHUAN).replace(".",",")+' giải phóng được bao nhiêu GV để chuyển sang nơi thiếu?</div></div>';
+   +'<p class="leg"><b>Chính thức (FT)</b> = hợp đồng không xác định / xác định thời hạn — biên chế ổn định. <b>Thời vụ (PT)</b> = thời vụ, thử việc, khoán việc, cộng tác viên — linh hoạt, dễ biến động. '
+   +(hcTong&&Math.abs(hdTong-hcTong)>3?'<br>Số hợp đồng ('+fmt(hdTong)+') lệch số người đang làm ('+fmt(hcTong)+') — một người có thể có 2 HĐ (chính + phụ lục), hoặc một số người đang làm chưa ký/gia hạn HĐ. Đây là <b>khoảng mù cần HR rà</b>.':'')+'</p>'
+   +'<div class="q"><b>Câu hỏi:</b> tỷ lệ thời vụ cao ở cơ sở nào — đó là <b>linh hoạt theo mùa tuyển sinh</b> hay <b>né cam kết dài hạn khiến GV không gắn bó</b> (ảnh hưởng eNPS &amp; chất lượng)?</div></div>';
+
+  // ----- GV / lớp trung bình (đã bỏ tỷ lệ 5 trẻ/cô theo yêu cầu) -----
+  const gvArr=hrArr.filter(o=>o.code!=="HQ").map(o=>{const siso=sisoBy[o.code]||0;const lop=lopBy[o.code]||0;
+    return {ten:o.ten,code:o.code,gv:o.gv,siso:siso,lop:lop,gv_lop:lop?o.gv/lop:null,hs_lop:lop?siso/lop:null};});
+  const gvCoLop=gvArr.filter(x=>x.lop);
+  const gvLopHT=gvCoLop.reduce((a,x)=>a+x.gv,0), lopHT=gvCoLop.reduce((a,x)=>a+x.lop,0);
+  const gvLopTB=lopHT?gvLopHT/lopHT:null;
+  const nhanSuGVCard = !hcTong ? "" :
+   '<div class="card"><h2>Giáo viên / lớp trung bình</h2>'
+   +'<p class="sub">GV thực từ AMIS · số lớp &amp; sĩ số <b>đang đi học</b> từ CRM · '+(gvLopTB!=null?'GV/lớp trung bình toàn hệ thống (các cơ sở có CRM): <b>'+dec(gvLopTB,1)+'</b>':'')+'</p>'
+   +'<div class="tw"><table style="min-width:520px"><thead><tr><th>Cơ sở</th><th>GV hiện có</th><th>Số lớp</th><th>GV/lớp</th><th>Sĩ số đang học</th><th>HS/lớp</th></tr></thead><tbody>'
+   +gvArr.map(x=>{const c=x.gv_lop==null?"":(x.gv_lop<1.5?"#B42318":x.gv_lop>2.5?"#A96C05":"#067647");
+      return "<tr><td>"+x.ten+'</td><td class="mono">'+fmt(x.gv)+'</td><td class="mono">'+(x.lop||'<span style="opacity:.5">—</span>')+'</td><td class="mono" style="color:'+c+'">'+(x.gv_lop==null?"—":dec(x.gv_lop,1))+'</td><td class="mono">'+(x.siso||'<span style="opacity:.5">—</span>')+'</td><td class="mono">'+(x.hs_lop==null?"—":dec(x.hs_lop,1))+"</td></tr>";}).join("")
+   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>Cộng (cơ sở có CRM)</td><td class="mono">'+fmt(gvLopHT)+'</td><td class="mono">'+fmt(lopHT)+'</td><td class="mono">'+(gvLopTB==null?"—":dec(gvLopTB,1))+'</td><td class="mono"></td><td class="mono"></td></tr>'
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>GV/lớp</b> = số giáo viên ÷ số lớp của cơ sở. <b style="color:#B42318">Dưới 1,5</b> = mỏng người trên mỗi lớp; <b style="color:#A96C05">trên 2,5</b> = dày (có thể đúng với lớp nhỏ tuổi cần nhiều cô). '
+   +'Tân Thuận &amp; Linh Đàm để trống số lớp/sĩ số vì <b>không dùng CRM</b> — GV của 2 cơ sở này lấy từ AMIS (xem chú thích Tân Thuận bên dưới, AMIS có thể đếm thiếu GV thời vụ). '
+   +'Chưa có nguồn sống GV <i>theo từng lớp</i> — nên chỉ tính trung bình ở mức cơ sở, chưa chỉ được "lớp nào mỏng".</p>'
+   +'<p class="leg" style="border-left:3px solid #A96C05;padding-left:10px"><b>⚠ Tân Thuận &amp; Linh Đàm — số GV từ AMIS có thể đếm thiếu.</b> '
+   +'AMIS (hồ sơ chính thức) hiện đếm Tân Thuận <b>'+((hrBy.TT&&hrBy.TT.gv)||0)+' giáo viên</b>. Nhưng Tomia (phân công lớp) cho thấy nhiều cô hơn — vì 2 cơ sở này dùng <b>pháp nhân/HR riêng</b>, GV thời vụ &amp; cộng tác không nằm trong hồ sơ AMIS "đang làm việc". '
+   +'Con số đúng phải lấy từ <b>Tomia (cô ↔ lớp)</b>. Việc cần: build "Kéo GV-lớp" từ Tomia để đối chiếu tên GV × lớp × trường cho TT &amp; LĐ, rồi hợp nhất với AMIS. <b>Chủ: chưa giao.</b></p>'
+   +'<div class="q"><b>Câu hỏi:</b> chênh lệch GV/lớp giữa các cơ sở là <b>thiết kế sư phạm theo độ tuổi</b>, hay <b>biên chế trôi theo lịch sử</b>? Cơ sở GV/lớp cao mà sĩ số/lớp thấp — đang dư người, hay đang giữ lớp để chờ tuyển thêm trẻ?</div></div>';
+
+  // ----- Ma trận nhân sự × cơ sở (hiệu quả: sĩ số vs GV vs hỗ trợ) -----
+  const mtxRows=hrArr.slice().sort(sapVung);
+  const VUNGTEN={HCM:"TP.HCM",HN:"Hà Nội",HP:"Hải Phòng",VP:"Khối VP","?":"—"};
+  const nhanSuMaTranCard = !hcTong ? "" :
+   '<div class="card"><h2>Ma trận nhân sự × cơ sở — hiệu quả biên chế</h2>'
+   +'<p class="sub">Xếp theo <b>vùng (HCM → HN → HP)</b> rồi <b>sĩ số cao → thấp</b> · chức danh gom 4 nhóm để nhìn cơ cấu · HS/NS = sĩ số ÷ tổng nhân sự</p>'
+   +'<div class="tw"><table style="min-width:680px"><thead><tr><th>Cơ sở</th><th>Vùng</th><th>Sĩ số</th><th>Giáo viên</th><th>Hỗ trợ</th><th>Quản lý</th><th>Khác/chưa rõ</th><th>Tổng NS</th><th>HS/NS</th></tr></thead><tbody>'
+   +mtxRows.map(o=>{const siso=sisoBy[o.code]||0;const hsns=siso&&o.hc?siso/o.hc:null;
+      return "<tr><td>"+o.ten+'</td><td style="font-size:12px;color:var(--muted)">'+VUNGTEN[vungCua(o.code)[0]]+'</td><td class="mono">'+(siso||'<span style="opacity:.5">—</span>')+'</td><td class="mono">'+fmt(o.gv)+'</td><td class="mono">'+fmt(o.ht)+'</td><td class="mono">'+fmt(o.ql)+'</td><td class="mono" style="color:'+((o.khac+o.trong)?"#A96C05":"var(--muted)")+'">'+fmt(o.khac)+'</td><td class="mono">'+fmt(o.hc)+'</td><td class="mono">'+(hsns==null?"—":dec(hsns,1))+"</td></tr>";}).join("")
+   +"</tbody></table></div>"
+   +'<p class="leg"><b>Giáo viên</b> = chức danh có chữ "Giáo viên". <b>Hỗ trợ</b> = bảo mẫu, cấp dưỡng, bảo vệ, y tế, kế toán, hành chính, lễ tân, trợ giảng, tuyển sinh… <b>Quản lý</b> = hiệu trưởng/phó, trưởng/phó phòng, điều hành. <b>Khác/chưa rõ</b> gồm cả hồ sơ AMIS bỏ trống chức danh — cần điền. '
+   +'<b>HS/NS</b> càng cao = mỗi nhân sự "gánh" càng nhiều trẻ (năng suất cao, nhưng quá cao thì quá tải); càng thấp = nhiều người trên mỗi trẻ (chất lượng chăm sóc dày, nhưng chi phí lương/HS cao). Tân Thuận &amp; Linh Đàm thiếu sĩ số vì không dùng CRM.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> hai cơ sở cùng vùng, cùng cỡ sĩ số nhưng HS/NS lệch nhau — bên thấp đang <b>đầu tư chất lượng</b> hay <b>thừa biên chế</b>? Và tỷ lệ Hỗ trợ/Giáo viên có nơi nào bất thường (quá nhiều người không đứng lớp)?</div></div>';
 
   // ----- HR × Tài chính theo campus -----
   const finLastLbl = (typeof lastM!=="undefined"&&lastM)?("T"+lastM):"—";
@@ -1919,7 +2042,7 @@ async function render(){
    +'<div class="q"><b>Câu hỏi:</b> cơ sở nào <b>vừa lương/DT cao vừa turnover cao</b>? Đó là bẫy kép — chi phí nhân sự lớn mà người vẫn rời; chữa bằng giữ người (eNPS) hay bằng kéo sĩ số?</div></div>';
 
   const nhanSuHTML = hcTong
-    ? (nhanSuTrongCard + nhanSuCDCard + nhanSuGVCard + nhanSuFinCard)
+    ? (nhanSuTrongCard + nhanSuCDCard + nhanSuHDCard + nhanSuGVCard + nhanSuMaTranCard + nhanSuFinCard)
     : ('<div class="card" style="border-left:4px solid #A96C05"><h2>Nhân sự — chưa có dữ liệu, bấm "Kéo HR"</h2>'
        +'<p class="sub">Pipeline đã sẵn sàng (bảng + view). Chỉ còn 1 bước: kéo dữ liệu HR từ AMIS về.</p>'
        +'<p class="leg"><b>Cách làm (mỗi tháng 1 lần):</b> mở AMIS → <b>Thông tin nhân sự</b> → bấm dấu trang <b>Kéo HR</b> → chờ "KÉO HR XONG ✅" → tải lại app. '
@@ -2034,6 +2157,10 @@ $("mang").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b||!b.dataset.dom)return;
   DOM=b.dataset.dom; apDungChe(); window.scrollTo(0,0);
 });
+// b41: nút thu/mở thanh điều khiển trên mobile (header trước đây chiếm ~1/2 màn hình)
+(function(){var hT=$("hToggle"); if(hT) hT.addEventListener("click",function(){
+  document.querySelector("header").classList.toggle("collapsed");
+});})();
 
 // b18: email ngoai danh sach van dang nhap duoc, nhung KHONG doc duoc du lieu (RLS).
 // Truoc day ho thay trang trang va bao "khong vao duoc" — gio noi thang ra.
