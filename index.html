@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-25 · b42";
+const BUILD="2026-09-25 · b43";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -269,7 +269,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
-  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang"];
+  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -311,7 +311,8 @@ function taoTruyVan(CP){ return [
     sb.from("v_hr_nghiviec").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,ngay_nghi,ly_do").limit(3000),
     sb.from("v_hr_hopdong").select("co_so,loai_hop_dong,loai_nhom,so_nguoi").limit(500),
     sb.from("v_ph_ketnoi").select("campus,tinh_trang,loai,so_the").limit(500),
-    sb.from("hs_churn_thang").select("campus_code,campus_ten,thang,hs_nghi,hs_totnghiep").limit(500)
+    sb.from("hs_churn_thang").select("campus_code,campus_ten,thang,hs_nghi,hs_totnghiep").limit(500),
+    sb.from("v_gv_lop").select("campus,campus_ten,so_gv,so_chu_nhiem,tong_lop").limit(50)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -361,7 +362,7 @@ async function render(){
   soLanVe++;
   DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
          (KHO&&KHO.tong)?KHO.tong/1000:null);
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi},{data:hrHopDong},{data:phKN},{data:churnThang}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi},{data:hrHopDong},{data:phKN},{data:churnThang},{data:gvLop}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -2008,25 +2009,35 @@ async function render(){
    +'<div class="q"><b>Câu hỏi:</b> tỷ lệ thời vụ cao ở cơ sở nào — đó là <b>linh hoạt theo mùa tuyển sinh</b> hay <b>né cam kết dài hạn khiến GV không gắn bó</b> (ảnh hưởng eNPS &amp; chất lượng)?</div></div>';
 
   // ----- GV / lớp trung bình (đã bỏ tỷ lệ 5 trẻ/cô theo yêu cầu) -----
-  const gvArr=hrArr.filter(o=>o.code!=="HQ").map(o=>{const siso=sisoBy[o.code]||0;const lop=lopBy[o.code]||0;
-    return {ten:o.ten,code:o.code,gv:o.gv,siso:siso,lop:lop,gv_lop:lop?o.gv/lop:null,hs_lop:lop?siso/lop:null};});
+  // GV thật từ Tomia (v_gv_lop): map mã Tomia -> mã app
+  const GVLOP2APP={memon:"TT",MELD:"LD",methaodien:"TAD",MEBITIS:"MGB",meqa:"QA",MEQTG:"QTG",MEVD:"VD",MEVSIP:"VSIP",MENTT:"NTT",MEPCT:"PCT",METD:"TD",MEHT:"HT",MeKM:"KM",MeHVT:"HVT",MECC:"CC"};
+  const gvTomiaBy={}; (gvLop||[]).forEach(r=>{const ac=GVLOP2APP[r.campus]||r.campus;gvTomiaBy[ac]={gv:+r.so_gv||0,lop:+r.tong_lop||0,cn:+r.so_chu_nhiem||0};});
+  const coTomiaGV=Object.keys(gvTomiaBy).length>0;
+  const gvArr=hrArr.filter(o=>o.code!=="HQ").map(o=>{const siso=sisoBy[o.code]||0;const lop=lopBy[o.code]||0;const t=gvTomiaBy[o.code];
+    return {ten:o.ten,code:o.code,gv:o.gv,tgv:t?t.gv:null,siso:siso,lop:lop,gv_lop:lop?o.gv/lop:null,hs_lop:lop?siso/lop:null};});
   const gvCoLop=gvArr.filter(x=>x.lop);
   const gvLopHT=gvCoLop.reduce((a,x)=>a+x.gv,0), lopHT=gvCoLop.reduce((a,x)=>a+x.lop,0);
   const gvLopTB=lopHT?gvLopHT/lopHT:null;
   const nhanSuGVCard = !hcTong ? "" :
    '<div class="card"><h2>Giáo viên / lớp trung bình</h2>'
    +'<p class="sub">GV thực từ AMIS · số lớp &amp; sĩ số <b>đang đi học</b> từ CRM · '+(gvLopTB!=null?'GV/lớp trung bình toàn hệ thống (các cơ sở có CRM): <b>'+dec(gvLopTB,1)+'</b>':'')+'</p>'
-   +'<div class="tw"><table style="min-width:520px"><thead><tr><th>Cơ sở</th><th>GV hiện có</th><th>Số lớp</th><th>GV/lớp</th><th>Sĩ số đang học</th><th>HS/lớp</th></tr></thead><tbody>'
+   +'<div class="tw"><table style="min-width:560px"><thead><tr><th>Cơ sở</th><th>GV (AMIS)</th>'+(coTomiaGV?'<th>GV (Tomia)</th>':'')+'<th>Số lớp</th><th>GV/lớp</th><th>Sĩ số đang học</th><th>HS/lớp</th></tr></thead><tbody>'
    +gvArr.map(x=>{const c=x.gv_lop==null?"":(x.gv_lop<1.5?"#B42318":x.gv_lop>2.5?"#A96C05":"#067647");
-      return "<tr><td>"+x.ten+'</td><td class="mono">'+fmt(x.gv)+'</td><td class="mono">'+(x.lop||'<span style="opacity:.5">—</span>')+'</td><td class="mono" style="color:'+c+'">'+(x.gv_lop==null?"—":dec(x.gv_lop,1))+'</td><td class="mono">'+(x.siso||'<span style="opacity:.5">—</span>')+'</td><td class="mono">'+(x.hs_lop==null?"—":dec(x.hs_lop,1))+"</td></tr>";}).join("")
-   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>Cộng (cơ sở có CRM)</td><td class="mono">'+fmt(gvLopHT)+'</td><td class="mono">'+fmt(lopHT)+'</td><td class="mono">'+(gvLopTB==null?"—":dec(gvLopTB,1))+'</td><td class="mono"></td><td class="mono"></td></tr>'
+      var tcell=coTomiaGV?('<td class="mono" style="color:'+(x.tgv!=null&&x.tgv>x.gv?"#B42318":"var(--muted)")+'">'+(x.tgv==null?'<span style="opacity:.4">—</span>':x.tgv+(x.tgv>x.gv?' ▲':''))+'</td>'):'';
+      return "<tr><td>"+x.ten+'</td><td class="mono">'+fmt(x.gv)+'</td>'+tcell+'<td class="mono">'+(x.lop||'<span style="opacity:.5">—</span>')+'</td><td class="mono" style="color:'+c+'">'+(x.gv_lop==null?"—":dec(x.gv_lop,1))+'</td><td class="mono">'+(x.siso||'<span style="opacity:.5">—</span>')+'</td><td class="mono">'+(x.hs_lop==null?"—":dec(x.hs_lop,1))+"</td></tr>";}).join("")
+   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>Cộng (cơ sở có CRM)</td><td class="mono">'+fmt(gvLopHT)+'</td>'+(coTomiaGV?'<td class="mono"></td>':'')+'<td class="mono">'+fmt(lopHT)+'</td><td class="mono">'+(gvLopTB==null?"—":dec(gvLopTB,1))+'</td><td class="mono"></td><td class="mono"></td></tr>'
    +"</tbody></table></div>"
    +'<p class="leg"><b>GV/lớp</b> = số giáo viên ÷ số lớp của cơ sở. <b style="color:#B42318">Dưới 1,5</b> = mỏng người trên mỗi lớp; <b style="color:#A96C05">trên 2,5</b> = dày (có thể đúng với lớp nhỏ tuổi cần nhiều cô). '
    +'Tân Thuận &amp; Linh Đàm để trống số lớp/sĩ số vì <b>không dùng CRM</b> — GV của 2 cơ sở này lấy từ AMIS (xem chú thích Tân Thuận bên dưới, AMIS có thể đếm thiếu GV thời vụ). '
    +'Chưa có nguồn sống GV <i>theo từng lớp</i> — nên chỉ tính trung bình ở mức cơ sở, chưa chỉ được "lớp nào mỏng".</p>'
-   +'<p class="leg" style="border-left:3px solid #A96C05;padding-left:10px"><b>⚠ Tân Thuận &amp; Linh Đàm — số GV từ AMIS có thể đếm thiếu.</b> '
-   +'AMIS (hồ sơ chính thức) hiện đếm Tân Thuận <b>'+((hrBy.TT&&hrBy.TT.gv)||0)+' giáo viên</b>. Nhưng Tomia (phân công lớp) cho thấy nhiều cô hơn — vì 2 cơ sở này dùng <b>pháp nhân/HR riêng</b>, GV thời vụ &amp; cộng tác không nằm trong hồ sơ AMIS "đang làm việc". '
-   +'Con số đúng phải lấy từ <b>Tomia (cô ↔ lớp)</b>. Việc cần: build "Kéo GV-lớp" từ Tomia để đối chiếu tên GV × lớp × trường cho TT &amp; LĐ, rồi hợp nhất với AMIS. <b>Chủ: chưa giao.</b></p>'
+   +'<p class="leg" style="border-left:3px solid '+(coTomiaGV?"#067647":"#A96C05")+';padding-left:10px"><b>Tân Thuận &amp; Linh Đàm — GV thật từ Tomia:</b> '
+   +(coTomiaGV
+      ?('cột <b>GV (Tomia)</b> đã có số thật. '
+        +((gvTomiaBy.TT?'Tân Thuận: AMIS '+((hrBy.TT&&hrBy.TT.gv)||0)+' vs Tomia <b>'+gvTomiaBy.TT.gv+'</b>. ':'Tân Thuận: chưa kéo Tomia (bấm Kéo GV-lớp khi mở cơ sở TT). ')
+          +(gvTomiaBy.LD?'Linh Đàm: AMIS '+((hrBy.LD&&hrBy.LD.gv)||0)+' vs Tomia <b>'+gvTomiaBy.LD.gv+'</b>. ':'Linh Đàm: chưa kéo Tomia (bấm Kéo GV-lớp khi mở cơ sở LĐ). '))
+        +'Chênh (Tomia > AMIS) = GV thời vụ/cộng tác chưa vào hồ sơ AMIS "đang làm việc" — con số Tomia sát thực tế lớp học hơn.')
+      :('AMIS đếm Tân Thuận <b>'+((hrBy.TT&&hrBy.TT.gv)||0)+' GV</b> nhưng thường thiếu (GV thời vụ/cộng tác không vào AMIS). '
+        +'<b>Cách lấy số thật:</b> cài dấu trang <b>"Kéo GV-lớp"</b>, mở Tomia đúng cơ sở (Tân Thuận, rồi Linh Đàm), bấm 1 lần mỗi cơ sở → cột "GV (Tomia)" sẽ hiện.'))+'</p>'
    +'<div class="q"><b>Câu hỏi:</b> chênh lệch GV/lớp giữa các cơ sở là <b>thiết kế sư phạm theo độ tuổi</b>, hay <b>biên chế trôi theo lịch sử</b>? Cơ sở GV/lớp cao mà sĩ số/lớp thấp — đang dư người, hay đang giữ lớp để chờ tuyển thêm trẻ?</div></div>';
 
   // ----- Ma trận nhân sự × cơ sở (hiệu quả: sĩ số vs GV vs hỗ trợ) -----
