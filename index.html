@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-29 · b46";
+const BUILD="2026-09-29 · b47";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -269,7 +269,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
-  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo"];
+  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -313,7 +313,8 @@ function taoTruyVan(CP){ return [
     sb.from("v_ph_ketnoi").select("campus,tinh_trang,loai,so_the").limit(500),
     sb.from("hs_churn_thang").select("campus_code,campus_ten,thang,hs_nghi,hs_totnghiep").limit(500),
     sb.from("v_gv_lop").select("campus,campus_ten,so_gv,so_chu_nhiem,tong_lop").limit(50),
-    sb.from("v_nghi_lydo").select("ma_hs,thang,ngay_thoi_hoc,ly_do,ten_hs,campus,nhom_ly_do").order("ngay_thoi_hoc",{ascending:false}).limit(1000)
+    sb.from("v_nghi_lydo").select("ma_hs,thang,ngay_thoi_hoc,ly_do,ten_hs,campus,nhom_ly_do").order("ngay_thoi_hoc",{ascending:false}).limit(1000),
+    sb.from("crm_lead_thang").select("thang,campus,nguon,so_lead").limit(2000)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -363,7 +364,7 @@ async function render(){
   soLanVe++;
   DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
          (KHO&&KHO.tong)?KHO.tong/1000:null);
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi},{data:hrHopDong},{data:phKN},{data:churnThang},{data:gvLop},{data:nghiLyDoCrm}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi},{data:hrHopDong},{data:phKN},{data:churnThang},{data:gvLop},{data:nghiLyDoCrm},{data:leadThang}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -2154,6 +2155,44 @@ async function render(){
        +'<p class="leg">Khi có dữ liệu, tab này hiện: headcount theo cơ sở &amp; vị trí, vào/ra/turnover (tháng này + 3 tháng), GV so chuẩn trẻ/cô, và bảng HR×tài chính. '
        +'Chỉ lấy trường an toàn — <b>không</b> có ngày sinh, SĐT, email, địa chỉ, lương cá nhân.</p></div>');
 
+  // ----- THE: LEAD TUYEN SINH THANG NAY theo nguon & co so (CRM Co hoi: Opportunity, CreatedDate thang nay, LeadSourceIDText + CustomField17Text) -----
+  var _llAll=(leadThang||[]);
+  var _llNay=_llAll.filter(function(r){return String(r.thang||"")===_thNay;});
+  var _llTong=_llNay.reduce(function(a,r){return a+(+r.so_lead||0);},0);
+  var _TGT_CS=30, _TGT_SYS=450; // KHNS: 30 lead/cơ sở/tháng · 15 cơ sở ≈ 450 (MKT ghi 446)
+  var _llByNguon={}; _llNay.forEach(function(r){var k=r.nguon||"(chưa gắn)"; _llByNguon[k]=(_llByNguon[k]||0)+(+r.so_lead||0);});
+  var _llNguonRows=Object.entries(_llByNguon).sort(function(a,b){return b[1]-a[1];});
+  var _llByCp={}; _llNay.forEach(function(r){var k=r.campus||"(chưa gán)"; _llByCp[k]=(_llByCp[k]||0)+(+r.so_lead||0);});
+  var _llCpRows=Object.entries(_llByCp).sort(function(a,b){return b[1]-a[1];});
+  var _llPct=_TGT_SYS?_llTong/_TGT_SYS:0;
+  var _llDat=_llCpRows.filter(function(e){return e[1]>=_TGT_CS;}).length;
+  var leadNguonCard = !_llAll.length ?
+   ('<div class="card"><h2>Lead tuyển sinh tháng này — theo nguồn &amp; cơ sở <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
+    +'<p class="sub">Nguồn: AMIS CRM module <b>Cơ hội/Tuyển sinh</b> · lead = cơ hội <b>tạo trong tháng</b> · nguồn gốc + Campus xử lý chính</p>'
+    +'<p class="leg">Chưa có dữ liệu lead tháng <b>'+_thNay+'</b>. Chạy bookmarklet <b>"Kéo lead tuyển sinh"</b> trên trang <b>TUYỂN SINH</b> của AMIS để nạp.</p></div>')
+   :
+   ('<div class="card"><h2>Lead tuyển sinh tháng này — theo nguồn &amp; cơ sở <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· '+_thNay+' · CRM Cơ hội</span></h2>'
+    +'<p class="sub">Từ AMIS CRM <b>Cơ hội/Tuyển sinh</b> · lead = cơ hội <b>tạo trong tháng</b> (ngày tạo) · <b>nguồn gốc</b> + <b>Campus xử lý chính</b> · mục tiêu KHNS 30 lead/cơ sở/tháng</p>'
+    +'<div class="kpis">'
+    +kpi("Lead tháng "+_thNay.slice(5),fmt(_llTong),"","cơ hội mới tạo trong tháng — số sống từ CRM")
+    +kpi("Mục tiêu tháng",fmt(_TGT_SYS),"","KHNS: 15 cơ sở × 30 lead")
+    +kpi("% đạt mục tiêu",pct(_llPct,0),"","toàn hệ thống, tháng này")
+    +kpi("Cơ sở đạt ≥30",fmt(_llDat)+"/"+fmt(_llCpRows.length),"","số cơ sở đạt mục tiêu lead")+"</div>"
+    +(_llPct<0.6?'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid #B42318;border-radius:8px;padding:12px 14px;background:rgba(180,35,24,.05)"><p style="margin:0;font-weight:700;color:#B42318">Toàn hệ thống mới đạt '+pct(_llPct,0)+' mục tiêu lead tháng này</p><p class="leg" style="margin:4px 0 0">Lead là đầu vào phễu — thiếu lead tháng này = thiếu nhập học 4–6 tuần tới. Soi cơ sở &amp; nguồn dưới target ở bảng dưới.</p></div>':"")
+    +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo nguồn gốc</p>'
+    +'<div class="tw"><table><thead><tr><th>Nguồn gốc</th><th>Số lead</th><th>Tỷ trọng</th></tr></thead><tbody>'
+    +_llNguonRows.map(function(e){var k=e[0],v=e[1];var isC=/chưa gắn/i.test(k);return '<tr><td>'+(isC?'<span class="down">'+k+'</span>':k)+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(_llTong?v/_llTong:0,0)+'</td></tr>';}).join("")
+    +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TỔNG</td><td class="mono">'+fmt(_llTong)+'</td><td class="mono">100%</td></tr>'
+    +'</tbody></table></div>'
+    +'<p class="leg" style="margin-top:6px">Mục tiêu KHNS chia theo 4 nhóm: Website tự nhiên 171 · Facebook Ads 77 · FB Organic+TikTok 94 · Referral+Zalo+Drop-in 104. Tên nguồn trong CRM khác nhóm KHNS (VD Fanpage gộp cả Ads &amp; Organic — không tách được từ trường nguồn gốc), nên chỉ đối chiếu tổng &amp; theo cơ sở; đối chiếu từng nhóm cần chuẩn hoá tên nguồn.</p>'
+    +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo cơ sở (mục tiêu 30/cơ sở)</p>'
+    +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Lead</th><th>Mục tiêu</th><th>% đạt</th></tr></thead><tbody>'
+    +_llCpRows.map(function(e){var c=e[0],v=e[1];var p=v/_TGT_CS;return '<tr><td>'+c+'</td><td class="mono">'+fmt(v)+'</td><td class="mono" style="opacity:.6">'+_TGT_CS+'</td><td class="mono" style="color:'+(p>=1?"#067647":p>=0.6?"#A96C05":"#B42318")+'">'+pct(p,0)+'</td></tr>';}).join("")
+    +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(_llTong)+'</td><td class="mono">'+fmt(_TGT_SYS)+'</td><td class="mono">'+pct(_llPct,0)+'</td></tr>'
+    +'</tbody></table></div>'
+    +'<div class="q"><b>Câu hỏi:</b> cơ sở đỏ (dưới 60% mục tiêu lead) — thiếu lead vì marketing chưa đẩy, hay lead có mà chưa gắn "Campus xử lý chính" trong CRM? '+((_llByNguon["(chưa gắn)"]||0)>0?fmt(_llByNguon["(chưa gắn)"])+' lead tháng này chưa gắn nguồn gốc — mất dấu kênh nào hiệu quả.':'')+'</div>'
+    +'</div>');
+
   $("body").innerHTML=
    '<div class="zone" id="z1">'
    +'<p class="sub">Bốn thẻ. Mỗi thẻ trả lời được đúng một câu: <b>ai làm gì trong 48 giờ</b>. Thẻ nào không trả lời được thì nằm ở ③.</p>'
@@ -2229,7 +2268,7 @@ async function render(){
    +dongGap+cdCard+'</div>'
 
    +'<div class="zone" id="zdom">'
-   +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — phễu + kết nối phụ huynh")+hsCard+caCard+dsCard+choCard+cohCard+ctCard+'</div>'
+   +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — lead theo nguồn + phễu + kết nối phụ huynh")+leadNguonCard+hsCard+caCard+dsCard+choCard+cohCard+ctCard+'</div>'
    +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — tháng này theo lý do (CRM) + churn theo tháng + nghỉ liên tục + đã lắng nghe")+churnNayCard+churnCard+ngCard+ngHocCard+'</div>'
    +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
    +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
