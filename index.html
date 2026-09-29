@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-29 · b44";
+const BUILD="2026-09-29 · b45";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -269,7 +269,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
-  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop"];
+  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -312,7 +312,8 @@ function taoTruyVan(CP){ return [
     sb.from("v_hr_hopdong").select("co_so,loai_hop_dong,loai_nhom,so_nguoi").limit(500),
     sb.from("v_ph_ketnoi").select("campus,tinh_trang,loai,so_the").limit(500),
     sb.from("hs_churn_thang").select("campus_code,campus_ten,thang,hs_nghi,hs_totnghiep").limit(500),
-    sb.from("v_gv_lop").select("campus,campus_ten,so_gv,so_chu_nhiem,tong_lop").limit(50)
+    sb.from("v_gv_lop").select("campus,campus_ten,so_gv,so_chu_nhiem,tong_lop").limit(50),
+    sb.from("v_nghi_lydo").select("ma_hs,thang,ngay_thoi_hoc,ly_do,ten_hs,campus,nhom_ly_do").order("ngay_thoi_hoc",{ascending:false}).limit(1000)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -362,7 +363,7 @@ async function render(){
   soLanVe++;
   DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
          (KHO&&KHO.tong)?KHO.tong/1000:null);
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi},{data:hrHopDong},{data:phKN},{data:churnThang},{data:gvLop}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi},{data:hrHopDong},{data:phKN},{data:churnThang},{data:gvLop},{data:nghiLyDoCrm}] = KQ;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -1799,8 +1800,8 @@ async function render(){
   const rowChua=r=>"<tr><td>"+(r.ten_hs||r.ma_hs||"—")+"</td><td>"+_stripCp(r.campus)+"</td><td>"+(r.phu_trach||'<span style="opacity:.5">chưa gán</span>')+"</td></tr>";
   const rowChurn=r=>"<tr><td>"+(r.ten_hs||r.ma_hs||"—")+"</td><td>"+_stripCp(r.campus)+"</td><td>"+(r.ly_do_nghi&&String(r.ly_do_nghi).trim()?r.ly_do_nghi:'<span class="down">chưa lắng nghe</span>')+"</td><td>"+(r.phu_trach||'<span style="opacity:.5">chưa gán</span>')+"</td></tr>";
   const ngHocCard = !nghiTong ? "" :
-   '<div class="card"><h2>Học sinh nghỉ — đã lắng nghe (exit) chưa? <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· lũy kế</span></h2>'
-   +'<p class="sub">Từ CRM (AMIS) · học sinh trạng thái "Nghỉ học" · <b>LŨY KẾ toàn thời gian</b> (không theo tháng — xem thẻ "Churn theo tháng" ở trên cho số theo kỳ) · "đã lắng nghe" = có ghi lý do nghỉ</p>'
+   '<div class="card"><h2>Học sinh nghỉ — đã lắng nghe (exit) chưa? <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· lũy kế toàn thời gian (tham khảo)</span></h2>'
+   +'<p class="sub">Từ CRM (AMIS) · học sinh trạng thái "Nghỉ học" · <b>LŨY KẾ toàn thời gian</b> — số <b>tháng hiện hành</b> xem thẻ "Học sinh nghỉ tháng này" ở đầu mảng · "đã lắng nghe" = có ghi lý do nghỉ</p>'
    +'<div class="kpis">'
    +kpi("Học sinh đã nghỉ",fmt(nghiTong),"","tổng lũy kế trong CRM")
    +kpi("Đã lắng nghe",fmt(nghiLd),"","đã ghi nhận vì sao nghỉ")
@@ -1831,9 +1832,52 @@ async function render(){
      +'<div class="tw"><table><thead><tr><th>Học sinh</th><th>Campus</th><th>Lý do (exit)</th><th>Phụ trách gọi</th></tr></thead><tbody>'
      +nghiChurnDS.slice().sort((a,b)=>(_hasLD(a)?1:0)-(_hasLD(b)?1:0)).slice(0,20).map(rowChurn).join("")+"</tbody></table></div>"
      +(nghiChurnDS.length>20?'<p class="note" style="margin-top:6px">Chỉ hiện 20 em (ưu tiên "chưa lắng nghe" lên trên). <b>Còn '+fmt(nghiChurnDS.length-20)+' em — mở CRM để gọi exit toàn bộ.</b> Cột "Phụ trách gọi" trống = chưa ai được giao gọi exit em này.</p>':""):"")
-   +'<p class="leg" style="margin-top:10px">⏱ CRM chưa lưu <b>ngày thôi học</b> nên chưa dựng được "nghỉ theo tháng / theo tuần" từ nguồn sống (đây là số lũy kế). '
-   +'<b>Để có churn theo tháng &amp; theo tuần by campus:</b> nguồn chuẩn là sheet <b>"HS nghỉ học"</b> trong file KHNS hằng tháng (có tháng + cơ sở) — cần đẩy sheet đó lên Supabase thì bảng churn theo kỳ mới tự dựng. Theo tuần cần thêm ngày thôi học từng em (Tomia lưu trữ hoặc CRM bổ sung trường ngày).</p>'
+   +'<p class="leg" style="margin-top:10px">⏱ Đây là số <b>lũy kế toàn thời gian</b> (tham khảo). Con số <b>tháng hiện hành</b> nay lấy trực tiếp từ CRM (trường <b>Ngày thôi học</b>) — xem thẻ <b>"Học sinh nghỉ tháng này — theo lý do"</b> ở trên đầu mảng này.</p>'
    +'</div>';
+
+  // ----- THE: CHURN THANG NAY THEO LY DO (nguon song tu CRM: v_nghi_lydo, truong Ngay thoi hoc = CustomField15) -----
+  // Nguyen tac (Phuong 29/09): CHI thang hien hanh, khong lay all data. Bookmarklet chi day thang hien tai.
+  const _thNay = (typeof homNay==="string"?homNay:new Date().toISOString()).slice(0,7);
+  const clyAll = (nghiLyDoCrm||[]);
+  const clyNay = clyAll.filter(r=>String(r.thang||"")===_thNay);
+  const clyTong = clyNay.length;
+  const clyCoLD = clyNay.filter(r=>String(r.nhom_ly_do||"")!=="Chưa ghi lý do").length;
+  const clyChuaLD = clyTong - clyCoLD;
+  const clyPct = clyTong? clyCoLD/clyTong : 0;
+  const clyByLD = {}; clyNay.forEach(r=>{const k=r.nhom_ly_do||"Chưa ghi lý do"; clyByLD[k]=(clyByLD[k]||0)+1;});
+  const clyLDRows = Object.entries(clyByLD).sort((a,b)=>b[1]-a[1]);
+  const clyByCp = {}; clyNay.forEach(r=>{const k=_stripCp(r.campus)||"(chưa gán)"; clyByCp[k]=(clyByCp[k]||0)+1;});
+  const clyCpRows = Object.entries(clyByCp).sort((a,b)=>b[1]-a[1]);
+  const clyChuyen = (clyByLD["Chuyển nhà / khu vực"]||0);
+  const clyChuyenPct = clyTong? clyChuyen/clyTong : 0;
+  const _dmy = s=>{ s=String(s||""); return s.length>=10? s.slice(8,10)+"/"+s.slice(5,7) : s; };
+  const churnNayCard = !clyAll.length ?
+   ('<div class="card"><h2>Học sinh nghỉ tháng này — theo lý do <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
+    +'<p class="sub">Nguồn: AMIS CRM · trường <b>Ngày thôi học</b> + <b>Lý do thôi học</b> · chỉ tháng hiện hành</p>'
+    +'<p class="leg">Chưa có dữ liệu nghỉ tháng <b>'+_thNay+'</b> từ CRM. Chạy bookmarklet <b>"Kéo HS thôi học"</b> trên trang HỌC SINH của AMIS để nạp — chỉ nạp tháng hiện hành, không đụng số lũy kế.</p></div>')
+   :
+   ('<div class="card"><h2>Học sinh nghỉ tháng này — theo lý do <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· '+_thNay+' · nguồn sống CRM</span></h2>'
+    +'<p class="sub">Từ AMIS CRM · trường <b>Ngày thôi học</b> + <b>Lý do thôi học</b> · <b>CHỈ tháng hiện hành</b> — không gộp lũy kế</p>'
+    +'<div class="kpis">'
+    +kpi("Nghỉ tháng "+_thNay.slice(5),fmt(clyTong),"","học sinh thôi học trong tháng — số sống từ CRM")
+    +kpi("Đã ghi lý do",fmt(clyCoLD),"","có lý do thôi học trong CRM")
+    +kpi("Tỷ lệ lắng nghe",pct(clyPct,0),"","tháng này — càng cao càng hiểu vì sao mất HS")
+    +kpi("Chưa ghi lý do",fmt(clyChuaLD),"","cần bổ sung để exit interview")+"</div>"
+    +(clyChuyenPct>=0.4 ? '<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid #0369a1;border-radius:8px;padding:12px 14px;background:rgba(3,105,161,.06)"><p style="margin:0;font-weight:700;color:#0369a1">'+pct(clyChuyenPct,0)+' HS nghỉ tháng này là do CHUYỂN NHÀ / khu vực</p><p class="leg" style="margin:4px 0 0">Phần lớn KHÔNG phải lỗi chất lượng — churn do relocation. Cần soi riêng nhóm này với nhóm "nghỉ học / không hài lòng" để không chữa nhầm chỗ.</p></div>' : "")
+    +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo lý do thôi học</p>'
+    +'<div class="tw"><table><thead><tr><th>Lý do</th><th>Số bé</th><th>%</th></tr></thead><tbody>'
+    +clyLDRows.map(function(e){var k=e[0],v=e[1];var isChua=k==="Chưa ghi lý do";return '<tr><td>'+(isChua?'<span class="down">'+k+'</span>':k)+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(clyTong?v/clyTong:0,0)+'</td></tr>';}).join("")
+    +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TỔNG</td><td class="mono">'+fmt(clyTong)+'</td><td class="mono">100%</td></tr>'
+    +'</tbody></table></div>'
+    +(clyCpRows.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo cơ sở</p>'
+      +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Nghỉ tháng này</th></tr></thead><tbody>'
+      +clyCpRows.map(function(e){return '<tr><td>'+e[0]+'</td><td class="mono">'+fmt(e[1])+'</td></tr>';}).join("")+'</tbody></table></div>':"")
+    +'<details style="margin-top:14px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Danh sách '+fmt(clyTong)+' bé nghỉ tháng này — đọc từng em</summary>'
+    +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>Học sinh</th><th>Cơ sở</th><th>Ngày thôi học</th><th>Lý do</th></tr></thead><tbody>'
+    +clyNay.slice().sort(function(a,b){return String(b.ngay_thoi_hoc||"").localeCompare(String(a.ngay_thoi_hoc||""));}).map(function(r){return '<tr><td>'+(r.ten_hs||r.ma_hs||"—")+'</td><td>'+_stripCp(r.campus)+'</td><td class="mono">'+_dmy(r.ngay_thoi_hoc)+'</td><td>'+(String(r.ly_do||"").trim()?r.ly_do:'<span class="down">chưa ghi</span>')+'</td></tr>';}).join("")
+    +'</tbody></table></div></details>'
+    +'<div class="q"><b>Câu hỏi:</b> '+fmt(clyChuaLD)+' bé nghỉ tháng này chưa ghi lý do — ai gọi exit trong tuần này? Và trong nhóm "chuyển nhà", có bao nhiêu em thực ra không hài lòng nhưng ngại nói thẳng?</div>'
+    +'</div>');
 
   // ----- THE: KET NOI PHU HUYNH (nhat ky cham soc PH hien huu, tu CRM phan he hoc sinh -> v_ph_ketnoi) -----
   // ĐÚNG NGHĨA: campus gọi/chạm PHỤ HUYNH HIỆN HỮU mỗi ngày — để tìm lead mới (giới thiệu),
@@ -2186,7 +2230,7 @@ async function render(){
 
    +'<div class="zone" id="zdom">'
    +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — phễu + kết nối phụ huynh")+hsCard+caCard+dsCard+choCard+cohCard+ctCard+'</div>'
-   +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — churn theo tháng + nghỉ liên tục + đã lắng nghe (exit)")+churnCard+ngCard+ngHocCard+'</div>'
+   +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — tháng này theo lý do (CRM) + churn theo tháng + nghỉ liên tục + đã lắng nghe")+churnNayCard+churnCard+ngCard+ngHocCard+'</div>'
    +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
    +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
    +'<div class="dom" data-dom="channel">'+SEC("Channel — Website · Google · Meta · Messenger")+webCard+chanCard+kwCard+nearCard+pageCard+evCard+wCard+hrCard+metaCard+cmpCard+'</div>'
