@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-29 · b45";
+const BUILD="2026-09-29 · b46";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1758,7 +1758,7 @@ async function render(){
   const churnCard = !ctMonths.length ? "" :
    '<div class="card"><h2>Churn theo tháng — nghỉ thật, tách tốt nghiệp</h2>'
    +'<p class="sub">Nguồn: KHNS sheet "Nghỉ học" (export CRM theo tháng) · đến <b>T'+ctMax+'/2026</b> · <b>churn thật = HS nghỉ học</b>, KHÔNG gồm tốt nghiệp/lên lớp 1</p>'
-   +'<p class="leg" style="margin-top:-6px">⏱ Đây là số <b>theo từng tháng</b> (khác thẻ "đã lắng nghe" bên dưới là lũy kế toàn thời gian). Tháng mới nhất (T'+ctMax+') có thể <b>chưa đủ</b> nếu file export chưa cập nhật hết tháng.</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Đây là số <b>theo từng tháng</b> từ file KHNS (export tay, hay trễ). Tháng mới nhất (T'+ctMax+') <b>thường chưa đủ</b>. <b>Số THẬT của tháng hiện hành lấy từ CRM nguồn sống</b> — xem thẻ <b>"Học sinh nghỉ tháng này — theo lý do"</b> ở đầu mảng (VD: T9 KHNS hiện = '+fmt(ctSys[ctMax].nghi)+', nhưng CRM = số ở thẻ đầu). Dùng thẻ CRM cho tháng này, thẻ KHNS này để xem xu hướng nhiều tháng.</p>'
    +'<div class="kpis">'
    +kpi("Nghỉ thật T"+ctMax,fmt(ctSys[ctMax].nghi),"","churn trong tháng — cần chữa")
    +(ctPrev?kpi("Nghỉ thật T"+ctPrev,fmt(ctSys[ctPrev].nghi),"","tháng liền trước"):"")
