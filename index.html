@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-25 · b43";
+const BUILD="2026-09-29 · b44";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -751,9 +751,16 @@ async function render(){
 
   // ----- THE: AN TOAN & SU CO (Tomia, sheet Van hanh) -----
   const scLoc=(suCo||[]).filter(r=>hopCP(r.campus));
-  const scMo=scLoc.filter(r=>r.con_mo), scNang=scMo.filter(r=>r.he_trong);
+  const _thMS=homNay.slice(0,7);                                  // "YYYY-MM" thang hien hanh
+  const _trongThang=r=>String(r.ngay_tao||"").slice(0,7)===_thMS;
+  const scMoTatCa=scLoc.filter(r=>r.con_mo);                      // dang mo, moi thoi gian
+  const scMo=scMoTatCa.filter(_trongThang);                      // dang mo, TAO trong thang hien hanh
+  const scNang=scMo.filter(r=>r.he_trong);
   const scChuaGiao=scMo.filter(r=>!r.nguoi_duoc_giao);
   const scTBngay=scMo.length?Math.round(scMo.reduce((a,r)=>a+(+r.so_ngay_mo||0),0)/scMo.length):0;
+  // an toan tre em (nguyen tac 1): su co nghiem trong CU (truoc thang nay) van dang mo -> KHONG giau
+  const scNangCu=scMoTatCa.filter(r=>r.he_trong&&!_trongThang(r))
+    .sort((a,b)=>(+b.so_ngay_mo||0)-(+a.so_ngay_mo||0));
   const scTheoCampus={}; scMo.forEach(r=>{const k=r.campus||"(chưa rõ)";
     const o=scTheoCampus[k]||(scTheoCampus[k]={mo:0,nang:0,lau:0}); o.mo++; if(r.he_trong)o.nang++;
     if((+r.so_ngay_mo||0)>30)o.lau++});
@@ -777,12 +784,19 @@ async function render(){
   const scCard = !scLoc.length ? "" :
    '<div class="card" style="border-color:#7f1d1d"><h2>🚨 An toàn &amp; sự cố</h2>'
    +'<p class="sub">Từ Tomia · '+nhanCP+' · ticket vận hành, hành vi, an toàn, sức khoẻ</p>'
-   +'<p class="leg" style="margin-top:-6px">⏱ Toàn bộ ticket có trong các kỳ báo cáo đã kéo về. <b>Không đổi theo ô chọn thời gian</b> — sự cố chưa đóng thì không có hạn.</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Chỉ đếm ticket <b>đang mở, tạo trong tháng '+_thMS+'</b> (tháng hiện hành). Sự cố nghiêm trọng cũ hơn hiển thị riêng ở dưới — <b>không giấu</b>.</p>'
    +'<div class="kpis">'
-   +kpi("Còn mở",fmt(scMo.length),"","chưa đóng, chưa hoàn tất")
+   +kpi("Còn mở (tháng này)",fmt(scMo.length),"","tạo trong tháng "+_thMS+", chưa đóng")
    +kpi("Nghi nghiêm trọng",fmt(scNghi.length),"","khớp 7 tiêu chí — cần người xác nhận")
    +kpi("Chưa giao cho ai",fmt(scChuaGiao.length),"","không có người được giao")
    +kpi("Mở trung bình",fmt(scTBngay)+" ngày","","tính đến hôm nay")+"</div>"
+   +(scNangCu.length ? '<div style="margin:14px 0;padding:10px 12px;border:1px solid #7f1d1d;border-radius:8px;background:rgba(220,38,38,.08)">'
+     +'<p style="margin:0 0 4px;font-weight:700;color:#f87171">⚠️ '+fmt(scNangCu.length)+' sự cố nghiêm trọng CŨ (trước tháng '+_thMS+') vẫn đang mở theo lần kéo gần nhất</p>'
+     +'<p class="leg" style="margin:0 0 8px">Có thể đã đóng ở Tomia nhưng app chưa kéo lại — <b>vào Tomia kiểm tra &amp; đóng</b>. Đây là an toàn trẻ nên không bỏ qua.</p>'
+     +'<details><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Xem danh sách</summary>'
+     +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Campus</th><th>Việc gì</th><th>Mức</th><th>Đã mở</th></tr></thead><tbody>'
+     +scNangCu.map(r=>'<tr><td>'+(r.ngay_tao||"—")+'</td><td>'+nhan(r.campus)+'</td><td>'+(r.tieu_de||"—")+'</td><td>'+(r.muc_do||"—")+'</td><td class="mono"><span class="down">'+fmt(r.so_ngay_mo)+' ngày</span></td></tr>').join("")
+     +'</tbody></table></div></details></div>' : "")
    +(scNang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghiêm trọng &amp; còn mở — đọc từng dòng</p>'
      +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Campus</th><th>Việc gì</th><th>Loại</th><th>Mức</th><th>Trạng thái</th><th>Đã mở</th><th>Giao cho</th></tr></thead><tbody>'
      +scNang.sort((a,b)=>(+b.so_ngay_mo||0)-(+a.so_ngay_mo||0)).map(r=>
@@ -1162,8 +1176,8 @@ async function render(){
   const tomiaWkN=w=>{const lo=w,hi=_sunOf(w).toISOString().slice(0,10);
     const s=new Set();_nhCP.forEach(r=>{if(r.d>=lo&&r.d<=hi)s.add(r.ma);});return s.size;};
   // luy ke: dem theo THANG cua ngay Chu nhat cua tuan (de tuan 31/08 chua tre thang 9 tinh vao thang 9)
-  const tomiaLuyKe=w=>{const sun=_sunOf(w);const mth=sun.getUTCMonth()+1,yr=sun.getUTCFullYear();
-    const hi=sun.toISOString().slice(0,10);const s=new Set();
+  const tomiaLuyKe=w=>{const _td=new Date(homNay+"T00:00:00Z");const mth=_td.getUTCMonth()+1,yr=_td.getUTCFullYear();
+    const hi=_sunOf(w).toISOString().slice(0,10);const s=new Set();
     _nhCP.forEach(r=>{const dt=new Date(r.d+"T00:00:00Z");
       if(dt.getUTCFullYear()===yr&&dt.getUTCMonth()+1===mth&&r.d<=hi)s.add(r.ma);});return s.size;};
   const luyKeThang=tuanNay?tomiaLuyKe(String(tuanNay.tuan).slice(0,10)):0;
