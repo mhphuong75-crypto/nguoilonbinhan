@@ -20,21 +20,45 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install google-auth requests openpyxl
-      - run: python scripts/sync.py 90
-        env:
-          GA_SA_KEY: ${{ secrets.GA_SA_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          META_TOKEN: ${{ secrets.NGUOILONBINHAN_META_TOKEN }}
+
+      # ---- BOC TRUOC (parse first) — chay nhanh, khong phu thuoc GA/Meta ----
+      # De file thô "lay ve roi chua boc" khong bao gio bi ket sau buoc GA/Meta cham/treo.
       - name: Boc file Tomia trong kho
-        if: always()
+        timeout-minutes: 10
         run: python scripts/tomia.py
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       - name: Boc checklist SUPA trong kho
         if: always()
+        timeout-minutes: 10
         run: python scripts/supa.py
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+      # ---- Lam moi mv_* NGAY SAU khi boc xong (event-driven, khong doi pg_cron) ----
+      - name: Lam moi kho (mv_*)
+        if: always()
+        timeout-minutes: 12
+        run: |
+          curl -sS -X POST "${SUPABASE_URL}/rest/v1/rpc/lam_moi_kho" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            --max-time 660 -d '{}' || echo "lam_moi_kho: timeout/err (pg_cron van chay du phong)"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+      # ---- GA4 + Meta (cham/de treo) chay CUOI, co timeout, khong chan cac buoc tren ----
+      - name: Keo GA4 + Meta
+        if: always()
+        timeout-minutes: 20
+        run: python scripts/sync.py 90
+        env:
+          GA_SA_KEY: ${{ secrets.GA_SA_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          META_TOKEN: ${{ secrets.NGUOILONBINHAN_META_TOKEN }}
