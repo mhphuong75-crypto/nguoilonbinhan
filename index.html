@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{--bg:#F4F6F5;--surface:#fff;--sunk:#EDF1EF;--line:#DCE3E0;--ink:#141D1B;--ink2:#42514E;
---muted:#6E7D79;--accent:#0F5348;--soft:#E1EEE9;--good:#4F7A1E;--warn:#A96C05;--crit:#A93126;
+--muted:#6E7D79;--accent:var(--accent);--soft:#E1EEE9;--good:#4F7A1E;--warn:var(--warn);--crit:#A93126;
 --shadow:0 1px 2px rgba(20,29,27,.06),0 6px 20px -12px rgba(20,29,27,.22)}
 @media(prefers-color-scheme:dark){:root{--bg:#0D1210;--surface:#151D1B;--sunk:#1D2724;--line:#2A3633;
 --ink:#E7EDEA;--ink2:#B4C1BD;--muted:#8B9995;--accent:#4EB69D;--soft:#173029;--good:#8DBE4E;
@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b54";
+const BUILD="2026-10-01 · b55";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -633,7 +633,7 @@ async function render(){
       +' phiên — tỷ lệ <b class="mono">'+pct(ses?raiseTot/ses:0,2)+'</b>.'
       +(keTot?' GA4 đếm được <b class="mono">'+fmt(keTot)+'</b> key event.':'')
       +'<br>Ai nhận những lượt giơ tay này, và sau bao lâu thì có người gọi lại?</div>'
-      +'<div class="gap" style="border-left-color:#0F5348"><b>Cách đo "ai nhận & sau bao lâu gọi lại":</b><br>'
+      +'<div class="gap" style="border-left-color:var(--accent)"><b>Cách đo "ai nhận & sau bao lâu gọi lại":</b><br>'
       +'1. <b>Ai nhận:</b> giơ tay qua Zalo/Messenger → xem thẻ "Messenger &amp; Zalo" (người xử lý). Giơ tay qua form/hotline → hiện web <b>không ghi người nhận</b>; để đo, gán mỗi kênh cho 1 người trực (VD Zalo → Hiền, hotline → lễ tân campus) và ghi rõ trong SOP.<br>'
       +'2. <b>Sau bao lâu gọi lại:</b> lấy giờ giơ tay (cột thời gian ở web_click) trừ giờ "lần chạm đầu" ghi trong AMIS của lead trùng SĐT → ra <b>thời gian phản hồi</b>. Mục tiêu ME: gọi lại trong <b>4 giờ</b> (Contact rate 4h).<br>'
       +'3. Chưa nối được tự động vì web chưa lưu SĐT — tạm thời mỗi trực ca ghi tay: nhận lúc mấy giờ, gọi lại lúc mấy giờ. <b>Đây là số cần cho Campus Health (Contact rate).</b></div>'
@@ -1007,7 +1007,7 @@ async function render(){
    +'Ví dụ Thảo Điền, checklist an toàn lớp học: <b>48 lần kiểm</b> → <b>324 câu</b> → <b>48 câu chưa đạt</b>. Hai số 48 bằng nhau là trùng hợp, không liên quan.</p>'
    +'<p class="leg"><b>Cách đọc:</b> tỷ lệ đạt cao không có nghĩa là an toàn — nó có nghĩa là <b>người đi kiểm đã trả lời “đã hoàn thành”</b>. '
    +'Đối chiếu campus có tỷ lệ đạt cao nhưng vẫn có ticket sự cố ở thẻ trên: đó là chỗ checklist đang không nhìn thấy thứ cần nhìn.</p>'
-   +(spCam["(phiếu chưa ghi cơ sở)"]?'<p class="leg" style="border-left:3px solid #A96C05;padding-left:10px"><b>⚠ "(phiếu chưa ghi cơ sở)"</b> = có '+fmt(spCam["(phiếu chưa ghi cơ sở)"].ph)+' lần kiểm mà bản ghi SUPA <b>không gắn tên cơ sở</b> — nên app không biết đặt vào campus nào. '
+   +(spCam["(phiếu chưa ghi cơ sở)"]?'<p class="leg" style="border-left:3px solid var(--warn);padding-left:10px"><b>⚠ "(phiếu chưa ghi cơ sở)"</b> = có '+fmt(spCam["(phiếu chưa ghi cơ sở)"].ph)+' lần kiểm mà bản ghi SUPA <b>không gắn tên cơ sở</b> — nên app không biết đặt vào campus nào. '
      +'Đây là lý do bảng có dòng "không có địa điểm". Nguyên nhân: người đi kiểm chọn bộ checklist nhưng <b>bỏ trống ô cơ sở</b> trên SUPA, hoặc checklist đó là cấp hệ thống (không thuộc 1 campus). '
      +'<b>Việc cần làm:</b> yêu cầu SUPA bắt buộc chọn cơ sở khi tạo phiếu, để mọi lần kiểm đều truy được về campus.</p>':"")
    +'<div class="q"><b>Câu hỏi:</b> campus nào lâu nhất chưa có lần kiểm nào? Và trong số câu “chưa đạt”, câu nào lặp lại nhiều lần — '
@@ -1036,7 +1036,7 @@ async function render(){
   // chi hien ten khi do la NGUOI PHU TRACH THAT; con lai de trong co chu, khong doan
   const aiLam=c=>{const t=CO[c];
     if(t&&t.that&&(t.nguon==="người phụ trách"||t.nguon==="QLVH")) return t.that;
-    return '<span style="color:#A96C05">chưa gán người phụ trách</span>';};
+    return '<span style="color:var(--warn)">chưa gán người phụ trách</span>';};
   const oHan=(k,im)=>{const h=HAN[k]; if(h===null) return '<b>tuần này</b>';
     const con=h-(+im||0);
     if(con<0) return '<b class="down">quá hạn '+Math.abs(con)+' ngày</b>';
@@ -1216,8 +1216,8 @@ async function render(){
      +'<div class="tw"><table><thead><tr><th>Đang ở bước</th><th>Số lead</th><th>Im lặng TB (ngày)</th><th>Chưa ghi lý do</th></tr></thead><tbody>'
      +ktRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+Math.round(v.ngay/v.n)
        +'</td><td class="mono">'+fmt(v.chua)+" / "+fmt(v.n)+"</td></tr>").join("")+"</tbody></table></div>" : "")
-   +(ketTot ? '<div style="margin:16px 0 4px;border:1px solid #B42318;border-left:4px solid #B42318;border-radius:8px;padding:12px 14px;background:rgba(180,35,24,.06)">'
-     +'<p style="margin:0 0 4px;font-weight:700;color:#B42318">⚠ '+fmt(ketTot)+' lead đang KẸT trong phễu — cần vào CRM xử lý ngay</p>'
+   +(ketTot ? '<div style="margin:16px 0 4px;border:1px solid var(--crit);border-left:4px solid var(--crit);border-radius:8px;padding:12px 14px;background:rgba(180,35,24,.06)">'
+     +'<p style="margin:0 0 4px;font-weight:700;color:var(--crit)">⚠ '+fmt(ketTot)+' lead đang KẸT trong phễu — cần vào CRM xử lý ngay</p>'
      +'<p class="leg" style="margin:0 0 8px"><b>"Đang kẹt giữa phễu" ('+fmt(ketTot)+') là gì:</b> số lead đã vào phễu tuyển sinh nhưng <b>chưa ra kết quả</b> — vẫn ở các bước "đang tư vấn / đã kết nối chờ phản hồi / đang ra quyết định", chưa chốt, chưa từ chối, chưa ai đóng sổ. Mỗi lead này là tiền quảng cáo đã bỏ ra nhưng đang nguội dần. <b>Hành động: vào CRM, lọc theo campus bên dưới, giao đích danh người gọi trong 48h.</b></p>'
      +'<div class="tw"><table><thead><tr><th>Campus</th><th>Lead đang kẹt</th></tr></thead><tbody>'
      +ketCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono"><span class="down">'+fmt(v)+"</span></td></tr>").join("")
@@ -1261,7 +1261,7 @@ async function render(){
          +ds.map(r=>'<tr'+(r.tomia_da_di_hoc?' style="opacity:.5"':'')+'><td>'+(r.ten_hs||'(không tên)')+'</td>'
              +'<td>'+(r.lop||'—')+'</td>'
              +'<td>'+(r.tomia_da_di_hoc
-                 ? '<span style="color:#067647">✓ đã đi học'+(r.tomia_ngay?' ('+String(r.tomia_ngay).slice(0,10)+')':'')+'</span>'
+                 ? '<span style="color:var(--good)">✓ đã đi học'+(r.tomia_ngay?' ('+String(r.tomia_ngay).slice(0,10)+')':'')+'</span>'
                  : '<span class="down">● chưa thấy — đang chờ</span>')+'</td></tr>').join("")
          +'</tbody></table></div>';
      }).join("")
@@ -1437,17 +1437,17 @@ async function render(){
     const veKho=(t&&t.luc)?new Date(t.luc):null;
     const lamMoiTre = !!(lmLuc && veKho && !isNaN(veKho.getTime()) && lmLuc < veKho);
     let cua=0, nhan="", mau="var(--ink2)";
-    if(chet.length){          cua=3; nhan="Máy chủ quá tải — thiếu "+chet.length+"/"+x.bang.length+" bảng"; mau="#B42318"; }
+    if(chet.length){          cua=3; nhan="Máy chủ quá tải — thiếu "+chet.length+"/"+x.bang.length+" bảng"; mau="var(--crit)"; }
     else if(x.tay&&coTuoi){
-      if(gio==null)            { cua=1; nhan="Chưa bao giờ được kéo về"; mau="#B42318"; }
-      else if(gio>30)          { cua=1; nhan="Chưa ai bấm dấu trang — "+doTuoi(gio); mau="#B42318"; }
-      else if(x.den==null)     { cua=2; nhan=lamMoiTre?"Đã về kho, bảng tính sẵn chưa làm mới":"Đã kéo về, chưa bóc ra số";  mau="#A96C05"; }
-      else if(qua)             { cua=2; nhan=(lamMoiTre?"Đã về kho, bảng tính sẵn chưa làm mới — thiếu ":"Đã kéo về, chờ job bóc số — thiếu ")+moTaTre;  mau="#A96C05"; }
-      else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
+      if(gio==null)            { cua=1; nhan="Chưa bao giờ được kéo về"; mau="var(--crit)"; }
+      else if(gio>30)          { cua=1; nhan="Chưa ai bấm dấu trang — "+doTuoi(gio); mau="var(--crit)"; }
+      else if(x.den==null)     { cua=2; nhan=lamMoiTre?"Đã về kho, bảng tính sẵn chưa làm mới":"Đã kéo về, chưa bóc ra số";  mau="var(--warn)"; }
+      else if(qua)             { cua=2; nhan=(lamMoiTre?"Đã về kho, bảng tính sẵn chưa làm mới — thiếu ":"Đã kéo về, chờ job bóc số — thiếu ")+moTaTre;  mau="var(--warn)"; }
+      else                     { cua=0; nhan="Bình thường"; mau="var(--good)"; }
     }else{
-      if(x.den==null)          { cua=2; nhan="Chưa có số nào"; mau="#A96C05"; }
-      else if(qua)             { cua=2; nhan="Job tự động chưa chạy — "+moTaTre; mau="#B42318"; }
-      else                     { cua=0; nhan="Bình thường"; mau="#067647"; }
+      if(x.den==null)          { cua=2; nhan="Chưa có số nào"; mau="var(--warn)"; }
+      else if(qua)             { cua=2; nhan="Job tự động chưa chạy — "+moTaTre; mau="var(--crit)"; }
+      else                     { cua=0; nhan="Bình thường"; mau="var(--good)"; }
     }
     return Object.assign({},x,{gio:gio,cua:cua,nhan:nhan,mau:mau,treHoc:treHoc,chet:chet,lamMoiTre:lamMoiTre});
   });
@@ -1471,7 +1471,7 @@ async function render(){
    : '<b>Cả hai cửa đều thông.</b> Nếu vẫn thấy số cũ thì là cửa 3 — trình duyệt đang giữ số cũ: bấm <b>↻ Tải lại số</b> ở đầu trang.';
 
   const skCard =
-   '<details class="card"'+(skHong.length?' style="border-color:'+((skCua3.length||skCua1.length)?'#B42318':'#A96C05')+'"':'')+'>'
+   '<details class="card"'+(skHong.length?' style="border-color:'+((skCua3.length||skCua1.length)?'var(--crit)':'var(--warn)')+'"':'')+'>'
    +'<summary>'+(skCua3.length?'⛔':(skHong.length?'⚠':'✓'))+' Sức khoẻ dữ liệu — '
    +(skCua3.length? skCua3.length+'/6 nguồn KHÔNG lấy được số' : (skHong.length? skHong.length+'/6 nguồn có vấn đề' : 'cả 6 nguồn bình thường'))+'</summary>'
    +'<p class="sub">Số trên app chỉ mới bằng nguồn cũ nhất. Đọc dòng nào màu đỏ hoặc cam trước.</p>'
@@ -1482,7 +1482,7 @@ async function render(){
        +'<td class="mono">'+(x.den||"—")+'</td>'
        +'<td style="color:'+x.mau+'">'+(x.cua===0?"✓ ":(x.cua===1?"⚠ ":(x.cua===3?"⛔ ":"⏳ ")))+x.nhan+'</td></tr>').join("")
    +'</tbody></table></div>'
-   +(chetTatCa.length? '<div class="q" style="border-color:#B42318"><b>⛔ Máy chủ không trả kịp '+chetTatCa.length+' bảng:</b> '
+   +(chetTatCa.length? '<div class="q" style="border-color:var(--crit)"><b>⛔ Máy chủ không trả kịp '+chetTatCa.length+' bảng:</b> '
        +chetTatCa.map(vietTen).join(" · ")
        +'.<br>Các thẻ dùng những bảng này <b>không hiện trên trang</b> — nghĩa là <b>chưa lấy được</b>, '
        +'<b>không phải</b> là không có việc. Bấm <b>↻ Tải lại số</b> để thử lại; nếu lặp lại nhiều lần thì máy chủ đang quá tải, báo cho Phuong.</div>' : "")
@@ -1504,7 +1504,7 @@ async function render(){
    +'Chỉ tin số từ <b>ngày học gần nhất trở về trước</b>.</p></details>';
   const treNgay = bdNgay ? ngayHocTuDen(bdNgay,homNay) : null;
   const bangTre = (treNgay!=null && treNgay>=1) ?
-   '<details class="card" style="border-color:#A96C05">'
+   '<details class="card" style="border-color:var(--warn)">'
    +'<summary>⏳ Dữ liệu điểm danh đang trễ — thiếu '+treNgay+' ngày học</summary>'
    +'<p class="sub">Ngày học gần nhất có điểm danh: <b>'+bdNgay+'</b> · hôm nay '+homNay+'</p>'
    +'<p class="leg" style="margin-top:-6px;font-size:13.5px;color:var(--ink2)">Thiếu <b class="down">'+treNgay+' ngày học</b>. '
@@ -1716,8 +1716,8 @@ async function render(){
   const finArr=Object.entries(finBy).map(([k,o])=>({code:k,ten:o.ten,m:o.m,lastRatio:(_rt(o.m[lastM])==null?9:_rt(o.m[lastM]))}))
     .filter(x=>last3.some(mn=>x.m[mn]&&x.m[mn].dt)).sort((a,b)=>a.lastRatio-b.lastRatio);
   const sysM={}; last3.forEach(mn=>{let dt=0,l=0,e=0;(finCampus||[]).forEach(r=>{if(+r.thang===mn){dt+=+r.dt_th||0;l+=+r.luong||0;e+=+r.eb_th||0;}});sysM[mn]={dt,luong:l,eb:e};});
-  const rColor=v=>v==null?"var(--muted)":(v>0.55?"#B42318":v>0.45?"#A96C05":"#067647");
-  const eColor=v=>v==null?"var(--muted)":(v<0?"#B42318":v<0.05?"#A96C05":"#067647");
+  const rColor=v=>v==null?"var(--muted)":(v>0.55?"var(--crit)":v>0.45?"var(--warn)":"var(--good)");
+  const eColor=v=>v==null?"var(--muted)":(v<0?"var(--crit)":v<0.05?"var(--warn)":"var(--good)");
   const cellR=v=>'<td class="mono" style="color:'+rColor(v)+'">'+pc(v)+"</td>";
   const cellE=v=>'<td class="mono" style="color:'+eColor(v)+'">'+pc(v)+"</td>";
   const finLoLast=finArr.filter(x=>{const e=_em(x.m[lastM]);return e!=null&&e<0;}).length;
@@ -1732,9 +1732,9 @@ async function render(){
    +kpi("%EBITDA hệ thống (T"+lastM+")",pc(sysM[lastM].dt?sysM[lastM].eb/sysM[lastM].dt:null),"","lợi nhuận sau phân bổ")
    +kpi("Campus lỗ (T"+lastM+")",fmt(finLoLast)+" / "+fmt(finArr.length),"","%EBITDA âm tháng gần nhất")
    +kpi("Vượt ngưỡng 45% (T"+lastM+")",fmt(finVuotLast)+" / "+fmt(finArr.length),"","lương/DT trên 45%")+"</div>"
-   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid #067647;border-radius:8px;padding:12px 14px;background:rgba(6,118,71,.05)">'
+   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid var(--good);border-radius:8px;padding:12px 14px;background:rgba(6,118,71,.05)">'
    +'<p style="margin:0 0 4px;font-weight:700">Đòn bẩy số 1: tỷ lệ Lương/Doanh thu</p>'
-   +'<p class="leg" style="margin:0">Ngưỡng: <b style="color:#067647">≤45% → khỏe</b>; <b style="color:#A96C05">45–55% → mỏng</b>; <b style="color:#B42318">&gt;55% → lỗ</b>. '
+   +'<p class="leg" style="margin:0">Ngưỡng: <b style="color:var(--good)">≤45% → khỏe</b>; <b style="color:var(--warn)">45–55% → mỏng</b>; <b style="color:var(--crit)">&gt;55% → lỗ</b>. '
    +'Xem 3 tháng để thấy campus nào đang <b>xấu đi</b> (tỷ lệ lương/DT tăng dần) hay <b>cải thiện</b>. Campus lỗ thường do doanh thu thấp so với bộ khung nhân sự — chữa bằng kéo sĩ số, không cắt lương.</p></div>'
    +'<div class="tw"><table style="min-width:640px"><thead>'
    +'<tr><th rowspan="2" style="vertical-align:bottom">Campus</th><th colspan="'+last3.length+'" style="text-align:center">%Lương / Doanh thu</th><th colspan="'+last3.length+'" style="text-align:center">%EBITDA</th></tr>'
@@ -1773,12 +1773,12 @@ async function render(){
    +'<div class="tw" style="margin-top:14px"><table style="min-width:520px"><thead><tr><th>Cơ sở</th>'
    +ctLast.map(m=>'<th>Nghỉ T'+m+'</th>').join("")+'<th>Tốt nghiệp T'+ctMax+'</th></tr></thead><tbody>'
    +ctCampRows.map(function(e){var c=e[0],d=e[1];
-      return "<tr><td>"+c+"</td>"+ctLast.map(function(m){var n=(d[m]||{}).nghi||0;return '<td class="mono" style="color:'+(n>=5?"#B42318":n>=3?"#A96C05":"var(--muted)")+'">'+(n||"")+"</td>";}).join("")
+      return "<tr><td>"+c+"</td>"+ctLast.map(function(m){var n=(d[m]||{}).nghi||0;return '<td class="mono" style="color:'+(n>=5?"var(--crit)":n>=3?"var(--warn)":"var(--muted)")+'">'+(n||"")+"</td>";}).join("")
         +'<td class="mono" style="opacity:.7">'+(((d[ctMax]||{}).tot)||"")+"</td></tr>";}).join("")
    +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td>'
    +ctLast.map(m=>'<td class="mono">'+fmt(ctSys[m].nghi)+'</td>').join("")+'<td class="mono">'+fmt(ctSys[ctMax].tot)+'</td></tr>'
    +"</tbody></table></div>"
-   +'<p class="leg"><b>Đỏ</b> = ≥5 nghỉ/tháng, <b style="color:#A96C05">cam</b> = 3–4 — cơ sở cần soi. T6 thường cao (cuối năm học). Số này là <b>đầu ra thật từ CRM</b>, khác con số "đã lắng nghe" (lũy kế) — hai thẻ trả lời 2 câu khác nhau: <i>tháng này mất bao nhiêu</i> vs <i>đã hỏi lý do bao nhiêu người</i>.</p>'
+   +'<p class="leg"><b>Đỏ</b> = ≥5 nghỉ/tháng, <b style="color:var(--warn)">cam</b> = 3–4 — cơ sở cần soi. T6 thường cao (cuối năm học). Số này là <b>đầu ra thật từ CRM</b>, khác con số "đã lắng nghe" (lũy kế) — hai thẻ trả lời 2 câu khác nhau: <i>tháng này mất bao nhiêu</i> vs <i>đã hỏi lý do bao nhiêu người</i>.</p>'
    +'<p class="leg">Thiếu <b>Linh Đàm</b> (không có trong file KHNS). Cập nhật: mỗi tháng khi chị làm mới file KHNS, tôi kéo lại sheet "Nghỉ học".</p>'
    +'<div class="q"><b>Câu hỏi:</b> cơ sở nào churn thật <b>tăng dần 3 tháng</b>? Và churn tháng này của cơ sở đó — đã có ai gọi exit từng ca chưa (đối chiếu thẻ "đã lắng nghe" dưới)?</div></div>';
 
@@ -1813,23 +1813,23 @@ async function render(){
    +kpi("Đã lắng nghe",fmt(nghiLd),"","đã ghi nhận vì sao nghỉ")
    +kpi("Tỷ lệ được lắng nghe",pct(nghiPct,0),"","càng cao càng hiểu vì sao mất HS")
    +kpi("Chưa ai hỏi",fmt(nghiChuaN),"","nghỉ mà không rõ lý do")+"</div>"
-   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid '+(nghiPct<0.5?"#B42318":"#A96C05")+';border-radius:8px;padding:12px 14px;background:rgba(180,35,24,.05)">'
-   +'<p style="margin:0 0 4px;font-weight:700;color:'+(nghiPct<0.5?"#B42318":"#A96C05")+'">Chỉ '+pct(nghiPct,0)+' học sinh nghỉ từng được hỏi lý do</p>'
+   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid '+(nghiPct<0.5?"var(--crit)":"var(--warn)")+';border-radius:8px;padding:12px 14px;background:rgba(180,35,24,.05)">'
+   +'<p style="margin:0 0 4px;font-weight:700;color:'+(nghiPct<0.5?"var(--crit)":"var(--warn)")+'">Chỉ '+pct(nghiPct,0)+' học sinh nghỉ từng được hỏi lý do</p>'
    +'<p class="leg" style="margin:0">Mỗi HS nghỉ không được hỏi = một bài học bị mất: không biết campus/sản phẩm hỏng ở đâu, marketing không biết objection thật. '
    +'<b>Việc cần làm:</b> chuẩn hoá exit interview khi HS nghỉ — bắt buộc ghi lý do vào CRM; ưu tiên các campus có tỷ lệ lắng nghe thấp nhất bên dưới.</p></div>'
    +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo campus</p>'
    +'<div class="tw"><table><thead><tr><th>Campus</th><th>Đã nghỉ</th><th>Đã lắng nghe</th><th>Tỷ lệ</th></tr></thead><tbody>'
    +nghiAggR.map(r=>{const n=+r.so_nghi||0,l=+r.da_lang_nghe||0;return "<tr><td>"+_stripCp(r.campus)+'</td><td class="mono">'+fmt(n)+'</td><td class="mono">'+fmt(l)
-     +'</td><td class="mono" style="color:'+(n&&l/n<0.5?"#B42318":"#067647")+'">'+pct(n?l/n:0,0)+"</td></tr>";}).join("")
+     +'</td><td class="mono" style="color:'+(n&&l/n<0.5?"var(--crit)":"var(--good)")+'">'+pct(n?l/n:0,0)+"</td></tr>";}).join("")
    +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(nghiTong)+'</td><td class="mono">'+fmt(nghiLd)+'</td><td class="mono">'+pct(nghiPct,0)+"</td></tr>"
    +"</tbody></table></div>"
    +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Tách 3 loại nghỉ — chỉ "churn thật" mới là mất mát cần chữa</p>'
    +'<div class="tw"><table style="min-width:460px"><thead><tr><th>Loại nghỉ</th><th>Số HS (đã ghi lý do)</th><th>Ý nghĩa</th></tr></thead><tbody>'
-   +'<tr><td>🎓 Tốt nghiệp / lên lớp 1</td><td class="mono">'+fmt(nghiLoai.totnghiep)+'</td><td style="font-size:12px;color:#067647">ra đúng lộ trình — KHÔNG phải churn</td></tr>'
+   +'<tr><td>🎓 Tốt nghiệp / lên lớp 1</td><td class="mono">'+fmt(nghiLoai.totnghiep)+'</td><td style="font-size:12px;color:var(--good)">ra đúng lộ trình — KHÔNG phải churn</td></tr>'
    +'<tr><td>⏳ Ngắn ngày / trải nghiệm</td><td class="mono">'+fmt(nghiLoai.nganngay)+'</td><td style="font-size:12px;color:var(--muted)">vốn chỉ học tạm — churn "nhẹ"</td></tr>'
-   +'<tr style="font-weight:700"><td>🔴 Churn thật (mất thật sự)</td><td class="mono">'+fmt(nghiLoai.churn)+'</td><td style="font-size:12px;color:#B42318">chuyển trường / không hài lòng / lý do khác — cần chữa</td></tr>'
+   +'<tr style="font-weight:700"><td>🔴 Churn thật (mất thật sự)</td><td class="mono">'+fmt(nghiLoai.churn)+'</td><td style="font-size:12px;color:var(--crit)">chuyển trường / không hài lòng / lý do khác — cần chữa</td></tr>'
    +'</tbody></table></div>'
-   +'<p class="leg">Tách như vậy vì <b>gộp tốt nghiệp vào churn sẽ thổi phồng con số mất HS</b> và làm dịu cảm giác sai. Con số cần theo dõi để giữ chân là <b style="color:#B42318">churn thật</b>. '
+   +'<p class="leg">Tách như vậy vì <b>gộp tốt nghiệp vào churn sẽ thổi phồng con số mất HS</b> và làm dịu cảm giác sai. Con số cần theo dõi để giữ chân là <b style="color:var(--crit)">churn thật</b>. '
    +'(Chỉ tính được trên nhóm đã ghi lý do; HS chưa ai hỏi lý do mặc định xếp vào "churn thật" để không bỏ sót — gọi exit xong sẽ phân loại lại.)</p>'
    +(nghiLyRows.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lý do nghỉ đã ghi nhận (mẫu)</p>'
      +'<div class="tw"><table><thead><tr><th>Lý do</th><th>Số HS</th></tr></thead><tbody>'
@@ -2082,13 +2082,13 @@ async function render(){
    +kpi("⚠ Chưa có chức danh",fmt(tongTrong),"","AMIS bỏ trống ô vị trí — cần điền")
    +kpi("Tuyển mới "+M0,fmt(vaoThang(M0)),"","vào tháng, hiện còn làm")
    +kpi("Nghỉ / Turnover "+M0,fmt(raThang(M0))+" · "+pct(tvRate(M0),1),"","rời trong tháng")+"</div>"
-   +'<div class="tw"><table style="min-width:620px"><thead><tr><th>Cơ sở</th><th>Nhân sự</th><th>Giáo viên</th><th>Chưa có chức danh</th><th>Vào '+M0+'</th><th>Ra '+M0+'</th><th>Ra 3 tháng</th></tr></thead><tbody>'
-   +hrArr.map(o=>"<tr><td>"+o.ten+'</td><td class="mono">'+fmt(o.hc)+'</td><td class="mono">'+fmt(o.gv)+'</td><td class="mono" style="color:'+(o.trong?"#B42318":"var(--muted)")+'">'+(o.trong||"")+'</td><td class="mono">'+(o.vao||"")+'</td><td class="mono">'+(raBy[o.code]||"")+'</td><td class="mono" style="color:'+((raBy3[o.code]||0)>=3?"#B42318":"var(--muted)")+'">'+(raBy3[o.code]||"")+"</td></tr>").join("")
-   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(hcTong)+'</td><td class="mono">'+fmt(tongGV)+'</td><td class="mono">'+fmt(tongTrong)+'</td><td class="mono">'+fmt(vaoThang(M0))+'</td><td class="mono">'+fmt(raThang(M0))+'</td><td class="mono">'+fmt(raThang3)+'</td></tr>'
+   +'<div class="tw"><table style="min-width:620px"><thead><tr><th>Cơ sở</th><th>Nhân sự</th><th>Giáo viên</th><th>Chưa có chức danh</th><th>Vào '+M0+'</th><th>Ra '+M0+'</th><th>Ra 3 tháng</th><th>Turnover 3th</th></tr></thead><tbody>'
+   +hrArr.map(o=>"<tr><td>"+o.ten+'</td><td class="mono">'+fmt(o.hc)+'</td><td class="mono">'+fmt(o.gv)+'</td><td class="mono" style="color:'+(o.trong?"var(--crit)":"var(--muted)")+'">'+(o.trong||"")+'</td><td class="mono">'+(o.vao||"")+'</td><td class="mono">'+(raBy[o.code]||"")+'</td><td class="mono" style="color:'+((raBy3[o.code]||0)>=3?"var(--crit)":"var(--muted)")+'">'+(raBy3[o.code]||"")+'</td><td class="mono" style="color:'+(function(){var t=o.hc?(raBy3[o.code]||0)/o.hc:0;return t>0.15?"var(--crit)":t>0.08?"var(--warn)":"var(--muted)";})()+'">'+(o.hc?pct((raBy3[o.code]||0)/o.hc,1):"—")+"</td></tr>").join("")
+   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(hcTong)+'</td><td class="mono">'+fmt(tongGV)+'</td><td class="mono">'+fmt(tongTrong)+'</td><td class="mono">'+fmt(vaoThang(M0))+'</td><td class="mono">'+fmt(raThang(M0))+'</td><td class="mono">'+fmt(raThang3)+'</td><td class="mono">'+pct(hcTong?raThang3/hcTong:0,1)+'</td></tr>'
    +"</tbody></table></div>"
    +'<p class="leg"><b>Xu hướng 3 tháng (toàn hệ thống):</b> '
    +M3.map(m=>m+": vào "+vaoThang(m)+" · ra "+raThang(m)+" · turnover "+pct(tvRate(m),1)).join("  |  ")+'</p>'
-   +'<p class="leg">Giáo viên = vị trí có chữ "Giáo viên". <b style="color:#B42318">Chưa có chức danh</b> = AMIS để trống ô vị trí — đây là khoảng mù cần đội HR điền, KHÔNG phải "quản lý". Chi tiết từng chức danh ở bảng ngay dưới.</p>'
+   +'<p class="leg">Giáo viên = vị trí có chữ "Giáo viên". <b style="color:var(--crit)">Chưa có chức danh</b> = AMIS để trống ô vị trí — đây là khoảng mù cần đội HR điền, KHÔNG phải "quản lý". Chi tiết từng chức danh ở bảng ngay dưới.</p>'
    +'<div class="q"><b>Câu hỏi:</b> cơ sở nào <b>ra > vào</b>, và ai đã nói chuyện với người nghỉ trước khi họ đi? Ô "chưa có chức danh" — giao ai rà & điền trong tuần này?</div></div>';
 
   // ----- Theo CHỨC DANH thật (không gộp) -----
@@ -2096,7 +2096,7 @@ async function render(){
    '<div class="card"><h2>Nhân sự theo chức danh (đúng chức danh AMIS — không gộp)</h2>'
    +'<p class="sub">Toàn hệ thống · '+fmt(cdArr.length)+' chức danh · dữ liệu kéo lúc '+hrLuc+'</p>'
    +'<div class="tw"><table style="min-width:420px"><thead><tr><th>Chức danh</th><th>Số người</th><th>% tổng</th></tr></thead><tbody>'
-   +cdArr.map(function(e){var k=e[0],n=e[1];var blank=/chưa cập nhật/i.test(k);return "<tr><td"+(blank?' style="color:#B42318"':"")+">"+(blank?"⚠ "+k:k)+'</td><td class="mono">'+fmt(n)+'</td><td class="mono">'+pct(n/hcTong,0)+"</td></tr>";}).join("")
+   +cdArr.map(function(e){var k=e[0],n=e[1];var blank=/chưa cập nhật/i.test(k);return "<tr><td"+(blank?' style="color:var(--crit)"':"")+">"+(blank?"⚠ "+k:k)+'</td><td class="mono">'+fmt(n)+'</td><td class="mono">'+pct(n/hcTong,0)+"</td></tr>";}).join("")
    +"</tbody></table></div>"
    +'<div class="q"><b>Câu hỏi:</b> cơ cấu này có khớp mô hình lớp chuẩn của ME không — và '+fmt(tongTrong)+' hồ sơ trống chức danh thuộc cơ sở nào, ai chịu trách nhiệm điền?</div></div>';
 
@@ -2118,7 +2118,7 @@ async function render(){
    +kpi("Chưa phân loại",fmt(hdKhac),"","loại HĐ không khớp nhóm nào")
    +kpi("Tổng hợp đồng",fmt(hdTong),"","đang hiệu lực")+"</div>"
    +'<div class="tw" style="margin-top:14px"><table style="min-width:420px"><thead><tr><th>Loại hợp đồng (AMIS)</th><th>Số người</th><th>% tổng</th><th>Nhóm</th></tr></thead><tbody>'
-   +hdLoaiRows.map(([k,v])=>{const g=isFT(k)?'<span style="color:#067647">Chính thức</span>':isPT(k)?'<span style="color:#A96C05">Thời vụ</span>':'<span style="color:var(--muted)">—</span>';return "<tr><td>"+k+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(hdTong?v/hdTong:0,0)+'</td><td style="font-size:12px">'+g+"</td></tr>";}).join("")
+   +hdLoaiRows.map(([k,v])=>{const g=isFT(k)?'<span style="color:var(--good)">Chính thức</span>':isPT(k)?'<span style="color:var(--warn)">Thời vụ</span>':'<span style="color:var(--muted)">—</span>';return "<tr><td>"+k+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(hdTong?v/hdTong:0,0)+'</td><td style="font-size:12px">'+g+"</td></tr>";}).join("")
    +"</tbody></table></div>"
    +'<p class="leg"><b>Chính thức (FT)</b> = hợp đồng không xác định / xác định thời hạn — biên chế ổn định. <b>Thời vụ (PT)</b> = thời vụ, thử việc, khoán việc, cộng tác viên — linh hoạt, dễ biến động. '
    +(hcTong&&Math.abs(hdTong-hcTong)>3?'<br>Số hợp đồng ('+fmt(hdTong)+') lệch số người đang làm ('+fmt(hcTong)+') — một người có thể có 2 HĐ (chính + phụ lục), hoặc một số người đang làm chưa ký/gia hạn HĐ. Đây là <b>khoảng mù cần HR rà</b>.':'')+'</p>'
@@ -2138,15 +2138,15 @@ async function render(){
    '<div class="card"><h2>Giáo viên / lớp trung bình</h2>'
    +'<p class="sub">GV thực từ AMIS · số lớp &amp; sĩ số <b>đang đi học</b> từ CRM · '+(gvLopTB!=null?'GV/lớp trung bình toàn hệ thống (các cơ sở có CRM): <b>'+dec(gvLopTB,1)+'</b>':'')+'</p>'
    +'<div class="tw"><table style="min-width:560px"><thead><tr><th>Cơ sở</th><th>GV (AMIS)</th>'+(coTomiaGV?'<th>GV (Tomia)</th>':'')+'<th>Số lớp</th><th>GV/lớp</th><th>Sĩ số đang học</th><th>HS/lớp</th></tr></thead><tbody>'
-   +gvArr.map(x=>{const c=x.gv_lop==null?"":(x.gv_lop<1.5?"#B42318":x.gv_lop>2.5?"#A96C05":"#067647");
-      var tcell=coTomiaGV?('<td class="mono" style="color:'+(x.tgv!=null&&x.tgv>x.gv?"#B42318":"var(--muted)")+'">'+(x.tgv==null?'<span style="opacity:.4">—</span>':x.tgv+(x.tgv>x.gv?' ▲':''))+'</td>'):'';
+   +gvArr.map(x=>{const c=x.gv_lop==null?"":(x.gv_lop<1.5?"var(--crit)":x.gv_lop>2.5?"var(--warn)":"var(--good)");
+      var tcell=coTomiaGV?('<td class="mono" style="color:'+(x.tgv!=null&&x.tgv>x.gv?"var(--crit)":"var(--muted)")+'">'+(x.tgv==null?'<span style="opacity:.4">—</span>':x.tgv+(x.tgv>x.gv?' ▲':''))+'</td>'):'';
       return "<tr><td>"+x.ten+'</td><td class="mono">'+fmt(x.gv)+'</td>'+tcell+'<td class="mono">'+(x.lop||'<span style="opacity:.5">—</span>')+'</td><td class="mono" style="color:'+c+'">'+(x.gv_lop==null?"—":dec(x.gv_lop,1))+'</td><td class="mono">'+(x.siso||'<span style="opacity:.5">—</span>')+'</td><td class="mono">'+(x.hs_lop==null?"—":dec(x.hs_lop,1))+"</td></tr>";}).join("")
    +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>Cộng (cơ sở có CRM)</td><td class="mono">'+fmt(gvLopHT)+'</td>'+(coTomiaGV?'<td class="mono"></td>':'')+'<td class="mono">'+fmt(lopHT)+'</td><td class="mono">'+(gvLopTB==null?"—":dec(gvLopTB,1))+'</td><td class="mono"></td><td class="mono"></td></tr>'
    +"</tbody></table></div>"
-   +'<p class="leg"><b>GV/lớp</b> = số giáo viên ÷ số lớp của cơ sở. <b style="color:#B42318">Dưới 1,5</b> = mỏng người trên mỗi lớp; <b style="color:#A96C05">trên 2,5</b> = dày (có thể đúng với lớp nhỏ tuổi cần nhiều cô). '
+   +'<p class="leg"><b>GV/lớp</b> = số giáo viên ÷ số lớp của cơ sở. <b style="color:var(--crit)">Dưới 1,5</b> = mỏng người trên mỗi lớp; <b style="color:var(--warn)">trên 2,5</b> = dày (có thể đúng với lớp nhỏ tuổi cần nhiều cô). '
    +'Tân Thuận &amp; Linh Đàm để trống số lớp/sĩ số vì <b>không dùng CRM</b> — GV của 2 cơ sở này lấy từ AMIS (xem chú thích Tân Thuận bên dưới, AMIS có thể đếm thiếu GV thời vụ). '
    +'Chưa có nguồn sống GV <i>theo từng lớp</i> — nên chỉ tính trung bình ở mức cơ sở, chưa chỉ được "lớp nào mỏng".</p>'
-   +'<p class="leg" style="border-left:3px solid '+(coTomiaGV?"#067647":"#A96C05")+';padding-left:10px"><b>Tân Thuận &amp; Linh Đàm — GV thật từ Tomia:</b> '
+   +'<p class="leg" style="border-left:3px solid '+(coTomiaGV?"var(--good)":"var(--warn)")+';padding-left:10px"><b>Tân Thuận &amp; Linh Đàm — GV thật từ Tomia:</b> '
    +(coTomiaGV
       ?('cột <b>GV (Tomia)</b> đã có số thật. '
         +((gvTomiaBy.TT?'Tân Thuận: AMIS '+((hrBy.TT&&hrBy.TT.gv)||0)+' vs Tomia <b>'+gvTomiaBy.TT.gv+'</b>. ':'Tân Thuận: chưa kéo Tomia (bấm Kéo GV-lớp khi mở cơ sở TT). ')
@@ -2164,7 +2164,7 @@ async function render(){
    +'<p class="sub">Xếp theo <b>vùng (HCM → HN → HP)</b> rồi <b>sĩ số cao → thấp</b> · chức danh gom 4 nhóm để nhìn cơ cấu · HS/NS = sĩ số ÷ tổng nhân sự</p>'
    +'<div class="tw"><table style="min-width:680px"><thead><tr><th>Cơ sở</th><th>Vùng</th><th>Sĩ số</th><th>Giáo viên</th><th>Hỗ trợ</th><th>Quản lý</th><th>Khác/chưa rõ</th><th>Tổng NS</th><th>HS/NS</th></tr></thead><tbody>'
    +mtxRows.map(o=>{const siso=sisoBy[o.code]||0;const hsns=siso&&o.hc?siso/o.hc:null;
-      return "<tr><td>"+o.ten+'</td><td style="font-size:12px;color:var(--muted)">'+VUNGTEN[vungCua(o.code)[0]]+'</td><td class="mono">'+(siso||'<span style="opacity:.5">—</span>')+'</td><td class="mono">'+fmt(o.gv)+'</td><td class="mono">'+fmt(o.ht)+'</td><td class="mono">'+fmt(o.ql)+'</td><td class="mono" style="color:'+((o.khac+o.trong)?"#A96C05":"var(--muted)")+'">'+fmt(o.khac)+'</td><td class="mono">'+fmt(o.hc)+'</td><td class="mono">'+(hsns==null?"—":dec(hsns,1))+"</td></tr>";}).join("")
+      return "<tr><td>"+o.ten+'</td><td style="font-size:12px;color:var(--muted)">'+VUNGTEN[vungCua(o.code)[0]]+'</td><td class="mono">'+(siso||'<span style="opacity:.5">—</span>')+'</td><td class="mono">'+fmt(o.gv)+'</td><td class="mono">'+fmt(o.ht)+'</td><td class="mono">'+fmt(o.ql)+'</td><td class="mono" style="color:'+((o.khac+o.trong)?"var(--warn)":"var(--muted)")+'">'+fmt(o.khac)+'</td><td class="mono">'+fmt(o.hc)+'</td><td class="mono">'+(hsns==null?"—":dec(hsns,1))+"</td></tr>";}).join("")
    +"</tbody></table></div>"
    +'<p class="leg"><b>Giáo viên</b> = chức danh có chữ "Giáo viên". <b>Hỗ trợ</b> = bảo mẫu, cấp dưỡng, bảo vệ, y tế, kế toán, hành chính, lễ tân, trợ giảng, tuyển sinh… <b>Quản lý</b> = hiệu trưởng/phó, trưởng/phó phòng, điều hành. <b>Khác/chưa rõ</b> gồm cả hồ sơ AMIS bỏ trống chức danh — cần điền. '
    +'<b>HS/NS</b> càng cao = mỗi nhân sự "gánh" càng nhiều trẻ (năng suất cao, nhưng quá cao thì quá tải); càng thấp = nhiều người trên mỗi trẻ (chất lượng chăm sóc dày, nhưng chi phí lương/HS cao). Tân Thuận &amp; Linh Đàm thiếu sĩ số vì không dùng CRM.</p>'
@@ -2183,20 +2183,20 @@ async function render(){
     let al=[]; if(em!=null&&em<0)al.push("🔴 lỗ"); if(rt!=null&&rt>0.55)al.push("lương/DT>55%"); if(drt!=null&&drt>0.03)al.push("lương/DT tăng"); if(tv!=null&&tv>0.05)al.push("turnover cao"); if(!hc)al.push("thiếu roster");
     return {ten:x.ten,dt:m.dt,rt:rt,em:em,drt:drt,hc:hc,luongTB:luongTB,ra:ra,tv:tv,al:al.join(" · ")};
   });
-  const rColor2=v=>v==null?"var(--muted)":(v>0.55?"#B42318":v>0.45?"#A96C05":"#067647");
-  const eColor2=v=>v==null?"var(--muted)":(v<0?"#B42318":v<0.05?"#A96C05":"#067647");
+  const rColor2=v=>v==null?"var(--muted)":(v>0.55?"var(--crit)":v>0.45?"var(--warn)":"var(--good)");
+  const eColor2=v=>v==null?"var(--muted)":(v<0?"var(--crit)":v<0.05?"var(--warn)":"var(--good)");
   const nhanSuFinCard = (!hcTong||!hrFinRows.length) ? "" :
    '<div class="card"><h2>HR × Tài chính theo cơ sở</h2>'
    +'<p class="sub">Tài chính đến <b>'+finLastLbl+'/2026</b> (từ KHNS) · headcount &amp; turnover <b>hiện tại</b> (AMIS) · so cột Δ với '+(prevM?("T"+prevM):"tháng trước")+'</p>'
    +'<div class="tw"><table style="min-width:660px"><thead><tr><th>Cơ sở</th><th>%Lương/DT</th><th>Δ</th><th>%EBITDA</th><th>NS</th><th>Lương TB/người (tr)</th><th>Ra/Turnover</th><th>Cảnh báo</th></tr></thead><tbody>'
    +hrFinRows.map(r=>"<tr><td>"+r.ten+'</td>'
       +'<td class="mono" style="color:'+rColor2(r.rt)+'">'+pc(r.rt)+'</td>'
-      +'<td class="mono" style="color:'+(r.drt==null?"var(--muted)":(r.drt>0.03?"#B42318":r.drt<-0.03?"#067647":"var(--muted)"))+'">'+(r.drt==null?"—":(r.drt>0?"+":"")+(r.drt*100).toFixed(1).replace(".",",")+"đ")+'</td>'
+      +'<td class="mono" style="color:'+(r.drt==null?"var(--muted)":(r.drt>0.03?"var(--crit)":r.drt<-0.03?"var(--good)":"var(--muted)"))+'">'+(r.drt==null?"—":(r.drt>0?"+":"")+(r.drt*100).toFixed(1).replace(".",",")+"đ")+'</td>'
       +'<td class="mono" style="color:'+eColor2(r.em)+'">'+pc(r.em)+'</td>'
       +'<td class="mono">'+fmt(r.hc)+'</td>'
       +'<td class="mono">'+tr(r.luongTB)+'</td>'
       +'<td class="mono">'+(r.ra||0)+" / "+pct(r.tv,1)+'</td>'
-      +'<td style="font-size:12px;color:#A96C05">'+r.al+"</td></tr>").join("")
+      +'<td style="font-size:12px;color:var(--warn)">'+r.al+"</td></tr>").join("")
    +"</tbody></table></div>"
    +'<p class="leg">%Lương/DT càng thấp margin càng khỏe (ngưỡng 45%/55%); Δ là điểm % thay đổi so tháng trước. (Đã bỏ cột doanh thu theo yêu cầu — chỉ giữ tỷ lệ.) '
    +'Lương TB/người = tổng chi phí lương cơ sở ('+finLastLbl+') ÷ headcount hiện tại — <i>trung bình toàn cơ sở, chưa tách theo vị trí</i> (số thực chưa tách lương theo vị trí). '
@@ -2205,7 +2205,7 @@ async function render(){
 
   const nhanSuHTML = hcTong
     ? (nhanSuTrongCard + nhanSuCDCard + nhanSuHDCard + nhanSuGVCard + nhanSuMaTranCard + nhanSuFinCard)
-    : ('<div class="card" style="border-left:4px solid #A96C05"><h2>Nhân sự — chưa có dữ liệu, bấm "Kéo HR"</h2>'
+    : ('<div class="card" style="border-left:4px solid var(--warn)"><h2>Nhân sự — chưa có dữ liệu, bấm "Kéo HR"</h2>'
        +'<p class="sub">Pipeline đã sẵn sàng (bảng + view). Chỉ còn 1 bước: kéo dữ liệu HR từ AMIS về.</p>'
        +'<p class="leg"><b>Cách làm (mỗi tháng 1 lần):</b> mở AMIS → <b>Thông tin nhân sự</b> → bấm dấu trang <b>Kéo HR</b> → chờ "KÉO HR XONG ✅" → tải lại app. '
        +'Chưa cài dấu trang? Mở file <code>cai_keo_hr.html</code> tôi gửi, kéo nút "Kéo HR" lên thanh dấu trang.</p>'
@@ -2383,7 +2383,7 @@ function vao(session){
   $("login").classList.add("hidden"); $("app").classList.remove("hidden");
   $("who").textContent=em;
   if(!coQuyen(em)){
-    $("body").innerHTML='<div class="card" style="border-color:#A96C05">'
+    $("body").innerHTML='<div class="card" style="border-color:var(--warn)">'
       +'<h2>⚠ Email này chưa được cấp quyền xem dữ liệu</h2>'
       +'<p class="sub">Bạn đã đăng nhập thành công bằng <b class="mono">'+em.replace(/</g,"&lt;")+'</b> — nhưng tài khoản này chưa được phép đọc số liệu ME School.</p>'
       +'<p class="leg">Đây <b>không phải lỗi</b>. Dữ liệu về trẻ và phụ huynh chỉ mở cho email <b class="mono">@meschool.vn</b>.</p>'
@@ -2412,10 +2412,10 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
       daNhac=moi;
       var cu=document.getElementById("__banmoi"); if(cu)cu.remove();
       var b=document.createElement("div"); b.id="__banmoi";
-      b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:2147483647;background:#0F5348;color:#fff;padding:10px 16px;font:14px/1.4 system-ui;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,.25)";
+      b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:2147483647;background:var(--accent);color:#fff;padding:10px 16px;font:14px/1.4 system-ui;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,.25)";
       var sp=document.createElement("span"); sp.textContent="Có bản mới của app ("+moi+") — bấm để lấy số liệu & giao diện mới nhất.";
       var nut=document.createElement("button"); nut.textContent="Tải lại ngay";
-      nut.style.cssText="background:#fff;color:#0F5348;border:0;border-radius:8px;padding:6px 14px;font-weight:600;cursor:pointer";
+      nut.style.cssText="background:#fff;color:var(--accent);border:0;border-radius:8px;padding:6px 14px;font-weight:600;cursor:pointer";
       nut.onclick=function(){ location.replace(location.pathname+"?v="+encodeURIComponent(moi)); };
       var x=document.createElement("button"); x.textContent="Để sau";
       x.style.cssText="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:6px 12px;cursor:pointer";
