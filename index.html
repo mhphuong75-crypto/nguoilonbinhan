@@ -126,9 +126,10 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
   <div class="row">
     <span id="oTG" style="display:none;gap:8px;align-items:center">
     <select id="period">
-      <option value="7">7 ngày gần nhất</option>
-      <option value="28">28 ngày</option>
-      <option value="90">90 ngày</option>
+      <option value="1">Hôm nay</option>
+      <option value="7" selected>7 ngày gần nhất</option>
+      <option value="thang">Tháng này</option>
+      <option value="truoc">Tháng trước</option>
     </select>
     <span style="font-size:11px;opacity:.55;margin-left:6px" title="Ô thời gian chỉ đổi các thẻ Website, Meta, Google và dòng “Lead mới trong kỳ”. Các thẻ khác có cửa sổ riêng, ghi ở dòng ⏱ của từng thẻ.">⏱ chỉ đổi Website · Meta · Google</span>
     </span>
@@ -158,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b55";
+const BUILD="2026-10-01 · b56";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -355,7 +356,7 @@ async function napKho(CP, ep){
 }
 
 async function render(){
-  const n=+$("period").value;
+  const pv=$("period").value;
   const CP=$("camp").value||"";            // "" = toan he thong
   const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
@@ -413,7 +414,18 @@ async function render(){
   const luuY = "";
 
   const days=[...new Set(ga.map(r=>r.day))].sort();
-  const end=days[days.length-1], start=shift(end,-(n-1)), pEnd=shift(start,-1), pStart=shift(pEnd,-(n-1));
+  const _gaEnd=days[days.length-1];
+  const _today=new Date(Date.now()+7*36e5).toISOString().slice(0,10);
+  const _mk=(Y,Mi,D)=>new Date(Date.UTC(Y,Mi,D)).toISOString().slice(0,10);
+  let end, start, n, pStart, pEnd;
+  if(pv==="thang"||pv==="truoc"){
+    const _yy=+_today.slice(0,4), _mm=+_today.slice(5,7);
+    if(pv==="thang"){ start=_mk(_yy,_mm-1,1); end=(_gaEnd<_today?_gaEnd:_today); pStart=_mk(_yy,_mm-2,1); pEnd=_mk(_yy,_mm-1,0); }
+    else { start=_mk(_yy,_mm-2,1); end=_mk(_yy,_mm-1,0); pStart=_mk(_yy,_mm-3,1); pEnd=_mk(_yy,_mm-2,0); }
+    n=Math.round((Date.parse(end)-Date.parse(start))/864e5)+1;
+  } else {
+    n=+pv||7; end=_gaEnd; start=shift(end,-(n-1)); pEnd=shift(start,-1); pStart=shift(pEnd,-(n-1));
+  }
   const inR=(d,a,b)=>d>=a&&d<=b;
   const sum=(rows,f,a,b)=>(rows||[]).filter(r=>inR(r.day,a,b)).reduce((s,r)=>s+(+r[f]||0),0);
 
@@ -564,7 +576,7 @@ async function render(){
   const NGUON={trangchu:"Trang chủ",blog:"Bài blog",web:"Trang khác"};
   // bang nay ghi thoi gian thuc -> luon tinh den hom nay, khong dung theo cua so GA4 (GA4 tre 2 ngay)
   const homNay=new Date(Date.now()+7*3600*1000).toISOString().slice(0,10);
-  const endW = end>homNay ? end : homNay;
+  const endW = (pv==="truoc") ? end : (end>homNay ? end : homNay);
   const W=(wc||[]).filter(r=>r.ts && inR(String(r.ts).slice(0,10),start,endW));
   const wKind={}, wRef={};
   W.forEach(r=>{wKind[r.kind]=(wKind[r.kind]||0)+1; const g=r.ref||"web"; wRef[g]=(wRef[g]||0)+1});
