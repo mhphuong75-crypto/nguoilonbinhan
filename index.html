@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b53";
+const BUILD="2026-10-01 · b54";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -570,6 +570,8 @@ async function render(){
   W.forEach(r=>{wKind[r.kind]=(wKind[r.kind]||0)+1; const g=r.ref||"web"; wRef[g]=(wRef[g]||0)+1});
   const wTot=W.length;
   const wDays=[...new Set(W.map(r=>String(r.ts).slice(0,10)))].sort();
+  const _aLeadWin=(tsi||[]).filter(r=>inR(String(r.ngay).slice(0,10),start,endW)).reduce((a,r)=>a+(+r.so_lead||0),0);  // A = lead CRM tạo trong cửa sổ (mv_lead_campus = tsi)
+  const _abPct=wTot?_aLeadWin/wTot:0;
   const wCard = !wTot ?
    '<div class="card"><h2>Ai giơ tay trên website</h2><p class="sub">Dữ liệu của chính ME School — bắt đầu ghi từ 03/09/2026</p>'
    +'<div class="q">Chưa có lượt nào. Bảng này chỉ đếm từ lúc bật (03/09/2026), không có dữ liệu quá khứ.<br>'
@@ -591,11 +593,13 @@ async function render(){
    +'Đây <b>chưa phải lead</b> — bấm gọi không có nghĩa là đã nói chuyện được. '
    +'Nhưng đây là số ME School tự đo, không phụ thuộc bên nào.</p>'
    +'<div class="q"><b>Câu hỏi:</b> '+fmt(wTot)+' lượt giơ tay trong kỳ này — bao nhiêu trong số đó có tên trong AMIS?</div>'
-   +'<div class="gap" style="border-left-color:#0F5348"><b>Cách trả lời câu này (làm thủ công, 10 phút):</b><br>'
-   +'1. Mở AMIS CRM → Tuyển sinh → lọc lead <b>tạo trong đúng '+start+' → '+endW+'</b> → đếm số lead mới = <b>A</b>.<br>'
-   +'2. Con số giơ tay ở trên = <b>'+fmt(wTot)+'</b> = <b>B</b> (số cú bấm liên lạc trên web).<br>'
-   +'3. Tỷ lệ <b>A ÷ B</b> = bao nhiêu cú giơ tay biến thành lead có tên. Nếu A ≪ B → phần lớn người bấm gọi/nhắn nhưng <b>không ai kịp lưu vào CRM</b> → mất dấu.<br>'
-   +'<i>Muốn tự động khớp từng người:</i> phải thêm ô SĐT vào form web (hiện web chỉ ghi "có bấm", không ghi "ai bấm") → khi đó mới nối được web ↔ AMIS theo số điện thoại. <b>Chủ: chưa giao · Hạn: chưa có.</b></div></div>';
+   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:12px 14px;background:rgba(78,182,157,.06)">'
+   +'<p style="margin:0 0 8px;font-weight:700">Giơ tay → lead có tên? (A ÷ B — tự tính)</p>'
+   +'<div class="kpis" style="margin:0">'
+   +kpi("A · Lead CRM tạo trong kỳ",fmt(_aLeadWin),"",start+"→"+endW+" · mọi nguồn")
+   +kpi("B · Cú giơ tay web",fmt(wTot),"","số cú bấm liên lạc")
+   +kpi("A ÷ B",pct(_abPct,0),"",_aLeadWin<wTot?"lead ít hơn giơ tay — nghi mất dấu":"")+"</div>"
+   +'<p class="leg" style="margin:8px 0 0"><b>A ÷ B &lt; 100%</b> = lead có tên ít hơn số cú giơ tay → nhiều người bấm gọi/nhắn nhưng không thành lead trong CRM (mất dấu). <b>Lưu ý:</b> A gồm lead <b>mọi nguồn</b> (không chỉ web) nên là tỷ lệ thô — muốn khớp từng cú giơ tay ↔ lead chính xác phải <b>thêm ô SĐT vào form web</b> (nay chỉ ghi "có bấm", không ghi "ai bấm"). Chủ: chưa giao · Hạn: chưa có.</p></div></div>';
 
   // ----- the: su kien website -----
   const TENSK={
@@ -2335,7 +2339,7 @@ async function render(){
    +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — tháng này + xu hướng 3 tháng · đã lắng nghe (exit) · nghỉ liên tục · CRM nguồn sống")+churnMoiCard+churnNayCard+ngCard+'</div>'
    +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
    +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
-   +'<div class="dom" data-dom="channel">'+SEC("Channel — Website · Google · Meta · Messenger")+webCard+chanCard+kwCard+nearCard+pageCard+evCard+wCard+hrCard+metaCard+cmpCard+'</div>'
+   +'<div class="dom" data-dom="channel">'+SEC("Channel — Meta · việc PH làm trên web · ai giơ tay · Website · Google · Messenger")+metaCard+cmpCard+evCard+wCard+webCard+chanCard+kwCard+nearCard+pageCard+hrCard+'</div>'
    +'<div class="dom" data-dom="nhansu">'+SEC("Nhân sự & hiệu quả lương")+nhanSuHTML+finCard+'</div>'
    +'</div>';
   if(KHO&&KHO.t){const gio=KHO.t.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
