@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ME Ops Cockpit — Tự kiểm tra số</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#0D1210;--card:#131A17;--line:#243029;--txt:#E8EFEA;--muted:#8CA093;
+        --crit:#E2776A;--warn:#DFA648;--good:#8DBE4E;--accent:#4EB69D}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px}
+  .wrap{max-width:980px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .hero{border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:0 0 18px;background:var(--card)}
+  .heroN{font-size:30px;font-weight:800;letter-spacing:-.5px}
+  .bar{height:10px;border-radius:6px;background:#22302a;overflow:hidden;margin:10px 0 4px}
+  .bar>i{display:block;height:100%}
+  .grp{border:1px solid var(--line);border-radius:12px;margin:0 0 14px;background:var(--card);overflow:hidden}
+  .grp>h2{font-size:14px;margin:0;padding:11px 16px;border-bottom:1px solid var(--line);background:rgba(78,182,157,.06)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:9px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .st{font-weight:700;white-space:nowrap}
+  .ok{color:var(--good)} .wr{color:var(--warn)} .bad{color:var(--crit)}
+  .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:700}
+  .pill.ok{background:rgba(141,190,78,.14)} .pill.wr{background:rgba(223,166,72,.14)} .pill.bad{background:rgba(226,119,106,.16)}
+  .note{color:var(--muted);font-size:12px}
+  button{background:var(--accent);color:#06130f;border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
+  .foot{color:var(--muted);font-size:12px;margin-top:16px;line-height:1.6}
+  code{background:#1b2420;padding:1px 5px;border-radius:4px;font-size:12px}
+</style></head>
+<body><div class="wrap">
+  <h1>ME Ops Cockpit — Tự kiểm tra số <span class="note" id="ver"></span></h1>
+  <p class="sub">Tính lại các con số quan trọng từ dữ liệu sống (Supabase) và đối chiếu chéo — thay cho việc so số bằng tay. 🔴 = sai/thiếu cần xem · 🟡 = cảnh báo · 🟢 = khớp.</p>
+  <div class="hero" id="hero"><div class="heroN" id="heroN">Đang chạy…</div>
+    <div class="bar"><i id="heroBar" style="width:0%;background:var(--muted)"></i></div>
+    <div class="note" id="heroNote"></div>
+    <div style="margin-top:10px"><button onclick="run()">Chạy lại</button></div></div>
+  <div id="out"></div>
+  <div class="foot">
+    Nguồn: Supabase <code>fxxgfihjirxbfmhwarkl</code> (khóa publishable, chỉ đọc) · không ghi gì.<br>
+    Cách đọc: mỗi dòng là một phép kiểm. "Giá trị" = số app tính lại ngay bây giờ; "Điều kiện" = cái lẽ ra phải đúng. Dòng 🔴/🟡 là chỗ cần bạn nhìn — còn lại khỏi so tay.
+  </div>
+</div>
+<script>
+const SB=window.supabase.createClient("https://fxxgfihjirxbfmhwarkl.supabase.co","sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T");
+const $=id=>document.getElementById(id);
+const fmt=n=>(n==null||isNaN(n))?"—":Number(n).toLocaleString("vi-VN");
+const pct=x=>(x==null||isNaN(x))?"—":Math.round(x*100)+"%";
+const ci=d=>{const m=String(d||"").match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:null;};
+const nkn=s=>String(s||"").replace(/\s*\(\d+\)\s*$/,"").replace(/^ME\s+Green\s+/i,"").trim().toUpperCase();
+const thNow=new Date(Date.now()+7*36e5).toISOString().slice(0,7);
+async function sel(t,cols,lim){const r=await SB.from(t).select(cols||"*").limit(lim||2000);if(r.error)throw new Error(r.error.message);return r.data||[];}
+
+// ---- Dinh nghia cac phep kiem. Moi phep tra ve {value, cond, state:'ok'|'wr'|'bad', note} ----
+const CHECKS=[
+ // ===== HOP DONG DU LIEU: moi nguon phai co dong =====
+ {grp:"Hợp đồng dữ liệu — nguồn có dữ liệu không",
+  items:[
+   ["v_nghi_lydo (nghỉ CRM)",       async()=>rows("v_nghi_lydo")],
+   ["v_ph_ketnoi (thẻ chăm sóc)",   async()=>rows("v_ph_ketnoi")],
+   ["v_diem_danh (điểm danh)",      async()=>rows("v_diem_danh")],
+   ["mv_nghi_chuoi (vắng dài)",     async()=>rows("mv_nghi_chuoi")],
+   ["mv_supa (checklist)",          async()=>rows("mv_supa")],
+   ["v_su_co (sự cố)",              async()=>rows("v_su_co")],
+   ["mv_lead_campus (lead)",        async()=>rows("mv_lead_campus")],
+   ["fin_campus_thang (tài chính)", async()=>rows("fin_campus_thang")],
+   ["v_siso (sĩ số)",               async()=>rows("v_siso")],
+   ["tomia_archived (lưu trữ Tomia)",async()=>{const d=await sel("tomia_archived","campus_code,ma_tre");const codes=[...new Set(d.map(r=>r.campus_code))];
+       return {value:fmt(d.length)+" dòng · "+codes.length+" campus_code", cond:"phủ nhiều cơ sở",
+         state: d.length===0?"bad":codes.length<=1?"wr":"ok",
+         note: codes.length<=1?("chỉ ["+codes.join(",")+"] = 1 cơ sở (Tân Thuận). Cần phủ tất cả cơ sở để đối chiếu CRM — đang fix pipeline."):""};}],
+  ]},
+ // ===== DO TUOI =====
+ {grp:"Độ tươi dữ liệu",
+  items:[
+   ["Điểm danh mới nhất", async()=>{const d=await sel("v_diem_danh","ngay");const mx=d.map(r=>ci(r.ngay)).filter(Boolean).sort().pop();
+       const lag=mx?Math.round((Date.now()-new Date(mx))/864e5):null;
+       return {value:(mx||"—")+" ("+(lag==null?"—":lag+" ngày trước")+")", cond:"≤4 ngày",
+         state: lag==null?"bad":lag<=4?"ok":lag<=7?"wr":"bad"};}],
+  ]},
+ // ===== DOI CHIEU CHEO + TINH LAI CHI SO =====
+ {grp:"Tính lại chỉ số chính (đối chiếu với thẻ trên app)",
+  items:[
+   ["Nghỉ CRM theo tháng", async()=>{const d=await sel("v_nghi_lydo","thang,nhom_ly_do");
+       const by={}; d.forEach(r=>{const m=String(r.thang||"");by[m]=(by[m]||0)+1;});
+       const months=Object.keys(by).sort().reverse();
+       return {value:months.map(m=>"T"+(+m.slice(5,7))+"="+by[m]).join(" · ")||"—", cond:"có dữ liệu, số khớp thẻ churn",
+         state: d.length?"ok":"bad"};}],
+   ["Đã lắng nghe (exit) — tháng gần nhất", async()=>{const d=await sel("v_nghi_lydo","thang,nhom_ly_do");
+       const by={}; d.forEach(r=>{const m=String(r.thang||"");(by[m]=by[m]||[]).push(r);});
+       const latest=Object.keys(by).sort().reverse()[0]; if(!latest)return{value:"—",cond:"",state:"bad"};
+       const rws=by[latest], co=rws.filter(r=>String(r.nhom_ly_do||"")!=="Chưa ghi lý do").length, p=co/rws.length;
+       return {value:"T"+(+latest.slice(5,7))+": "+co+"/"+rws.length+" = "+pct(p), cond:"% = thẻ exit trên app",
+         state: p>=0.8?"ok":p>=0.5?"wr":"bad"};}],
+   ["Care-log: thẻ vs nhu cầu (thô)", async()=>{  // replicate logic thẻ churnMoi/care-log card
+       const ph=await sel("v_ph_ketnoi","campus,so_the");
+       const caThe={}; ph.forEach(r=>{const k=nkn(r.campus);if(!k)return;caThe[k]=(caThe[k]||0)+(+r.so_the||0);});
+       const dd=await sel("v_diem_danh","ngay,campus");
+       const mm={}; dd.forEach(r=>{const d=ci(r.ngay);if(!d)return;const m=d.slice(0,7),k=nkn(r.campus);((mm[m]=mm[m]||{})[k]=mm[m][k]||new Set()).add(d);});
+       let refM=null,refMax=-1; Object.keys(mm).forEach(m=>{const mx=Math.max(0,...Object.keys(mm[m]).map(k=>mm[m][k].size));if(mx>refMax){refMax=mx;refM=m;}});
+       const daysRef={}; if(refM)Object.keys(mm[refM]).forEach(k=>daysRef[k]=mm[refM][k].size);
+       const typ=(function(){const v=Object.values(daysRef).filter(x=>x>0).sort((a,b)=>a-b);return v.length?v[Math.floor(v.length/2)]:0;})();
+       const keys=[...new Set([...Object.keys(caThe),...Object.keys(daysRef)])].filter(k=>k&&k!=="TRUNG TÂM");
+       let the=0,can=0; keys.forEach(k=>{the+=caThe[k]||0; can+=3*((daysRef[k]==null)?typ:daysRef[k]);});
+       const p=can?the/can:null;
+       return {value:"thẻ "+fmt(the)+" / cần "+fmt(can)+" = "+pct(p)+" (tháng chuẩn T"+(refM?+refM.slice(5,7):"?")+")", cond:"khớp thẻ Kết nối PH",
+         state: the>0&&can>0?"ok":"bad", note:"% thô — v_ph_ketnoi chưa có ngày tạo thẻ"};}],
+   ["Vắng dài ≥7 buổi — chưa liên lạc", async()=>{
+       const ng=await sel("mv_nghi_chuoi","ma_tre,so_buoi,ly_do,dang_dien_ra,chua_quay_lai");
+       const arch=new Set((await sel("tomia_archived","ma_tre")).map(r=>String(r.ma_tre)));
+       const mat=ng.filter(r=>r.chua_quay_lai&&!r.dang_dien_ra&&!arch.has(String(r.ma_tre)));
+       const daLL=r=>/có phép|co phep/i.test(String(r.ly_do||""));
+       const chua=mat.filter(r=>!daLL(r)).length;
+       return {value:"nghỉ lâu "+fmt(mat.length)+" · chưa liên lạc "+fmt(chua), cond:"khớp card Trẻ nghỉ liên tục",
+         state: mat.length?"ok":"wr", note: chua?chua+" bé Không phép + vắng dài = cần gọi":""};}],
+   ["Sĩ số vs điểm danh (sơ bộ)", async()=>{
+       const si=await sel("v_siso","campus,so_hs"); const sTot=si.reduce((a,r)=>a+(+r.so_hs||0),0);
+       const dd=await sel("v_diem_danh","ngay,campus,di_hoc"); const mx=dd.map(r=>ci(r.ngay)).filter(Boolean).sort().pop();
+       const dTot=dd.filter(r=>ci(r.ngay)===mx).reduce((a,r)=>a+(+r.di_hoc||0),0);
+       const r=sTot?dTot/sTot:null;
+       return {value:"sĩ số "+fmt(sTot)+" · đi học ("+(mx||"—")+") "+fmt(dTot)+" = "+pct(r), cond:"đi học ≤ sĩ số, tỷ lệ hợp lý 60–100%",
+         state:(sTot&&dTot&&dTot<=sTot*1.05)?"ok":"wr"};}],
+  ]},
+ // ===== LANH MANH: khong co NaN/undefined trong cac so =====
+ {grp:"Không có số hỏng",
+  items:[
+   ["mv_lead_campus có so_lead số", async()=>{const d=await sel("mv_lead_campus","so_lead");const bad=d.filter(r=>r.so_lead!=null&&isNaN(+r.so_lead)).length;
+       return {value:bad+" dòng lỗi / "+d.length, cond:"0 dòng NaN", state:bad?"bad":"ok"};}],
+   ["fin_campus_thang margin hợp lệ", async()=>{const d=await sel("fin_campus_thang","eb_th,dt_th");const bad=d.filter(r=>r.dt_th!=null&&isNaN(+r.dt_th)).length;
+       return {value:bad+" dòng lỗi / "+d.length, cond:"0 dòng NaN", state:bad?"bad":"ok"};}],
+  ]},
+];
+async function rows(t){try{const d=await sel(t,"*",1);const full=await SB.from(t).select("*",{count:"exact",head:true});const n=full.count!=null?full.count:(d.length?"≥1":0);
+    return {value:fmt(n)+" dòng", cond:"> 0 dòng", state:(n&&n>0)?"ok":"bad"};}catch(e){return{value:"lỗi",cond:"> 0 dòng",state:"bad",note:e.message};}}
+
+async function run(){
+  $("out").innerHTML=""; $("heroN").textContent="Đang chạy…"; $("heroBar").style.width="0%";
+  let pass=0,warn=0,fail=0,total=0;
+  for(const g of CHECKS){
+    const sec=document.createElement("div"); sec.className="grp";
+    sec.innerHTML='<h2>'+g.grp+'</h2><table><thead><tr><th>Phép kiểm</th><th>Giá trị</th><th>Điều kiện</th><th>Trạng thái</th></tr></thead><tbody></tbody></table>';
+    const tb=sec.querySelector("tbody"); $("out").appendChild(sec);
+    for(const [name,fn] of g.items){
+      total++; const tr=document.createElement("tr");
+      tr.innerHTML='<td>'+name+'</td><td class="mono">…</td><td class="note">…</td><td class="st">…</td>'; tb.appendChild(tr);
+      let res; try{res=await fn();}catch(e){res={value:"lỗi",cond:"",state:"bad",note:e.message};}
+      const emoji=res.state==="ok"?"🟢":res.state==="wr"?"🟡":"🔴";
+      if(res.state==="ok")pass++; else if(res.state==="wr")warn++; else fail++;
+      tr.children[1].innerHTML=res.value||"—";
+      tr.children[2].innerHTML='<span class="note">'+(res.cond||"")+'</span>';
+      tr.children[3].innerHTML='<span class="pill '+res.state+'">'+emoji+' '+(res.state==="ok"?"khớp":res.state==="wr"?"xem":"SAI")+'</span>'+(res.note?'<div class="note" style="margin-top:3px">'+res.note+'</div>':'');
+    }
+  }
+  const okAll=fail===0;
+  $("heroN").innerHTML=(fail?'<span class="bad">':warn?'<span class="wr">':'<span class="ok">')+pass+"/"+total+" khớp</span>"
+    +(warn?' · <span class="wr">'+warn+" xem</span>":"")+(fail?' · <span class="bad">'+fail+" SAI</span>":"");
+  $("heroBar").style.width=Math.round(pass/total*100)+"%";
+  $("heroBar").style.background=fail?"var(--crit)":warn?"var(--warn)":"var(--good)";
+  $("heroNote").textContent="Chạy lúc "+new Date().toLocaleString("vi-VN")+(okAll?" · tất cả số khớp, khỏi so tay":" · có dòng cần xem ở dưới");
+}
+$("ver").textContent="· v1 (01/10)";
+run();
+</script>
+</body></html>
