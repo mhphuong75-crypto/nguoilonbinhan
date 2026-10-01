@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b56";
+const BUILD="2026-10-01 · b57";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -420,7 +420,7 @@ async function render(){
   let end, start, n, pStart, pEnd;
   if(pv==="thang"||pv==="truoc"){
     const _yy=+_today.slice(0,4), _mm=+_today.slice(5,7);
-    if(pv==="thang"){ start=_mk(_yy,_mm-1,1); end=(_gaEnd<_today?_gaEnd:_today); pStart=_mk(_yy,_mm-2,1); pEnd=_mk(_yy,_mm-1,0); }
+    if(pv==="thang"){ start=_mk(_yy,_mm-1,1); const _e=(_gaEnd<_today?_gaEnd:_today); end=(_e<start?start:_e); pStart=_mk(_yy,_mm-2,1); pEnd=_mk(_yy,_mm-1,0); }
     else { start=_mk(_yy,_mm-2,1); end=_mk(_yy,_mm-1,0); pStart=_mk(_yy,_mm-3,1); pEnd=_mk(_yy,_mm-2,0); }
     n=Math.round((Date.parse(end)-Date.parse(start))/864e5)+1;
   } else {
