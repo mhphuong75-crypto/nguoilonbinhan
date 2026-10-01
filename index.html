@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b58";
+const BUILD="2026-10-01 · b59";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1591,10 +1591,10 @@ async function render(){
               nhip:(+r.tuyen_moi||0)*ngayHocDaQua(thangHT)/soNgayHoc(thangHT)}))
     .filter(r=>r.moi||r.si||r.thuc)
     .sort((a,b)=>(a.thuc-a.nhip)-(b.thuc-b.nhip));   // tut nhip nhieu nhat len truoc
-  // Danh sách bé đi học buổi đầu + đối chiếu Tomia vs CRM (tháng gần nhất có nhập học)
-  const _nhMon=(function(){var ms=Object.keys(thucT).map(Number).filter(m=>thucT[m]>0);return ms.length?Math.max.apply(null,ms):thangHT;})();
-  const _nhList=(nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).filter(function(r){var d=chiNgay(r.ngay_dau);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_nhMon;}).sort(function(a,b){return String(a.ngay_dau).localeCompare(String(b.ngay_dau));});
-  const _nhCRM=(tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).filter(function(r){var d=chiNgay(r.ngay);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_nhMon;}).reduce(function(a,r){return a+(+r.so_lead||0);},0);
+  // Danh sách bé đi học buổi đầu + đối chiếu Tomia vs CRM — 30 ngày gần nhất
+  const _nhFrom=shift(homNay,-29);
+  const _nhList=(nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).filter(function(r){var d=chiNgay(r.ngay_dau);return d&&d>=_nhFrom&&d<=homNay;}).sort(function(a,b){return String(a.ngay_dau).localeCompare(String(b.ngay_dau));});
+  const _nhCRM=(tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).filter(function(r){var d=chiNgay(r.ngay);return d&&d>=_nhFrom&&d<=homNay;}).reduce(function(a,r){return a+(+r.so_lead||0);},0);
   const ktCard = !ktDs.length ?
    '<div class="card"><h2>Mục tiêu và thực tế</h2>'
    +'<p class="sub">'+nhanCP+' · bảng <code>chi_tieu</code> trả về <b class="down">0 dòng</b></p>'
@@ -1612,9 +1612,9 @@ async function render(){
         '<span class="'+(thucNay-nhipNay>=0?"up":"down")+'">'+(thucNay-nhipNay>=0?"+":"")+dec(thucNay-nhipNay,1)+"</span>",
         "","thực tế trừ nhịp — đây là con số cần nhìn")+"</div>"
    +(ktCoNH?'<div style="margin:12px 0 4px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:11px 14px;background:rgba(78,182,157,.06)">'
-     +'<p style="margin:0;font-weight:700">Đi học buổi đầu tháng '+_nhMon+' — đối chiếu nguồn: Tomia <b>'+fmt(_nhList.length)+'</b> · CRM (chốt) <b>'+fmt(_nhCRM)+'</b>'+(_nhList.length>_nhCRM?' <span style="color:var(--warn)">→ lệch '+fmt(_nhList.length-_nhCRM)+' hồ sơ CRM chưa bấm chốt</span>':'')+'</p>'
+     +'<p style="margin:0;font-weight:700">Đi học buổi đầu 30 ngày gần nhất — đối chiếu nguồn: Tomia <b>'+fmt(_nhList.length)+'</b> · CRM (chốt) <b>'+fmt(_nhCRM)+'</b>'+(_nhList.length>_nhCRM?' <span style="color:var(--warn)">→ lệch '+fmt(_nhList.length-_nhCRM)+' hồ sơ CRM chưa bấm chốt</span>':'')+'</p>'
      +'<p class="leg" style="margin:4px 0 0">Tomia = trẻ thật sự đến lớp (điểm danh, phủ 15 cơ sở) → tin số này. CRM = chỉ lead ai đó bấm "Kết thúc thành công". Danh sách chi tiết ↓.</p></div>'
-     +'<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Danh sách '+fmt(_nhList.length)+' bé đi học buổi đầu tháng '+_nhMon+' — tên · cơ sở · lớp · ngày</summary>'
+     +'<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Danh sách '+fmt(_nhList.length)+' bé đi học buổi đầu 30 ngày gần nhất — tên · cơ sở · lớp · ngày</summary>'
      +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>#</th><th>Học sinh</th><th>Cơ sở</th><th>Lớp</th><th>Ngày đi học đầu</th></tr></thead><tbody>'
      +_nhList.map(function(r,i){return "<tr><td class=\"mono\">"+(i+1)+"</td><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.campus||"—")+"</td><td>"+(r.lop||"—")+'</td><td class="mono">'+(r.ngay_dau||"—")+"</td></tr>";}).join("")
      +'</tbody></table></div></details>':"")
