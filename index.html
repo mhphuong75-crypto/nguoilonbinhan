@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b48";
+const BUILD="2026-10-01 · b49";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1926,46 +1926,44 @@ async function render(){
     if(/đang|dang|in.?progress|processing/.test(s))return"dang_cham";
     if(/chưa|chua|not|mới|moi|new/.test(s))return"chua_cham";
     return"khac";};
-  const caRows=(phKN||[]).filter(r=>hopCP(r.campus));
-  const caTong=caRows.reduce((a,r)=>a+(+r.so_the||0),0);
-  const caSt={hoan_thanh:0,dang_cham:0,chua_cham:0,khac:0};
-  caRows.forEach(r=>{caSt[_kntt(r.tinh_trang)]+=(+r.so_the||0);});
-  const caLoai={}; caRows.forEach(r=>{const k=(r.loai||"").trim();if(k){caLoai[k]=(caLoai[k]||0)+(+r.so_the||0);}});
-  const caLoaiRows=Object.entries(caLoai).sort((a,b)=>b[1]-a[1]);
-  const caCam={}; caRows.forEach(r=>{const k=r.campus||"(chưa gán)";const o=caCam[k]||(caCam[k]={tong:0,ht:0,dc:0,cc:0});o.tong+=(+r.so_the||0);const st=_kntt(r.tinh_trang);if(st==="hoan_thanh")o.ht+=(+r.so_the||0);else if(st==="dang_cham")o.dc+=(+r.so_the||0);else if(st==="chua_cham")o.cc+=(+r.so_the||0);});
-  const caCamRows=Object.entries(caCam).sort((a,b)=>b[1].tong-a[1].tong);
-  const caPctHT=caTong?caSt.hoan_thanh/caTong:0;
+  const _nkn=s=>String(s||"").replace(/\s*\(\d+\)\s*$/,"").replace(/^ME\s+Green\s+/i,"").trim().toUpperCase();
+  const caThe={}; (phKN||[]).forEach(r=>{const k=_nkn(r.campus); if(!k)return; caThe[k]=(caThe[k]||0)+(+r.so_the||0);});
+  const _careDays=mon=>{const o={}; (dd||[]).forEach(r=>{const d=chiNgay(r.ngay); if(d&&d.slice(0,7)===mon){const k=_nkn(r.campus); if(!k)return;(o[k]=o[k]||new Set()).add(d);}}); const out={}; Object.keys(o).forEach(k=>out[k]=o[k].size); return out;};
+  const _careMonths=[...new Set((dd||[]).map(r=>{const d=chiNgay(r.ngay);return d?d.slice(0,7):null;}).filter(Boolean))];
+  const _careCache={}; let caRefMon=_thNay, _caRefMax=-1;
+  _careMonths.forEach(m=>{const g=_careDays(m); _careCache[m]=g; const mx=Math.max(0,...Object.values(g)); if(mx>_caRefMax){_caRefMax=mx; caRefMon=m;}});
+  const caDaysRef=_careCache[caRefMon]||{};
+  const CARE_PER_DAY=3;
+  const _caTyp=(function(){const v=Object.values(caDaysRef).filter(x=>x>0).sort((a,b)=>a-b); return v.length?v[Math.floor(v.length/2)]:0;})();
+  const caKeys=[...new Set([...Object.keys(caThe),...Object.keys(caDaysRef)])].filter(k=>k&&(!CP||k===CP)&&k!=="TRUNG TÂM");
+  const caRowsD=caKeys.map(k=>{const the=caThe[k]||0; const estDay=(caDaysRef[k]==null); const days=estDay?_caTyp:caDaysRef[k]; const can=CARE_PER_DAY*days; const p=can?the/can:null; return {k,the,days,can,p,estDay};}).sort((a,b)=>((a.p==null?9:a.p)-(b.p==null?9:b.p)));
+  const caTheSum=caRowsD.reduce((a,r)=>a+r.the,0);
+  const caCanSum=caRowsD.reduce((a,r)=>a+r.can,0);
+  const caPct=caCanSum?caTheSum/caCanSum:null;
+  const _caClr=p=>p==null?"var(--muted)":p<0.6?"var(--crit)":p<1?"var(--warn)":"var(--good)";
+  const _d7set=new Set(); (dd||[]).forEach(r=>{const d=chiNgay(r.ngay); if(!d)return; if(CP&&_nkn(r.campus)!==CP)return; _d7set.add(d);});
+  const _last7n=[...(_d7set)].sort().reverse().slice(0,7).length;
+  const caRefLbl="T"+(+caRefMon.slice(5,7));
   const caEmpty =
-   '<div class="card" style="border-left:4px solid #A96C05"><h2>Kết nối phụ huynh — chưa có dữ liệu, bấm "Kéo Kết nối phụ huynh"</h2>'
-   +'<p class="sub">Đây là <b>nhật ký chăm sóc phụ huynh hiện hữu</b> trong CRM (phân hệ Học sinh) — <b>không phải</b> nuôi lead tiềm năng trong phễu.</p>'
-   +'<p class="leg"><b>Kết nối phụ huynh đúng nghĩa</b> = mỗi ngày campus chủ động gọi/chạm các phụ huynh <b>đang có con học</b> để: '
-   +'(1) <b>tìm lead mới</b> qua giới thiệu, (2) <b>mời viết Google review</b>, (3) <b>lắng nghe – chăm sóc</b> để giữ chân. Đây là ADN của ME School, đo bằng "thẻ chăm sóc" trong CRM.</p>'
-   +'<p class="leg"><b>Cách lấy (mỗi ngày/tuần 1 lần):</b> mở AMIS CRM → <b>Thẻ chăm sóc</b> (customer-subscription) → bấm dấu trang <b>Kéo Kết nối phụ huynh</b> → chờ "XONG ✅" → tải lại app. '
-   +'Chỉ đẩy <b>số tổng theo cơ sở &amp; tình trạng</b> — không có tên/SĐT phụ huynh.</p>'
-   +'<div class="q"><b>Câu hỏi khi có số:</b> cơ sở nào <b>bỏ bê</b> việc gọi phụ huynh hiện hữu (tỷ lệ hoàn thành thấp)? '
-   +'Và trong các cuộc gọi đã làm — bao nhiêu ra <b>lead giới thiệu</b>, bao nhiêu ra <b>Google review</b>? Đó mới là thước đo ADN, không phải số cuộc gọi.</div></div>';
-  const caCard = !caTong ? caEmpty :
-   '<div class="card"><h2>Kết nối phụ huynh — chăm sóc phụ huynh hiện hữu</h2>'
-   +'<p class="sub">Từ CRM AMIS · <b>thẻ chăm sóc phụ huynh đang có con học</b> · '+nhanCP+' · mục tiêu: tìm lead giới thiệu · mời Google review · lắng nghe giữ chân</p>'
+   '<div class="card" style="border-left:4px solid var(--warn)"><h2>Kết nối phụ huynh — chưa có dữ liệu, bấm "Kéo Kết nối phụ huynh"</h2>'
+   +'<p class="sub">Thẻ chăm sóc phụ huynh hiện hữu trong CRM (phân hệ Học sinh). Mở AMIS CRM → <b>Thẻ chăm sóc</b> → bấm <b>Kéo Kết nối phụ huynh</b> → chờ "XONG ✅" → tải lại app.</p></div>';
+  const caCard = (!caTheSum && !caCanSum) ? caEmpty :
+   '<div class="card"><h2>Kết nối phụ huynh — thẻ chăm sóc vs nhu cầu</h2>'
+   +'<p class="sub">Nhu cầu = <b>3 thẻ/cơ sở/ngày × số ngày có điểm danh</b> · thực tế = <b>thẻ tạo trong CRM</b> · '+nhanCP+'</p>'
+   +'<div style="margin:2px 0 12px;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:10px 13px;background:rgba(223,166,72,.07)">'
+   +'<p class="leg" style="margin:0;color:var(--warn)"><b>⚠ Số thô — chưa lọc theo tháng.</b> Thẻ chăm sóc trong CRM <b>chưa có ngày tạo</b>, nên “thẻ đã tạo” là <b>ảnh chụp tích luỹ</b>. Nhu cầu dưới đây tính theo <b>tháng đủ gần nhất ('+caRefLbl+' ≈ '+_caTyp+' ngày điểm danh)</b>; % = thẻ hiện có ÷ nhu cầu 1 tháng, <b>chưa phải % hoàn thành theo tháng chuẩn</b>.</p>'
+   +'<p class="leg" style="margin:6px 0 0">🔧 Fix thật: thêm trường <b>“ngày tạo thẻ”</b> vào bước <b>Kéo Kết nối phụ huynh</b> → mới tính đúng % theo tháng. <i>Blind spot — chủ: chưa giao · hạn: chưa có.</i></p></div>'
    +'<div class="kpis">'
-   +kpi("Tổng thẻ chăm sóc",fmt(caTong),"","việc gọi/chạm PH hiện hữu")
-   +kpi("Đã hoàn thành",pct(caPctHT,0),"",fmt(caSt.hoan_thanh)+" thẻ đã làm xong")
-   +kpi("Đang chăm",fmt(caSt.dang_cham),"","đang làm dở")
-   +kpi("Chưa ai làm",fmt(caSt.chua_cham),"","PH chưa được gọi — bỏ bê")+"</div>"
-   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid '+(caPctHT<0.6?"#B42318":caPctHT<0.8?"#A96C05":"#067647")+';border-radius:8px;padding:12px 14px;background:rgba(15,83,72,.04)">'
-   +'<p style="margin:0 0 4px;font-weight:700;color:'+(caPctHT<0.6?"#B42318":caPctHT<0.8?"#A96C05":"#067647")+'">'+pct(caPctHT,0)+' thẻ chăm sóc đã hoàn thành'+(caSt.chua_cham?' — còn '+fmt(caSt.chua_cham)+' PH chưa ai gọi':'')+'</p>'
-   +'<p class="leg" style="margin:0">Đây là ADN ME School: gọi phụ huynh hiện hữu để <b>xin giới thiệu (lead mới)</b>, <b>mời Google review</b>, và <b>lắng nghe giữ chân</b>. '
-   +'PH chưa ai gọi = cơ hội lead giới thiệu &amp; review đang bỏ lỡ. <b>Việc cần làm:</b> cơ sở tỷ lệ hoàn thành thấp nhất (bên dưới) — giao chỉ tiêu số cuộc gọi/tuần và ghi kết quả (ra lead? ra review?).</p></div>'
-   +(caLoaiRows.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo mục đích</p>'
-     +'<div class="tw"><table><thead><tr><th>Mục đích chăm sóc</th><th>Số thẻ</th><th>Tỷ lệ</th></tr></thead><tbody>'
-     +caLoaiRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(caTong?v/caTong:0,0)+"</td></tr>").join("")
-     +"</tbody></table></div>":"")
-   +(caCamRows.length>1?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo cơ sở — tỷ lệ hoàn thành thấp trước</p>'
-     +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Tổng thẻ</th><th>Hoàn thành</th><th>Đang chăm</th><th>Chưa làm</th><th>% hoàn thành</th></tr></thead><tbody>'
-     +caCamRows.slice().sort((a,b)=>(a[1].tong?a[1].ht/a[1].tong:1)-(b[1].tong?b[1].ht/b[1].tong:1)).map(([k,v])=>{const p=v.tong?v.ht/v.tong:0;return "<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.tong)+'</td><td class="mono">'+fmt(v.ht)+'</td><td class="mono">'+fmt(v.dc)+'</td><td class="mono" style="color:'+(v.cc?"#B42318":"var(--muted)")+'">'+fmt(v.cc)+'</td><td class="mono" style="color:'+(p<0.6?"#B42318":p<0.8?"#A96C05":"#067647")+'">'+pct(p,0)+"</td></tr>";}).join("")
-     +"</tbody></table></div>":"")
-   +'<p class="leg">Dữ liệu là <b>số tổng theo cơ sở &amp; tình trạng</b> (không có tên/SĐT phụ huynh). Muốn xem từng thẻ → vào thẳng AMIS CRM → Thẻ chăm sóc.</p>'
-   +'<div class="q"><b>Câu hỏi:</b> tỷ lệ hoàn thành cao nhưng có ra <b>lead giới thiệu</b> và <b>Google review</b> không — hay chỉ "gọi cho xong"? Nếu CRM chưa tách được kết quả (lead/review/lắng nghe), đó là trường cần thêm để đo đúng ADN.</div></div>';
+   +kpi("Thẻ đã tạo",fmt(caTheSum),"","ảnh chụp tích luỹ trong CRM")
+   +kpi("Thẻ cần tạo / tháng",fmt(caCanSum),"","3 × ngày điểm danh "+caRefLbl)
+   +kpi("% thực hiện (thô)",caPct==null?"—":pct(caPct,0),"","thẻ hiện có ÷ nhu cầu 1 tháng")+"</div>"
+   +'<p class="leg" style="margin:10px 0 0">Nhu cầu/tuần ≈ <b>'+fmt(CARE_PER_DAY*_last7n)+' thẻ/cơ sở</b> (3 × '+_last7n+' ngày học gần nhất).</p>'
+   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo cơ sở — % thô thấp nhất trước</p>'
+   +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Thẻ đã tạo</th><th>Ngày điểm danh '+caRefLbl+'</th><th>Cần tạo/tháng</th><th>% thô</th></tr></thead><tbody>'
+   +caRowsD.map(r=>"<tr><td>"+r.k+(r.estDay?' <span class="down" title="chưa có điểm danh — dùng số ngày điển hình">~</span>':'')+'</td><td class="mono">'+fmt(r.the)+'</td><td class="mono">'+fmt(r.days)+'</td><td class="mono">'+fmt(r.can)+'</td><td class="mono" style="color:'+_caClr(r.p)+'">'+(r.p==null?"—":pct(r.p,0))+"</td></tr>").join("")
+   +'</tbody></table></div>'
+   +'<p class="leg">Dấu <b>~</b> = cơ sở chưa có dữ liệu điểm danh '+caRefLbl+', dùng số ngày điển hình ('+_caTyp+') để ước nhu cầu. <b>TÂN THUẬN &amp; LINH ĐÀM</b> không dùng AMIS CRM → 0 thẻ là do nguồn, <b>không phải bỏ bê</b>. Dữ liệu là số tổng theo cơ sở (không có tên/SĐT PH) — xem từng thẻ ở AMIS CRM → Thẻ chăm sóc.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> cơ sở <b>% thô thấp nhất</b> (đầu bảng) — đang bỏ bê gọi phụ huynh hiện hữu, hay chỉ do chưa kéo thẻ mới? Khi có “ngày tạo thẻ”, % tháng thật sẽ lộ cơ sở nào thực sự tạo đủ 3 thẻ/ngày.</div></div>';
 
   // ----- Channel cards tach thanh bien de dung o ca z3 va tab Channel -----
   const webCard='<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
