@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b57";
+const BUILD="2026-10-01 · b58";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1591,6 +1591,10 @@ async function render(){
               nhip:(+r.tuyen_moi||0)*ngayHocDaQua(thangHT)/soNgayHoc(thangHT)}))
     .filter(r=>r.moi||r.si||r.thuc)
     .sort((a,b)=>(a.thuc-a.nhip)-(b.thuc-b.nhip));   // tut nhip nhieu nhat len truoc
+  // Danh sách bé đi học buổi đầu + đối chiếu Tomia vs CRM (tháng gần nhất có nhập học)
+  const _nhMon=(function(){var ms=Object.keys(thucT).map(Number).filter(m=>thucT[m]>0);return ms.length?Math.max.apply(null,ms):thangHT;})();
+  const _nhList=(nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).filter(function(r){var d=chiNgay(r.ngay_dau);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_nhMon;}).sort(function(a,b){return String(a.ngay_dau).localeCompare(String(b.ngay_dau));});
+  const _nhCRM=(tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).filter(function(r){var d=chiNgay(r.ngay);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_nhMon;}).reduce(function(a,r){return a+(+r.so_lead||0);},0);
   const ktCard = !ktDs.length ?
    '<div class="card"><h2>Mục tiêu và thực tế</h2>'
    +'<p class="sub">'+nhanCP+' · bảng <code>chi_tieu</code> trả về <b class="down">0 dòng</b></p>'
@@ -1607,6 +1611,13 @@ async function render(){
    +kpi("So với nhịp",(!ktCoThuc||nhipNay==null)?"—":
         '<span class="'+(thucNay-nhipNay>=0?"up":"down")+'">'+(thucNay-nhipNay>=0?"+":"")+dec(thucNay-nhipNay,1)+"</span>",
         "","thực tế trừ nhịp — đây là con số cần nhìn")+"</div>"
+   +(ktCoNH?'<div style="margin:12px 0 4px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:11px 14px;background:rgba(78,182,157,.06)">'
+     +'<p style="margin:0;font-weight:700">Đi học buổi đầu tháng '+_nhMon+' — đối chiếu nguồn: Tomia <b>'+fmt(_nhList.length)+'</b> · CRM (chốt) <b>'+fmt(_nhCRM)+'</b>'+(_nhList.length>_nhCRM?' <span style="color:var(--warn)">→ lệch '+fmt(_nhList.length-_nhCRM)+' hồ sơ CRM chưa bấm chốt</span>':'')+'</p>'
+     +'<p class="leg" style="margin:4px 0 0">Tomia = trẻ thật sự đến lớp (điểm danh, phủ 15 cơ sở) → tin số này. CRM = chỉ lead ai đó bấm "Kết thúc thành công". Danh sách chi tiết ↓.</p></div>'
+     +'<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Danh sách '+fmt(_nhList.length)+' bé đi học buổi đầu tháng '+_nhMon+' — tên · cơ sở · lớp · ngày</summary>'
+     +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>#</th><th>Học sinh</th><th>Cơ sở</th><th>Lớp</th><th>Ngày đi học đầu</th></tr></thead><tbody>'
+     +_nhList.map(function(r,i){return "<tr><td class=\"mono\">"+(i+1)+"</td><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.campus||"—")+"</td><td>"+(r.lop||"—")+'</td><td class="mono">'+(r.ngay_dau||"—")+"</td></tr>";}).join("")
+     +'</tbody></table></div></details>':"")
    +(ktCoNH
      ? '<p class="leg" style="margin-top:12px"><b>“Nhập học thực tế” nghĩa là gì:</b> một trẻ được tính vào ngày em <b>đi học buổi đầu tiên</b>, '
        +'lấy từ điểm danh Tomia. Mỗi trẻ chỉ tính <b>một lần</b> trong đời.<br>'
@@ -1816,7 +1827,7 @@ async function render(){
   const nghiChurnCoLD=nghiChurnDS.filter(_hasLD).length;
   const nghiChurnChuaLD=nghiChurnDS.filter(r=>!_hasLD(r));
   const rowChua=r=>"<tr><td>"+(r.ten_hs||r.ma_hs||"—")+"</td><td>"+_stripCp(r.campus)+"</td><td>"+(r.phu_trach||'<span style="opacity:.5">chưa gán</span>')+"</td></tr>";
-  const rowChurn=r=>"<tr><td>"+(r.ten_hs||r.ma_hs||"—")+"</td><td>"+_stripCp(r.campus)+"</td><td>"+(r.ly_do_nghi&&String(r.ly_do_nghi).trim()?r.ly_do_nghi:'<span class="down">chưa lắng nghe</span>')+"</td><td>"+(r.phu_trach||'<span style="opacity:.5">chưa gán</span>')+"</td></tr>";
+  const rowChurn=r=>"<tr><td>"+(r.ten_hs||r.ma_hs||"—")+"</td><td>"+_stripCp(r.campus)+"</td><td>"+(r.ly_do_nghi&&String(r.ly_do_nghi).trim()?r.ly_do_nghi:'<span class="down">chưa ghi lý do</span>')+"</td><td>"+(r.phu_trach||'<span style="opacity:.5">chưa gán</span>')+"</td></tr>";
   const ngHocCard = !nghiTong ? "" :
    '<div class="card"><h2>Học sinh nghỉ — đã lắng nghe (exit) chưa? <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· lũy kế toàn thời gian (tham khảo)</span></h2>'
    +'<p class="sub">Từ CRM (AMIS) · học sinh trạng thái "Nghỉ học" · <b>LŨY KẾ toàn thời gian</b> — số <b>tháng hiện hành</b> xem thẻ "Học sinh nghỉ tháng này" ở đầu mảng · "đã lắng nghe" = có ghi lý do nghỉ</p>'
@@ -1846,10 +1857,10 @@ async function render(){
    +(nghiLyRows.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Lý do nghỉ đã ghi nhận (mẫu)</p>'
      +'<div class="tw"><table><thead><tr><th>Lý do</th><th>Số HS</th></tr></thead><tbody>'
      +nghiLyRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v)+"</td></tr>").join("")+"</tbody></table></div>":"")
-   +(nghiChurnDS.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Học sinh churn thật — đã gọi exit chưa? ('+fmt(nghiChurnDS.length)+' em · '+fmt(nghiChurnChuaLD.length)+' chưa lắng nghe)</p>'
+   +(nghiChurnDS.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Học sinh churn thật — đã gọi exit chưa? ('+fmt(nghiChurnDS.length)+' em · '+fmt(nghiChurnChuaLD.length)+' chưa ghi lý do)</p>'
      +'<div class="tw"><table><thead><tr><th>Học sinh</th><th>Campus</th><th>Lý do (exit)</th><th>Phụ trách gọi</th></tr></thead><tbody>'
      +nghiChurnDS.slice().sort((a,b)=>(_hasLD(a)?1:0)-(_hasLD(b)?1:0)).slice(0,20).map(rowChurn).join("")+"</tbody></table></div>"
-     +(nghiChurnDS.length>20?'<p class="note" style="margin-top:6px">Chỉ hiện 20 em (ưu tiên "chưa lắng nghe" lên trên). <b>Còn '+fmt(nghiChurnDS.length-20)+' em — mở CRM để gọi exit toàn bộ.</b> Cột "Phụ trách gọi" trống = chưa ai được giao gọi exit em này.</p>':""):"")
+     +(nghiChurnDS.length>20?'<p class="note" style="margin-top:6px">Chỉ hiện 20 em (ưu tiên "chưa ghi lý do" lên trên). <b>Còn '+fmt(nghiChurnDS.length-20)+' em — mở CRM để gọi exit toàn bộ.</b> Cột "Phụ trách gọi" trống = chưa ai được giao gọi exit em này.</p>':""):"")
    +'<p class="leg" style="margin-top:10px">⏱ Đây là số <b>lũy kế toàn thời gian</b> (tham khảo). Con số <b>tháng hiện hành</b> nay lấy trực tiếp từ CRM (trường <b>Ngày thôi học</b>) — xem thẻ <b>"Học sinh nghỉ tháng này — theo lý do"</b> ở trên đầu mảng này.</p>'
    +'</div>';
 
@@ -1924,32 +1935,32 @@ async function render(){
   const exPct = exTong? exCoLD/exTong : 0;
   const _exSo = (+_exMon.slice(5));
   const _exClr = exPct<0.5?"var(--crit)":exPct<0.8?"var(--warn)":"var(--good)";
-  const _rowNghiNay=r=>{var co=String(r.ly_do||"").trim();return '<tr><td>'+(r.ten_hs||r.ma_hs||"—")+'</td><td>'+_stripCp(r.campus)+'</td><td class="mono">'+_dmy(r.ngay_thoi_hoc)+'</td><td>'+(co?r.ly_do:'<span class="down">chưa lắng nghe</span>')+'</td></tr>';};
+  const _rowNghiNay=r=>{var co=String(r.ly_do||"").trim();return '<tr><td>'+(r.ten_hs||r.ma_hs||"—")+'</td><td>'+_stripCp(r.campus)+'</td><td class="mono">'+_dmy(r.ngay_thoi_hoc)+'</td><td>'+(co?r.ly_do:'<span class="down">chưa ghi lý do</span>')+'</td></tr>';};
   const _exSorted=exRows.slice().sort(function(a,b){var la=String(a.ly_do||"").trim()?1:0,lb=String(b.ly_do||"").trim()?1:0;if(la!==lb)return la-lb;return String(b.ngay_thoi_hoc||"").localeCompare(String(a.ngay_thoi_hoc||""));});
   const churnNayCard = !clyAll.length ?
-   ('<div class="card"><h2>Đã lắng nghe (exit) — tháng này <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
+   ('<div class="card"><h2>Lý do thôi học (exit) — tháng này <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
     +'<p class="sub">Nguồn: AMIS CRM · trường <b>Ngày thôi học</b> + <b>Lý do thôi học</b></p>'
     +'<p class="leg">Chưa có dữ liệu nghỉ từ CRM. Chạy bookmarklet <b>"Kéo HS thôi học"</b> trên trang HỌC SINH của AMIS.</p></div>')
    : !exTong ?
-   ('<div class="card"><h2>Đã lắng nghe (exit) <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
+   ('<div class="card"><h2>Lý do thôi học (exit) <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
     +'<p class="leg">Chưa có HS nghỉ nào trong CRM (3 tháng gần nhất). Xem thẻ <b>"Học sinh nghỉ theo tháng"</b> phía trên.</p></div>')
    :
-   ('<div class="card"><h2>Đã lắng nghe (exit) — tháng '+_exSo+' <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· '+_exMon+(_exLaNay?' · tháng này':' · tháng gần nhất có HS nghỉ')+' · nguồn sống CRM</span></h2>'
+   ('<div class="card"><h2>Lý do thôi học (exit) — tháng '+_exSo+' <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· '+_exMon+(_exLaNay?' · tháng này':' · tháng gần nhất có HS nghỉ')+' · nguồn sống CRM</span></h2>'
     +'<p class="sub">'+(_exLaNay?'Tháng này đang tích luỹ. ':'Tháng '+_thNay.slice(5)+' chưa có bé nào nghỉ — số dưới là <b>tháng '+_exSo+'</b> (gần nhất có nghỉ). ')+'Trong <b>'+exTong+'</b> bé nghỉ — đã gọi hỏi lý do (exit) bao nhiêu? Mỗi bé không hỏi = một bài học bị mất.</p>'
     +'<div class="kpis">'
     +kpi("Nghỉ tháng "+_exSo,fmt(exTong),"","số sống từ CRM"+(_exLaNay?" — đang tích luỹ":""))
-    +kpi("Đã lắng nghe",fmt(exCoLD),"","đã ghi lý do thôi học")
-    +kpi("Tỷ lệ lắng nghe",pct(exPct,0),"","càng cao càng hiểu vì sao mất HS")
+    +kpi("Đã ghi lý do",fmt(exCoLD),"","có lý do thôi học trong CRM")
+    +kpi("Tỷ lệ có lý do",pct(exPct,0),"","% nghỉ đã ghi lý do — KHÁC 'đã gọi/lắng nghe PH'")
     +kpi("Chưa ai hỏi",fmt(exChua),"","cần gọi exit trong tuần")+"</div>"
     +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid '+_exClr+';border-radius:8px;padding:12px 14px;background:rgba(226,119,106,.06)">'
-    +'<p style="margin:0 0 4px;font-weight:700;color:'+_exClr+'">'+pct(exPct,0)+' HS nghỉ đã được hỏi lý do'+(exChua?' — còn '+fmt(exChua)+' bé chưa ai gọi exit':'')+'</p>'
-    +'<p class="leg" style="margin:0">Bé nghỉ không được hỏi = không biết campus/sản phẩm hỏng ở đâu, marketing không biết objection thật. <b>Việc cần làm:</b> giao đích danh người gọi exit các bé "chưa lắng nghe" (đầu bảng) trong tuần.</p></div>'
-    +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Danh sách bé nghỉ — chưa lắng nghe lên đầu</p>'
+    +'<p style="margin:0 0 4px;font-weight:700;color:'+_exClr+'">'+pct(exPct,0)+' HS nghỉ đã <b>GHI lý do</b> thôi học'+(exChua?' — còn '+fmt(exChua)+' bé chưa ghi lý do':'')+'</p>'
+    +'<p class="leg" style="margin:0"><b>⚠ "Có lý do" ≠ "đã gọi/lắng nghe phụ huynh".</b> CRM hiện chỉ kéo trường <b>Lý do thôi học</b>, KHÔNG có trường "đã gọi exit / đã liên hệ PH". Muốn đo <b>đã THỰC SỰ lắng nghe</b> (có gọi PH khi bé nghỉ) → cần thêm trường "đã liên hệ exit" trong AMIS + đưa vào bookmarklet. Chủ: chưa giao. Số trên chỉ là <b>đã ghi lý do</b>.</p></div>'
+    +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Danh sách bé nghỉ — chưa ghi lý do lên đầu</p>'
     +'<div class="tw"><table><thead><tr><th>Học sinh</th><th>Cơ sở</th><th>Ngày thôi học</th><th>Lý do (exit)</th></tr></thead><tbody>'
     +_exSorted.map(_rowNghiNay).join("")
     +'</tbody></table></div>'
     +'<p class="leg">Lý do theo nhóm + so sánh 3 tháng → xem thẻ <b>"Học sinh nghỉ theo tháng"</b> phía trên (tránh lặp). <b>TT &amp; LĐ</b> không có trong CRM nên không hiện ở đây.</p>'
-    +'<div class="q"><b>Câu hỏi:</b> '+fmt(exChua)+' bé chưa lắng nghe — ai gọi exit tuần này? Bé ghi "chuyển nhà" — thật sự relocation hay ngại nói không hài lòng?</div></div>');
+    +'<div class="q"><b>Câu hỏi:</b> '+fmt(exChua)+' bé chưa ghi lý do — ai gọi exit tuần này? Bé ghi "chuyển nhà" — thật sự relocation hay ngại nói không hài lòng?</div></div>');
 
   // ----- THE: KET NOI PHU HUYNH (nhat ky cham soc PH hien huu, tu CRM phan he hoc sinh -> v_ph_ketnoi) -----
   // ĐÚNG NGHĨA: campus gọi/chạm PHỤ HUYNH HIỆN HỮU mỗi ngày — để tìm lead mới (giới thiệu),
