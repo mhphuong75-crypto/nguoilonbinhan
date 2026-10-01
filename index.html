@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-09-29 · b47";
+const BUILD="2026-10-01 · b48";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1852,6 +1852,44 @@ async function render(){
   const clyChuyen = (clyByLD["Chuyển nhà / khu vực"]||0);
   const clyChuyenPct = clyTong? clyChuyen/clyTong : 0;
   const _dmy = s=>{ s=String(s||""); return s.length>=10? s.slice(8,10)+"/"+s.slice(5,7) : s; };
+  // ===== CARD GOP (V2): Hoc sinh nghi theo thang — churn 3 thang x co so, tach tot nghiep (CRM song) =====
+  const _isTN = s=>/tốt nghiệp|tot nghiep|lên lớp 1|len lop 1|hoàn thành chương trình|graduat/i.test(String(s||""));
+  const chM = (function(){var out=[];var y=+_thNay.slice(0,4),mo=+_thNay.slice(5,7);for(var i=0;i<3;i++){var yy=y,mm=mo-i;while(mm<=0){mm+=12;yy--;}out.push(yy+"-"+String(mm).padStart(2,"0"));}return out;})();
+  const chSys={}; chM.forEach(m=>chSys[m]={churn:0,tn:0});
+  const chCamp={};
+  (clyAll||[]).forEach(function(r){var m=String(r.thang||"");if(!chSys[m])return;var tn=_isTN(r.nhom_ly_do);var cp=_stripCp(r.campus)||"(chưa gán)";var o=chCamp[cp]||(chCamp[cp]={});var c=o[m]||(o[m]={churn:0,tn:0});if(tn){c.tn++;chSys[m].tn++;}else{c.churn++;chSys[m].churn++;}});
+  const _chRecent=o=>chM.slice(0,2).reduce((a,m)=>a+((o[m]||{}).churn||0),0);
+  const cxRows=Object.entries(chCamp).filter(e=>chM.some(m=>(e[1][m]||{}).churn||(e[1][m]||{}).tn)).sort((a,b)=>_chRecent(b[1])-_chRecent(a[1]));
+  const chChurnTot=chM.reduce((a,m)=>a+chSys[m].churn,0);
+  const chThis=chM[0],chPrev=chM[1];
+  const _lb=m=>"T"+(+m.slice(5,7));
+  const chDataM=chM.filter(m=>chSys[m].churn+chSys[m].tn>0); const chLatest=chDataM[0]||chPrev;
+  const chLD={}; (clyAll||[]).filter(r=>String(r.thang||"")===chLatest && !_isTN(r.nhom_ly_do)).forEach(r=>{var k=r.nhom_ly_do||"Chưa ghi lý do";chLD[k]=(chLD[k]||0)+1;});
+  const chLDRows=Object.entries(chLD).sort((a,b)=>b[1]-a[1]);
+  const chLatestTot=chSys[chLatest]?chSys[chLatest].churn:0;
+  const churnMoiCard = !(clyAll||[]).length ? "" :
+   '<div class="card"><h2>Học sinh nghỉ theo tháng — nghỉ thật vs tốt nghiệp <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
+   +'<p class="sub">Từ AMIS CRM · trường <b>Ngày thôi học</b> · 3 tháng gần nhất · <b>nghỉ thật</b> = churn (KHÔNG gồm tốt nghiệp/lên lớp 1) · tháng này ('+_lb(chThis)+') còn <b>đang tích luỹ</b></p>'
+   +'<div class="kpis">'
+   +kpi("Nghỉ thật "+_lb(chThis),fmt(chSys[chThis].churn),"","tháng này — đang tích luỹ, chưa chốt")
+   +kpi("Nghỉ thật "+_lb(chPrev),fmt(chSys[chPrev].churn),"","tháng liền trước — đã đủ")
+   +kpi("Tốt nghiệp "+_lb(chPrev),fmt(chSys[chPrev].tn),"","ra đúng lộ trình — không phải churn")
+   +kpi("Nghỉ thật 3 tháng",fmt(chChurnTot),"","tổng churn trong cửa sổ")+"</div>"
+   +'<div class="tw" style="margin-top:14px"><table style="min-width:420px"><thead><tr><th>Cơ sở</th>'
+   +chM.slice().reverse().map(m=>'<th>Nghỉ '+_lb(m)+'</th>').join("")+'<th>TN '+_lb(chPrev)+'</th></tr></thead><tbody>'
+   +cxRows.map(function(e){var cp=e[0],d=e[1];
+      return "<tr><td>"+cp+"</td>"+chM.slice().reverse().map(function(m){var n=(d[m]||{}).churn||0;var col=n>=5?"var(--crit)":n>=3?"var(--warn)":"var(--muted)";return '<td class="mono" style="color:'+col+'">'+(n||"")+"</td>";}).join("")
+        +'<td class="mono" style="opacity:.6">'+(((d[chPrev]||{}).tn)||"")+"</td></tr>";}).join("")
+   +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td>'
+   +chM.slice().reverse().map(m=>'<td class="mono">'+fmt(chSys[m].churn)+'</td>').join("")+'<td class="mono">'+fmt(chSys[chPrev].tn)+'</td></tr>'
+   +'</tbody></table></div>'
+   +(chLDRows.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghỉ thật '+_lb(chLatest)+' — theo lý do</p>'
+     +'<div class="tw"><table><thead><tr><th>Lý do</th><th>Số bé</th><th>%</th></tr></thead><tbody>'
+     +chLDRows.map(function(e){var k=e[0],v=e[1];var isChua=k==="Chưa ghi lý do";return '<tr><td>'+(isChua?'<span class="down">'+k+'</span>':k)+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(chLatestTot?v/chLatestTot:0,0)+'</td></tr>';}).join("")
+     +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TỔNG</td><td class="mono">'+fmt(chLatestTot)+'</td><td class="mono">100%</td></tr>'
+     +'</tbody></table></div>':"")
+   +'<p class="leg"><b style="color:var(--crit)">Đỏ</b> ≥5 nghỉ/tháng · <b style="color:var(--warn)">cam</b> 3–4 — cơ sở cần soi. Số lấy trực tiếp từ CRM (nguồn sống), thay cho file KHNS export tay.</p>'
+   +'<div class="q"><b>Câu hỏi:</b> cơ sở nào nghỉ thật <b>tăng dần</b> qua 3 tháng? Tháng này ai đã gọi exit từng ca để biết vì sao mất?</div></div>';
   const churnNayCard = !clyAll.length ?
    ('<div class="card"><h2>Học sinh nghỉ tháng này — theo lý do <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
     +'<p class="sub">Nguồn: AMIS CRM · trường <b>Ngày thôi học</b> + <b>Lý do thôi học</b> · chỉ tháng hiện hành</p>'
@@ -2269,7 +2307,7 @@ async function render(){
 
    +'<div class="zone" id="zdom">'
    +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — lead theo nguồn + phễu + kết nối phụ huynh")+leadNguonCard+hsCard+caCard+dsCard+choCard+cohCard+ctCard+'</div>'
-   +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — tháng này theo lý do (CRM) + churn theo tháng + nghỉ liên tục + đã lắng nghe")+churnNayCard+churnCard+ngCard+ngHocCard+'</div>'
+   +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — churn theo tháng (CRM, nghỉ thật vs tốt nghiệp) + nghỉ liên tục + đã lắng nghe")+churnMoiCard+ngCard+ngHocCard+'</div>'
    +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
    +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
    +'<div class="dom" data-dom="channel">'+SEC("Channel — Website · Google · Meta · Messenger")+webCard+chanCard+kwCard+nearCard+pageCard+evCard+wCard+hrCard+metaCard+cmpCard+'</div>'
