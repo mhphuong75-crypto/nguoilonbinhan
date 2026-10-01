@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b52";
+const BUILD="2026-10-01 · b53";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2210,7 +2210,9 @@ async function render(){
 
   // ----- THE: LEAD TUYEN SINH THANG NAY theo nguon & co so (CRM Co hoi: Opportunity, CreatedDate thang nay, LeadSourceIDText + CustomField17Text) -----
   var _llAll=(leadThang||[]);
-  var _llNay=_llAll.filter(function(r){return String(r.thang||"")===_thNay;});
+  var _llMon=(function(){var ms=[...new Set(_llAll.map(function(r){return String(r.thang||"");}).filter(Boolean))].sort();return ms[ms.length-1]||_thNay;})();
+  var _llLaNay=(_llMon===_thNay);
+  var _llNay=_llAll.filter(function(r){return String(r.thang||"")===_llMon;});
   var _llTong=_llNay.reduce(function(a,r){return a+(+r.so_lead||0);},0);
   var _TGT_CS=30, _TGT_SYS=450; // KHNS: 30 lead/cơ sở/tháng · 15 cơ sở ≈ 450 (MKT ghi 446)
   var _llByNguon={}; _llNay.forEach(function(r){var k=r.nguon||"(chưa gắn)"; _llByNguon[k]=(_llByNguon[k]||0)+(+r.so_lead||0);});
@@ -2219,19 +2221,21 @@ async function render(){
   var _llCpRows=Object.entries(_llByCp).sort(function(a,b){return b[1]-a[1];});
   var _llPct=_TGT_SYS?_llTong/_TGT_SYS:0;
   var _llDat=_llCpRows.filter(function(e){return e[1]>=_TGT_CS;}).length;
+  var _llNgTop=_llNguonRows.filter(function(e){return !/chưa gắn/i.test(e[0]);}).slice(0,6).map(function(e){return e[0];});
+  var _llMatrix={}; _llNay.forEach(function(r){var cp=r.campus||"(chưa gán)";var ng=r.nguon||"(chưa gắn)";(_llMatrix[cp]=_llMatrix[cp]||{})[ng]=(_llMatrix[cp][ng]||0)+(+r.so_lead||0);});
   var leadNguonCard = !_llAll.length ?
    ('<div class="card"><h2>Lead tuyển sinh tháng này — theo nguồn &amp; cơ sở <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
     +'<p class="sub">Nguồn: AMIS CRM module <b>Cơ hội/Tuyển sinh</b> · lead = cơ hội <b>tạo trong tháng</b> · nguồn gốc + Campus xử lý chính</p>'
     +'<p class="leg">Chưa có dữ liệu lead tháng <b>'+_thNay+'</b>. Chạy bookmarklet <b>"Kéo lead tuyển sinh"</b> trên trang <b>TUYỂN SINH</b> của AMIS để nạp.</p></div>')
    :
-   ('<div class="card"><h2>Lead tuyển sinh tháng này — theo nguồn &amp; cơ sở <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· '+_thNay+' · CRM Cơ hội</span></h2>'
-    +'<p class="sub">Từ AMIS CRM <b>Cơ hội/Tuyển sinh</b> · lead = cơ hội <b>tạo trong tháng</b> (ngày tạo) · <b>nguồn gốc</b> + <b>Campus xử lý chính</b> · mục tiêu KHNS 30 lead/cơ sở/tháng</p>'
+   ('<div class="card"><h2>Lead tuyển sinh — theo nguồn &amp; cơ sở <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· '+_llMon+(_llLaNay?'':' (gần nhất có dữ liệu)')+' · CRM Cơ hội</span></h2>'
+    +'<p class="sub">Từ AMIS CRM <b>Cơ hội/Tuyển sinh</b> · lead = cơ hội <b>tạo trong tháng</b> · <b>nguồn gốc</b> + <b>Campus xử lý chính</b>'+(_llLaNay?'':' · tháng '+_thNay.slice(5)+' chưa có snapshot — hiện tháng '+(+_llMon.slice(5)))+' · mục tiêu KHNS 30 lead/cơ sở</p>'
     +'<div class="kpis">'
-    +kpi("Lead tháng "+_thNay.slice(5),fmt(_llTong),"","cơ hội mới tạo trong tháng — số sống từ CRM")
+    +kpi("Lead tháng "+(+_llMon.slice(5)),fmt(_llTong),"","cơ hội mới tạo trong tháng — số sống từ CRM")
     +kpi("Mục tiêu tháng",fmt(_TGT_SYS),"","KHNS: 15 cơ sở × 30 lead")
     +kpi("% đạt mục tiêu",pct(_llPct,0),"","toàn hệ thống, tháng này")
     +kpi("Cơ sở đạt ≥30",fmt(_llDat)+"/"+fmt(_llCpRows.length),"","số cơ sở đạt mục tiêu lead")+"</div>"
-    +(_llPct<0.6?'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid #B42318;border-radius:8px;padding:12px 14px;background:rgba(180,35,24,.05)"><p style="margin:0;font-weight:700;color:#B42318">Toàn hệ thống mới đạt '+pct(_llPct,0)+' mục tiêu lead tháng này</p><p class="leg" style="margin:4px 0 0">Lead là đầu vào phễu — thiếu lead tháng này = thiếu nhập học 4–6 tuần tới. Soi cơ sở &amp; nguồn dưới target ở bảng dưới.</p></div>':"")
+    +(_llPct<0.6?'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid var(--crit);border-radius:8px;padding:12px 14px;background:rgba(226,119,106,.08)"><p style="margin:0;font-weight:700;color:var(--crit)">Toàn hệ thống mới đạt '+pct(_llPct,0)+' mục tiêu lead tháng này</p><p class="leg" style="margin:4px 0 0">Lead là đầu vào phễu — thiếu lead tháng này = thiếu nhập học 4–6 tuần tới. Soi cơ sở &amp; nguồn dưới target ở bảng dưới.</p></div>':"")
     +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo nguồn gốc</p>'
     +'<div class="tw"><table><thead><tr><th>Nguồn gốc</th><th>Số lead</th><th>Tỷ trọng</th></tr></thead><tbody>'
     +_llNguonRows.map(function(e){var k=e[0],v=e[1];var isC=/chưa gắn/i.test(k);return '<tr><td>'+(isC?'<span class="down">'+k+'</span>':k)+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(_llTong?v/_llTong:0,0)+'</td></tr>';}).join("")
@@ -2240,9 +2244,15 @@ async function render(){
     +'<p class="leg" style="margin-top:6px">Mục tiêu KHNS chia theo 4 nhóm: Website tự nhiên 171 · Facebook Ads 77 · FB Organic+TikTok 94 · Referral+Zalo+Drop-in 104. Tên nguồn trong CRM khác nhóm KHNS (VD Fanpage gộp cả Ads &amp; Organic — không tách được từ trường nguồn gốc), nên chỉ đối chiếu tổng &amp; theo cơ sở; đối chiếu từng nhóm cần chuẩn hoá tên nguồn.</p>'
     +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo cơ sở (mục tiêu 30/cơ sở)</p>'
     +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Lead</th><th>Mục tiêu</th><th>% đạt</th></tr></thead><tbody>'
-    +_llCpRows.map(function(e){var c=e[0],v=e[1];var p=v/_TGT_CS;return '<tr><td>'+c+'</td><td class="mono">'+fmt(v)+'</td><td class="mono" style="opacity:.6">'+_TGT_CS+'</td><td class="mono" style="color:'+(p>=1?"#067647":p>=0.6?"#A96C05":"#B42318")+'">'+pct(p,0)+'</td></tr>';}).join("")
+    +_llCpRows.map(function(e){var c=e[0],v=e[1];var p=v/_TGT_CS;return '<tr><td>'+c+'</td><td class="mono">'+fmt(v)+'</td><td class="mono" style="opacity:.6">'+_TGT_CS+'</td><td class="mono" style="color:'+(p>=1?"var(--good)":p>=0.6?"var(--warn)":"var(--crit)")+'">'+pct(p,0)+'</td></tr>';}).join("")
     +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td><td class="mono">'+fmt(_llTong)+'</td><td class="mono">'+fmt(_TGT_SYS)+'</td><td class="mono">'+pct(_llPct,0)+'</td></tr>'
     +'</tbody></table></div>'
+    +(_llNgTop.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Ma trận cơ sở × nguồn — top '+_llNgTop.length+' nguồn (số lead tháng '+(+_llMon.slice(5))+')</p>'
+      +'<div class="tw" style="overflow-x:auto"><table style="min-width:540px"><thead><tr><th>Cơ sở</th>'+_llNgTop.map(function(n){return '<th>'+n+'</th>';}).join("")+'<th>Tổng</th></tr></thead><tbody>'
+      +_llCpRows.map(function(e){var cp=e[0];var row=_llMatrix[cp]||{};return '<tr><td>'+cp+'</td>'+_llNgTop.map(function(n){var v=row[n]||0;return '<td class="mono" style="color:'+(v?"var(--txt)":"var(--muted)")+'">'+(v||"·")+'</td>';}).join("")+'<td class="mono" style="font-weight:700">'+fmt(e[1])+'</td></tr>';}).join("")
+      +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TỔNG</td>'+_llNgTop.map(function(n){var s=_llCpRows.reduce(function(a,e){return a+((_llMatrix[e[0]]||{})[n]||0);},0);return '<td class="mono">'+fmt(s)+'</td>';}).join("")+'<td class="mono">'+fmt(_llTong)+'</td></tr>'
+      +'</tbody></table></div>'
+      +'<p class="leg">Mỗi ô = số lead của nguồn đó ở cơ sở đó. <b>Mục tiêu theo TỪNG nguồn × cơ sở (file KHAITRUONG20) chưa nạp vào app</b> → hiện chỉ so được mục tiêu tổng (30/cơ sở) ở bảng trên. Muốn so target vs thực đạt từng ô: nạp bảng target vào Supabase.</p>':"")
     +'<div class="q"><b>Câu hỏi:</b> cơ sở đỏ (dưới 60% mục tiêu lead) — thiếu lead vì marketing chưa đẩy, hay lead có mà chưa gắn "Campus xử lý chính" trong CRM? '+((_llByNguon["(chưa gắn)"]||0)>0?fmt(_llByNguon["(chưa gắn)"])+' lead tháng này chưa gắn nguồn gốc — mất dấu kênh nào hiệu quả.':'')+'</div>'
     +'</div>');
 
