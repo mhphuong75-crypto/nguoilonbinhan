@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b51";
+const BUILD="2026-10-01 · b52";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1868,6 +1868,10 @@ async function render(){
   const chLD={}; (clyAll||[]).filter(r=>String(r.thang||"")===chLatest && !_isTN(r.nhom_ly_do)).forEach(r=>{var k=r.nhom_ly_do||"Chưa ghi lý do";chLD[k]=(chLD[k]||0)+1;});
   const chLDRows=Object.entries(chLD).sort((a,b)=>b[1]-a[1]);
   const chLatestTot=chSys[chLatest]?chSys[chLatest].churn:0;
+  // Blind spot TT/LĐ: khong co trong CRM -> nghi thang chua do duoc. Chi co proxy vang dai tu Tomia (mv_nghi_chuoi).
+  const _ttldRows=(nghi||[]).filter(function(r){var cp=String(r.campus||"").toUpperCase();return (cp.indexOf("TÂN THUẬN")>=0||cp.indexOf("LINH ĐÀM")>=0)&&(+r.so_buoi||0)>=7&&r.chua_quay_lai;});
+  const _ttN=_ttldRows.filter(r=>String(r.campus||"").toUpperCase().indexOf("TÂN THUẬN")>=0).length;
+  const _ldN=_ttldRows.filter(r=>String(r.campus||"").toUpperCase().indexOf("LINH ĐÀM")>=0).length;
   const churnMoiCard = !(clyAll||[]).length ? "" :
    '<div class="card"><h2>Học sinh nghỉ theo tháng — nghỉ thật vs tốt nghiệp <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
    +'<p class="sub">Từ AMIS CRM · trường <b>Ngày thôi học</b> · 3 tháng gần nhất · <b>nghỉ thật</b> = churn (KHÔNG gồm tốt nghiệp/lên lớp 1) · tháng này ('+_lb(chThis)+') còn <b>đang tích luỹ</b></p>'
@@ -1884,6 +1888,9 @@ async function render(){
    +'<tr style="border-top:2px solid var(--line);font-weight:700"><td>TOÀN HỆ THỐNG</td>'
    +chM.slice().reverse().map(m=>'<td class="mono">'+fmt(chSys[m].churn)+'</td>').join("")+'<td class="mono">'+fmt(chSys[chPrev].tn)+'</td></tr>'
    +'</tbody></table></div>'
+   +'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:11px 14px;background:rgba(223,166,72,.07)">'
+   +'<p style="margin:0 0 4px;font-weight:700;color:var(--warn)">⚠ Tân Thuận &amp; Linh Đàm: nghỉ tháng CHƯA đo được</p>'
+   +'<p class="leg" style="margin:0">Hai cơ sở này <b>không có trong CRM</b> → số nghỉ ở trên <b>chưa bao gồm TT/LĐ</b>. Lưu trữ Tomia không được duy trì (chỉ 1 lần đẩy TT cũ, 17 dòng). Hiện chỉ có <b>proxy vắng dài</b> (≥7 buổi, đang diễn ra): <b>'+fmt(_ttN)+' TT + '+fmt(_ldN)+' LĐ</b> — đây là <b>nghi ngờ nghỉ, chưa xác nhận, KHÔNG cộng vào số trên</b>. Fix thật: thêm trạng thái "lưu trữ" vào bước Kéo Tomia (đang kiểm tra — A2).</p></div>'
    +(chLDRows.length?'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghỉ thật '+_lb(chLatest)+' — theo lý do</p>'
      +'<div class="tw"><table><thead><tr><th>Lý do</th><th>Số bé</th><th>%</th></tr></thead><tbody>'
      +chLDRows.map(function(e){var k=e[0],v=e[1];var isChua=k==="Chưa ghi lý do";return '<tr><td>'+(isChua?'<span class="down">'+k+'</span>':k)+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(chLatestTot?v/chLatestTot:0,0)+'</td></tr>';}).join("")
