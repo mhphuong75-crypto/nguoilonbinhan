@@ -158,7 +158,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b50";
+const BUILD="2026-10-01 · b51";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -835,7 +835,8 @@ async function render(){
   const ltInfo={}; (luuTru||[]).forEach(r=>{ltInfo[String(r.ma_tre)]=r;});
   const laLuuTru=r=>Object.prototype.hasOwnProperty.call(ltInfo,String(r.ma_tre));
   const ngDang=ngLoc.filter(r=>r.dang_dien_ra&&!laLuuTru(r));
-  const ngMat=ngLoc.filter(r=>r.chua_quay_lai&&!r.dang_dien_ra&&!laLuuTru(r)).sort((a,b)=>(+a.ngay_ke_tu_khi_nghi||0)-(+b.ngay_ke_tu_khi_nghi||0));
+  const _daLL=r=>/có phép|co phep/i.test(String(r.ly_do||""));  // đã liên lạc = gia đình đã báo (có phép); không phép/không ghi = chưa xác nhận → cần gọi
+  const ngMat=ngLoc.filter(r=>r.chua_quay_lai&&!r.dang_dien_ra&&!laLuuTru(r)).sort((a,b)=>{const la=_daLL(a)?1:0,lb=_daLL(b)?1:0;if(la!==lb)return la-lb;return (+b.ngay_ke_tu_khi_nghi||0)-(+a.ngay_ke_tu_khi_nghi||0);});
   // tre dang bi gan la "nghi" (dang do hoac chua quay lai) nhung THUC TE da luu tru tren Tomia
   const _ltRaw=ngLoc.filter(r=>(r.dang_dien_ra||r.chua_quay_lai)&&laLuuTru(r));
   const _ltSeen={}; const ngLuuTru=[];
@@ -860,20 +861,20 @@ async function render(){
   const rowND=r=>"<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
        +"</td><td>"+(r.tu_ngay||"—")+"</td><td>"+(r.den_ngay||"—")
        +'</td><td class="mono">'+((+r.so_buoi||0)>=4?'<span class="down">':"<span>")+fmt(r.so_buoi)+"</span>"
-       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:#067647">rồi</span>')
+       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:var(--good)">rồi</span>')
        +"</td><td>"+(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>";
   const rowNM=r=>"<tr><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
        +"</td><td>"+(r.tu_ngay||"—")+'</td><td class="mono">'+fmt(r.so_buoi)
        +'</td><td class="mono"><span class="down">'+fmt(r.ngay_ke_tu_khi_nghi)+" ngày</span>"
-       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:#067647">rồi</span>')+"</td><td>"
-       +(r.ly_do||'<span style="opacity:.5">không ghi</span>')+"</td></tr>";
+       +'</td><td>'+(r.chua_quay_lai?'<span class="down">chưa</span>':'<span style="color:var(--good)">rồi</span>')+"</td><td>"
+       +(r.ly_do||'<span style="opacity:.5">không ghi</span>')+'</td><td>'+(_daLL(r)?'<span style="color:var(--good)">đã liên lạc</span>':'<span style="color:var(--crit);font-weight:600">chưa — gọi</span>')+"</td></tr>";
   const rowLT=r=>"<tr style=\"opacity:.72\"><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.lop||"—")+"</td><td>"+nhan(r.campus)
        +"</td><td>"+(r.tu_ngay||"—")+"</td><td>"+(r.den_ngay||"—")
        +'</td><td class="mono">'+fmt(r.so_buoi)+"</td><td>"+((r._lt&&r._lt.archived_at)||'<span style="opacity:.5">—</span>')+"</td></tr>";
   const thLT='<tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Buổi vắng cuối</th><th>Số buổi</th><th>Lưu trữ Tomia ngày</th></tr>';
   const ngDangS=ngDang.slice().sort((a,b)=>(+b.so_buoi||0)-(+a.so_buoi||0));
   const thNgD='<tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Nghỉ từ</th><th>Đến</th><th>Số buổi</th><th>Đã đi học lại?</th><th>Lý do</th></tr>';
-  const thNgM='<tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Buổi vắng đầu</th><th>Số buổi</th><th>Đã bao lâu</th><th>Đã đi học lại?</th><th>Lý do</th></tr>';
+  const thNgM='<tr><th>Bé</th><th>Lớp</th><th>Campus</th><th>Buổi vắng đầu</th><th>Số buổi</th><th>Đã bao lâu</th><th>Đã đi học lại?</th><th>Lý do</th><th>Liên lạc</th></tr>';
   const ngCard = !ngLoc.length ? "" :
    '<div class="card"><h2>Trẻ nghỉ liên tục từ 3 buổi</h2>'
    +'<p class="sub">Từ Tomia · điểm danh chi tiết từng trẻ · '+nhanCP+'</p>'
@@ -886,8 +887,8 @@ async function render(){
    +(ngLuuTru.length?kpi("Đã lọc — nghỉ hẳn",fmt(ngLuuTru.length),"","đã lưu trữ trên Tomia · không cần gọi"):"")
    +(ngXacMinh.length?kpi("⚠ Cần xác minh đã nghỉ?",fmt(ngXacMinh.length),"","nghỉ ≥7 ngày, chưa quay lại, chưa chuyển lưu trữ"):"")
    +kpi("Có ghi lý do",fmt(ngCoLyDo.length)+" / "+fmt(ngLoc.length),"","phần còn lại không ai biết vì sao")+"</div>"
-   +(ngXacMinh.length ? '<div style="margin:16px 0 4px;border:1px solid #A96C05;border-left:4px solid #A96C05;border-radius:8px;padding:12px 14px;background:rgba(169,108,5,.06)">'
-     +'<p style="margin:0 0 4px;font-weight:700;color:#A96C05">⚠ Nghi đã nghỉ hẳn nhưng chưa ai chuyển vào "kho lưu trữ" — '+fmt(ngXacMinh.length)+' bé</p>'
+   +(ngXacMinh.length ? '<div style="margin:16px 0 4px;border:1px solid var(--warn);border-left:4px solid var(--warn);border-radius:8px;padding:12px 14px;background:rgba(223,166,72,.08)">'
+     +'<p style="margin:0 0 4px;font-weight:700;color:var(--warn)">⚠ Nghi đã nghỉ hẳn nhưng chưa ai chuyển vào "kho lưu trữ" — '+fmt(ngXacMinh.length)+' bé</p>'
      +'<p class="leg" style="margin:0">Các bé này đã nghỉ <b>≥7 ngày</b> và <b>chưa đi học lại</b> (đã loại các bé đã lưu trữ'+(coLuuTru?"":" — hiện mới có dữ liệu lưu trữ của Tân Thuận")+'). Rất có thể đã nghỉ hẳn nhưng campus quên khai báo lưu trữ trên Tomia → vẫn bị đếm là "vắng", làm sai sĩ số &amp; số nghỉ. '
      +'<b>Việc cần làm:</b> gọi xác minh từng bé trong danh sách <b>"Nghỉ lâu, chưa quay lại"</b> ngay dưới — nếu đã nghỉ thì chuyển vào lưu trữ Tomia + ghi lý do nghỉ (cho exit interview); nếu còn học thì ghi note. '
      +'<i>Cột "Lý do" chỉ là có phép/không phép, không cho biết bé đã nghỉ hẳn hay chưa — nên phải gọi.</i></p></div>' : "")
@@ -903,8 +904,8 @@ async function render(){
      +"</tbody></table></div>"
      +(ngMat.length>10 ? '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Xem '+fmt(ngMat.length-10)+' bé còn lại nghỉ lâu</summary>'
        +'<div class="tw" style="margin-top:8px"><table><thead>'+thNgM+'</thead><tbody>'+ngMat.slice(10).map(rowNM).join("")+"</tbody></table></div></details>" : "") : "")
-   +(ngLuuTru.length ? '<details style="margin:16px 0 0;border-left:3px solid #067647;padding-left:10px">'
-     +'<summary style="cursor:pointer;font-size:13px;color:#067647;font-weight:600">✓ Đã nghỉ hẳn — đã lưu trữ trên Tomia, KHÔNG cần gọi ('+fmt(ngLuuTru.length)+' bé)</summary>'
+   +(ngLuuTru.length ? '<details style="margin:16px 0 0;border-left:3px solid var(--good);padding-left:10px">'
+     +'<summary style="cursor:pointer;font-size:13px;color:var(--good);font-weight:600">✓ Đã nghỉ hẳn — đã lưu trữ trên Tomia, KHÔNG cần gọi ('+fmt(ngLuuTru.length)+' bé)</summary>'
      +'<p class="leg" style="margin:8px 0 6px">Những bé này app vẫn đang gắn nhãn "chưa quay lại", nhưng đối chiếu với danh sách <b>lưu trữ</b> kéo từ Tomia thì các em <b>đã nghỉ hẳn</b>. Đã tách khỏi danh sách gọi ở trên để đội ngũ không mất công gọi nhầm.</p>'
      +'<div class="tw"><table><thead>'+thLT+'</thead><tbody>'+ngLuuTru.map(rowLT).join("")+"</tbody></table></div></details>" : "")
    +(coLuuTru ? '<p class="leg" style="margin-top:8px">📥 Nguồn lưu trữ: bảng <code>tomia_archived</code> · '+fmt((luuTru||[]).length)+' bé · cập nhật thủ công 1 tuần/lần từ Tomia (hiện có: Tân Thuận).</p>' : '')
@@ -916,7 +917,7 @@ async function render(){
    +'<p class="leg"><b>Cột “Số buổi” chỉ đếm buổi học.</b> Thứ Bảy, Chủ nhật và ngày lễ không tính — nghỉ thứ Sáu rồi nghỉ tiếp thứ Hai là <b>2 buổi</b>, không phải 4.<br>'
    +'<b>Đang nghỉ dở</b> = chưa đi học lại, buổi vắng cuối cách đây <b>không quá 7 ngày</b> — gọi hôm nay.<br>'
    +'<b>Nghỉ lâu</b> = chưa đi học lại, đã quá 7 ngày — gọi để biết <b>vì sao</b>, không còn để cứu.</p>'
-   +'<p class="leg" style="border-left:3px solid #A96C05;padding-left:10px"><b>⚠ Cột “Lý do” chỉ có 2 giá trị</b> — <i>Có phép</i> / <i>Không phép</i>. '
+   +'<p class="leg" style="border-left:3px solid var(--warn);padding-left:10px"><b>⚠ Cột “Lý do” chỉ có 2 giá trị</b> — <i>Có phép</i> / <i>Không phép</i>. '
    +'Không có <i>bảo lưu</i>, <i>ốm dài ngày</i>, <i>về quê</i>. Muốn biết ca nào cần gọi, phải xin Tomia thêm trường lý do. '
    +'<b>Chủ: chưa giao · Hạn: chưa có</b></p>'
    +'<div class="q"><b>Câu hỏi:</b> trong danh sách “đang nghỉ dở” ở trên, bé nào đã có người gọi cho phụ huynh? '
