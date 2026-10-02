@@ -131,7 +131,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
       <option value="thang">Tháng này</option>
       <option value="truoc">Tháng trước</option>
     </select>
-    <span style="font-size:11px;opacity:.55;margin-left:6px" title="Ô thời gian chỉ đổi các thẻ Website, Meta, Google và dòng “Lead mới trong kỳ”. Các thẻ khác có cửa sổ riêng, ghi ở dòng ⏱ của từng thẻ.">⏱ chỉ đổi Website · Meta · Google</span>
+    <span style="font-size:11px;opacity:.55;margin-left:6px" title="Hôm nay / 7 ngày: đổi Website · Meta · Google + dòng Lead mới trong kỳ. Tháng này / Tháng trước: thêm thẻ Mục tiêu &amp; thực tế (nhập học) để so tháng. Các thẻ khác có cửa sổ riêng, ghi ở dòng ⏱ của từng thẻ.">⏱ Website·Meta·Google · (Tháng này/trước ↔ Mục tiêu nhập học)</span>
     </span>
     <select id="camp"><option value="">Toàn hệ thống</option></select>
     <button id="lai" title="Gọi lại toàn bộ dữ liệu từ máy chủ" style="margin-left:auto">↻ Tải lại số</button>
@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-01 · b60";
+const BUILD="2026-10-02 · b61";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1555,13 +1555,16 @@ async function render(){
     const o=ktT[m]||(ktT[m]={thang:m,moi:0,si:0}); o.moi+=+r.tuyen_moi||0; o.si+=+r.si_so_kh||0;});
   const ktDs=Object.keys(ktT).map(k=>ktT[k]).sort((a,b)=>a.thang-b.thang);
   const namNay=+homNay.slice(0,4), thangHT=+homNay.slice(5,7);
+  // «b61» thẻ nhập học theo THÁNG: ô thời gian "Tháng trước" → tháng trước; còn lại (Tháng này/Hôm nay/7 ngày) → tháng hiện tại.
+  const _prevM = thangHT>1 ? thangHT-1 : 12;
+  const _selM = (pv==="truoc") ? _prevM : thangHT;
   const soNgayThang=m=>new Date(Date.UTC(namNay,m,0)).getUTCDate();
   const soTuanThang=m=>soNgayThang(m)/7;
   const soNgayHoc=m=>{let n=0; const h=soNgayThang(m);
     for(let d=1;d<=h;d++){const w=new Date(Date.UTC(namNay,m-1,d)).getUTCDay(); if(w>=1&&w<=5)n++;} return n;};
   const ngayHocDaQua=m=>{const het=(m===thangHT)? +homNay.slice(8,10) : soNgayThang(m); let n=0;
     for(let d=1;d<=het;d++){const w=new Date(Date.UTC(namNay,m-1,d)).getUTCDay(); if(w>=1&&w<=5)n++;} return n;};
-  const ktNay=ktT[thangHT]||null;
+  const ktNay=ktT[_selM]||null;
 
   // THUC TE: uu tien v_tuan_campus (dinh nghia goc). Neu view do chet -> dung tam v_lead_campus,
   // nhung day la so COHORT (theo thang TAO lead), khong phai so nhap hoc trong thang -> phai ghi ro.
@@ -1575,51 +1578,52 @@ async function render(){
     (nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
       const d=chiNgay(r.ngay_dau); if(!d||+d.slice(0,4)!==namNay)return; const m=+d.slice(5,7);
       thucT[m]=(thucT[m]||0)+1;
-      if(m===thangHT) thucCam[r.campus]=(thucCam[r.campus]||0)+1;});
+      if(m===_selM) thucCam[r.campus]=(thucCam[r.campus]||0)+1;});
   } else {
     (tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).forEach(r=>{
       const d=chiNgay(r.ngay); if(!d||+d.slice(0,4)!==namNay)return; const m=+d.slice(5,7);
       thucT[m]=(thucT[m]||0)+(+r.so_lead||0);
-      if(m===thangHT) thucCam[r.campus]=(thucCam[r.campus]||0)+(+r.so_lead||0);});
+      if(m===_selM) thucCam[r.campus]=(thucCam[r.campus]||0)+(+r.so_lead||0);});
   }
   const ktCoThuc=Object.keys(thucT).length>0;
-  const nhipNay=ktNay? ktNay.moi*ngayHocDaQua(thangHT)/soNgayHoc(thangHT) : null;
-  const thucNay=thucT[thangHT]||0;
-  const ktCam=ktLoc.filter(r=>+r.thang===thangHT)
+  const nhipNay=ktNay? ktNay.moi*ngayHocDaQua(_selM)/soNgayHoc(_selM) : null;
+  const thucNay=thucT[_selM]||0;
+  const ktCam=ktLoc.filter(r=>+r.thang===_selM)
     .map(r=>({c:r.campus,moi:+r.tuyen_moi||0,si:+r.si_so_kh||0,
               thuc:(thucCam[r.campus]||0),
-              nhip:(+r.tuyen_moi||0)*ngayHocDaQua(thangHT)/soNgayHoc(thangHT)}))
+              nhip:(+r.tuyen_moi||0)*ngayHocDaQua(_selM)/soNgayHoc(_selM)}))
     .filter(r=>r.moi||r.si||r.thuc)
     .sort((a,b)=>(a.thuc-a.nhip)-(b.thuc-b.nhip));   // tut nhip nhieu nhat len truoc
-  // Danh sách bé đi học buổi đầu + đối chiếu Tomia vs CRM — theo THÁNG (accumulated), tháng mới nhất có dữ liệu
+  // Danh sách bé đi học buổi đầu + đối chiếu Tomia vs CRM — theo THÁNG (accumulated)
+  // Tháng đối chiếu _dcM: 'Tháng trước'→tháng trước · 'Tháng này'→tháng hiện tại · (Hôm nay/7 ngày/mặc định)→tháng mới nhất có dữ liệu (lùi nếu đầu tháng)
   const _khMs=Object.keys(thucT).map(Number).filter(function(m){return thucT[m]>0;});
   const _curDay=+homNay.slice(8,10);
-  let _khM=_khMs.length?Math.max.apply(null,_khMs):thangHT;   // tháng mới nhất có trẻ đi học buổi đầu
-  // Đầu tháng (≤4 ngày) tháng hiện tại gần như rỗng → lùi về tháng trước đã xong, tránh hiện "1 bé"
+  let _khM=_khMs.length?Math.max.apply(null,_khMs):thangHT;
   if(_khM===thangHT && _curDay<5 && _khMs.some(function(m){return m<thangHT;})) _khM=Math.max.apply(null,_khMs.filter(function(m){return m<thangHT;}));
-  const _khLaNay=(_khM===thangHT);
-  const _nhList=(nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).filter(function(r){var d=chiNgay(r.ngay_dau);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_khM;}).sort(function(a,b){return String(a.ngay_dau).localeCompare(String(b.ngay_dau));});
-  const _nhCRM=(tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).filter(function(r){var d=chiNgay(r.ngay);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_khM;}).reduce(function(a,r){return a+(+r.so_lead||0);},0);
+  const _dcM = (pv==="truoc") ? _prevM : (pv==="thang" ? thangHT : _khM);
+  const _khLaNay=(_dcM===thangHT);
+  const _nhList=(nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).filter(function(r){var d=chiNgay(r.ngay_dau);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_dcM;}).sort(function(a,b){return String(a.ngay_dau).localeCompare(String(b.ngay_dau));});
+  const _nhCRM=(tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).filter(function(r){var d=chiNgay(r.ngay);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_dcM;}).reduce(function(a,r){return a+(+r.so_lead||0);},0);
   const ktCard = !ktDs.length ?
    '<div class="card"><h2>Mục tiêu và thực tế</h2>'
    +'<p class="sub">'+nhanCP+' · bảng <code>chi_tieu</code> trả về <b class="down">0 dòng</b></p>'
    +'<div class="q">Chưa có mục tiêu nào để so. Xem thẻ <b>Chẩn đoán nguồn dữ liệu</b> — '
    +'nếu <code>chi_tieu</code> báo lỗi thì bảng hỏng; nếu 0 dòng không lỗi thì file kế hoạch 2026 chưa được nạp lên.</div></div>'
    :
-   '<div class="card"><h2>Mục tiêu và thực tế — tháng '+thangHT+'</h2>'
-   +'<p class="sub">'+nhanCP+' · mục tiêu: file kế hoạch 2026 · thực tế: <b>trẻ đi học buổi đầu tiên</b> (điểm danh Tomia)</p>'
+   '<div class="card"><h2>Mục tiêu và thực tế — tháng '+_selM+(_selM===thangHT?' (tháng này)':' (tháng trước)')+'</h2>'
+   +'<p class="sub">'+nhanCP+' · mục tiêu: file kế hoạch 2026 · thực tế: <b>trẻ đi học buổi đầu tiên</b> (điểm danh Tomia) · <b>theo ô thời gian đầu trang</b> (Tháng này / Tháng trước)</p>'
    +'<div class="kpis">'
-   +kpi("Mục tiêu tháng "+thangHT,ktNay?fmt(ktNay.moi):"—","","học sinh mới cả tháng")
-   +kpi("Nhịp đến hôm nay",nhipNay==null?"—":dec(nhipNay,1),"",
-        "đã qua "+ngayHocDaQua(thangHT)+"/"+soNgayHoc(thangHT)+" ngày học")
-   +kpi("Thực tế tháng này",ktCoThuc?fmt(thucNay):"—","",ktCoNH?"trẻ đi học buổi đầu tiên":"tạm tính từ CRM — xem ghi chú")
-   +kpi("So với nhịp",(!ktCoThuc||nhipNay==null)?"—":
+   +kpi("Mục tiêu tháng "+_selM,ktNay?fmt(ktNay.moi):"—","","học sinh mới cả tháng")
+   +kpi(_selM===thangHT?"Nhịp đến hôm nay":"Mục tiêu (cả tháng)",nhipNay==null?"—":dec(nhipNay,1),"",
+        _selM===thangHT?("đã qua "+ngayHocDaQua(_selM)+"/"+soNgayHoc(_selM)+" ngày học"):"tháng đã xong — mốc cả tháng")
+   +kpi("Thực tế tháng "+_selM,ktCoThuc?fmt(thucNay):"—","",ktCoNH?"trẻ đi học buổi đầu tiên":"tạm tính từ CRM — xem ghi chú")
+   +kpi(_selM===thangHT?"So với nhịp":"So với mục tiêu",(!ktCoThuc||nhipNay==null)?"—":
         '<span class="'+(thucNay-nhipNay>=0?"up":"down")+'">'+(thucNay-nhipNay>=0?"+":"")+dec(thucNay-nhipNay,1)+"</span>",
         "","thực tế trừ nhịp — đây là con số cần nhìn")+"</div>"
    +(ktCoNH?'<div style="margin:12px 0 4px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:11px 14px;background:rgba(78,182,157,.06)">'
-     +'<p style="margin:0;font-weight:700">Tổng HS đi học mới <b>tháng '+_khM+'</b>'+(_khLaNay?'':' (tháng mới nhất có dữ liệu)')+' — đối chiếu 2 nguồn: Tomia <b>'+fmt(_nhList.length)+'</b> · CRM (chốt) <b>'+fmt(_nhCRM)+'</b>'+(_nhList.length!==_nhCRM?' <span style="color:var(--warn)">→ lệch '+fmt(Math.abs(_nhList.length-_nhCRM))+(_nhList.length>_nhCRM?' hồ sơ CRM chưa bấm chốt':' (CRM nhiều hơn Tomia — kiểm tra điểm danh)')+'</span>':'')+'</p>'
+     +'<p style="margin:0;font-weight:700">Tổng HS đi học mới <b>tháng '+_dcM+'</b>'+((pv==="thang"||pv==="truoc")?'':(_khLaNay?'':' (tháng mới nhất có dữ liệu)'))+' — đối chiếu 2 nguồn: Tomia <b>'+fmt(_nhList.length)+'</b> · CRM (chốt) <b>'+fmt(_nhCRM)+'</b>'+(_nhList.length!==_nhCRM?' <span style="color:var(--warn)">→ lệch '+fmt(Math.abs(_nhList.length-_nhCRM))+(_nhList.length>_nhCRM?' hồ sơ CRM chưa bấm chốt':' (CRM nhiều hơn Tomia — kiểm tra điểm danh)')+'</span>':'')+'</p>'
      +'<p class="leg" style="margin:4px 0 0">HS mới = trẻ <b>đi học buổi đầu tiên</b> trong tháng (mỗi trẻ 1 lần trong đời). <b>Tomia</b> = điểm danh thật, phủ 15 cơ sở → tin số này. <b>CRM</b> = lead ai đó bấm "Kết thúc thành công" trong tháng. Lệch = hồ sơ CRM chưa cập nhật. Danh sách chi tiết ↓.</p></div>'
-     +'<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Danh sách '+fmt(_nhList.length)+' bé đi học buổi đầu tháng '+_khM+' — tên · cơ sở · lớp · ngày</summary>'
+     +'<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Danh sách '+fmt(_nhList.length)+' bé đi học buổi đầu tháng '+_dcM+' — tên · cơ sở · lớp · ngày</summary>'
      +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>#</th><th>Học sinh</th><th>Cơ sở</th><th>Lớp</th><th>Ngày đi học đầu</th></tr></thead><tbody>'
      +_nhList.map(function(r,i){return "<tr><td class=\"mono\">"+(i+1)+"</td><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.campus||"—")+"</td><td>"+(r.lop||"—")+'</td><td class="mono">'+(r.ngay_dau||"—")+"</td></tr>";}).join("")
      +'</tbody></table></div></details>':"")
@@ -1637,7 +1641,7 @@ async function render(){
    +'<div class="tw"><table style="min-width:760px"><thead><tr><th>Tháng</th><th>Mục tiêu tháng</th><th>Thực tế</th><th>Chênh</th><th>% đạt</th>'
    +'<th>Nhịp/tuần (÷4)</th><th>Nhịp/tuần (theo lịch)</th><th>Nhịp/ngày học</th></tr></thead><tbody>'
    +ktDs.filter(r=>r.thang>=7).map(r=>{const th=(ktCoThuc&&thucT[r.thang]!=null)?thucT[r.thang]:null, d=(th==null?null:th-r.moi);
-     return "<tr"+(r.thang===thangHT?' style="background:var(--soft)"':"")+"><td>"+(r.thang===thangHT?"<b>Tháng "+r.thang+"</b>":"Tháng "+r.thang)
+     return "<tr"+(r.thang===_selM?' style="background:var(--soft)"':"")+"><td>"+(r.thang===_selM?"<b>Tháng "+r.thang+"</b>":"Tháng "+r.thang)
       +'</td><td class="mono">'+fmt(r.moi)
       +'</td><td class="mono">'+(th==null?'<span style="opacity:.3">—</span>':fmt(th))
       +'</td><td class="mono">'+(d==null?'<span style="opacity:.3">—</span>':'<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+fmt(d)+"</span>")
@@ -1649,15 +1653,15 @@ async function render(){
    +'<td class="mono"><b>'+(ktCoThuc?fmt(ktDs.filter(r=>r.thang>=7).reduce((a,r)=>a+(thucT[r.thang]||0),0)):"—")+"</b></td>"
    +"<td></td><td></td><td></td><td></td><td></td></tr>"
    +"</tbody></table></div>"
-   +'<p class="leg"><b>Vì sao mục tiêu chấm theo tháng chứ không theo tuần:</b> mục tiêu tháng '+thangHT+" ("+(ktNay?fmt(ktNay.moi):"—")
+   +'<p class="leg"><b>Vì sao mục tiêu chấm theo tháng chứ không theo tuần:</b> mục tiêu tháng '+_selM+" ("+(ktNay?fmt(ktNay.moi):"—")
    +') chia cho '+(ktCam.length||1)+' campus rồi chia cho 4 tuần ra <b>'+(ktNay&&ktCam.length?dec(ktNay.moi/ktCam.length/4,1):"—")
    +' học sinh</b> mỗi campus mỗi tuần. Ở mức đó, một tuần chốt 0 rồi tuần sau chốt 2 <i>không nói lên điều gì</i> — '
    +'đó là nhiễu, không phải tín hiệu. Nên: <b>tuần dùng để xem nhịp</b> (đang đi kịp chưa), '
    +'<b>tháng mới dùng để chấm</b>. Còn họp tuần thì đo <b>lead measure</b> — cuộc gọi, tham quan — ở bảng điểm theo ngày phía trên.</p>'
    +'<p class="leg"><b>Ba cột nhịp khác nhau ở mẫu số:</b> ÷4 là quy ước cũ; “theo lịch” chia cho số tuần thật ('
-   +dec(soTuanThang(thangHT),2)+' tuần trong tháng '+thangHT+'). Cộng 4 tuần theo quy ước ÷4 sẽ <b>vượt mục tiêu tháng ~'
-   +dec((soTuanThang(thangHT)/4-1)*100,0)+'%</b>. Muốn đổi thì sửa <code>METRIC_DEFINITIONS.md</code> — tôi không tự đổi mẫu số.</p>'
-   +(ktCam.length ? '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng '+thangHT+' theo campus — tụt nhịp nhiều nhất trước</p>'
+   +dec(soTuanThang(_selM),2)+' tuần trong tháng '+_selM+'). Cộng 4 tuần theo quy ước ÷4 sẽ <b>vượt mục tiêu tháng ~'
+   +dec((soTuanThang(_selM)/4-1)*100,0)+'%</b>. Muốn đổi thì sửa <code>METRIC_DEFINITIONS.md</code> — tôi không tự đổi mẫu số.</p>'
+   +(ktCam.length ? '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng '+_selM+' theo campus — tụt nhịp nhiều nhất trước</p>'
      +'<div class="tw"><table style="min-width:640px"><thead><tr><th>Campus</th><th>Mục tiêu tháng</th><th>Nhịp đến hôm nay</th><th>Thực tế</th><th>So với nhịp</th><th>Sĩ số kế hoạch</th></tr></thead><tbody>'
      +ktCam.map(r=>{const d=r.thuc-r.nhip;
        return "<tr"+(d<-1?' style="background:rgba(220,38,38,.09)"':"")+"><td>"+nhan(r.c)
@@ -2301,6 +2305,7 @@ async function render(){
     +'</tbody></table></div>'
     +'<p class="leg" style="margin-top:6px"><b>Cách đọc:</b> mỗi ô = lead thực đạt của nhóm nguồn đó ở cơ sở đó; màu so với target/cơ sở của nhóm (🟢 đạt · 🟡 ≥60% · 🔴 &lt;60%). Target mỗi cơ sở: Website 13 · Facebook+TikTok 8 · Referral·Zalo·Drop-in 9 = 30 (file KHAITRUONG20, sheet "KPI Lead source by campus"). <b>% đạt chỉ tính ở mức TỔNG</b> ('+fmt(_llTong)+'/'+fmt(_TGT_SYS)+' = '+pct(_llPct,0)+') — không tính % từng ô.</p>'
     +'<p class="leg" style="margin-top:4px"><b>⚠ Lưu ý nhóm "Facebook + TikTok":</b> KHAITRUONG20 tách <b>FB Ads</b> (TG 4) và <b>FB Organic+TikTok</b> (TG 4) riêng, nhưng trường "nguồn gốc" trong CRM gộp hết vào <b>"Fanpage"</b> (không phân biệt được Ads/Organic) → app gộp 2 nhóm thành 1 (TG 8). Muốn tách: cần thêm trường phân biệt chiến dịch QC trong bước kéo lead. · Target T9 áp cho tháng đang xem; chưa có target T10+ trong file.</p>'
+    +'<p class="leg" style="margin-top:4px"><b>Vì sao thẻ này KHÔNG theo ô "Tháng này/Tháng trước":</b> <code>crm_lead_thang</code> hiện chỉ có <b>1 tháng snapshot</b> (T9) — bookmarklet kéo lead ghi đè mỗi lần. Muốn so lead giữa các tháng: kéo lead <b>đều mỗi tháng</b> để tích luỹ nhiều snapshot. Thẻ tự hiện tháng mới nhất có dữ liệu.</p>'
     +'<div class="q"><b>Câu hỏi:</b> cơ sở đỏ (dưới 60% mục tiêu lead) — thiếu lead vì marketing chưa đẩy, hay lead có mà chưa gắn "Campus xử lý chính" trong CRM? '+((_llByNguon["(chưa gắn)"]||0)>0?fmt(_llByNguon["(chưa gắn)"])+' lead tháng này chưa gắn nguồn gốc — mất dấu kênh nào hiệu quả.':'')+'</div>'
     +'</div>');
 
