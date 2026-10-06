@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-02 · b62";
+const BUILD="2026-10-06 · b63";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1573,6 +1573,7 @@ async function render(){
   // Chi lui ve CRM khi v_nhap_hoc chua co du lieu.
   const ktCoNH=(nhapHoc||[]).length>0;
   const CHOTX=/thành công/i;
+  const _tsiCo=(tsi||[]).length>0;  // «b63» mv_lead_campus (stg_raw 'amis_opportunity') có dữ liệu không — rỗng = chưa kéo lead tuyển sinh
   const thucT={}, thucCam={};
   if(ktCoNH){
     (nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
@@ -1621,7 +1622,8 @@ async function render(){
         '<span class="'+(thucNay-nhipNay>=0?"up":"down")+'">'+(thucNay-nhipNay>=0?"+":"")+dec(thucNay-nhipNay,1)+"</span>",
         "","thực tế trừ nhịp — đây là con số cần nhìn")+"</div>"
    +(ktCoNH?'<div style="margin:12px 0 4px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:11px 14px;background:rgba(78,182,157,.06)">'
-     +'<p style="margin:0;font-weight:700">Tổng HS đi học mới <b>tháng '+_dcM+'</b>'+((pv==="thang"||pv==="truoc")?'':(_khLaNay?'':' (tháng mới nhất có dữ liệu)'))+' — đối chiếu 2 nguồn: Tomia <b>'+fmt(_nhList.length)+'</b> · CRM (chốt) <b>'+fmt(_nhCRM)+'</b>'+(_nhList.length!==_nhCRM?' <span style="color:var(--warn)">→ lệch '+fmt(Math.abs(_nhList.length-_nhCRM))+(_nhList.length>_nhCRM?' hồ sơ CRM chưa bấm chốt':' (CRM nhiều hơn Tomia — kiểm tra điểm danh)')+'</span>':'')+'</p>'
+     +'<p style="margin:0;font-weight:700">Tổng HS đi học mới <b>tháng '+_dcM+'</b>'+((pv==="thang"||pv==="truoc")?'':(_khLaNay?'':' (tháng mới nhất có dữ liệu)'))+' — đối chiếu 2 nguồn: Tomia <b>'+fmt(_nhList.length)+'</b> · CRM (chốt) '+(_tsiCo?('<b>'+fmt(_nhCRM)+'</b>'+(_nhList.length!==_nhCRM?' <span style="color:var(--warn)">→ lệch '+fmt(Math.abs(_nhList.length-_nhCRM))+(_nhList.length>_nhCRM?' hồ sơ CRM chưa bấm chốt':' (CRM nhiều hơn Tomia — kiểm tra điểm danh)')+'</span>':'')):'<b style="color:var(--warn)">chưa kéo lead tuyển sinh hôm nay</b>')+'</p>'
+     +(!_tsiCo?'<p class="leg" style="margin:4px 0 0;color:var(--warn)">⚠ Cột CRM trống vì <b>bookmarklet "Kéo lead tuyển sinh" (amis_opportunity)</b> chưa chạy trong đợt kéo gần nhất — dữ liệu lead chi tiết (<code>stg_raw</code>) đã bị dọn. Số lead THÁNG vẫn đúng (bảng lead ở trên). Cách sửa: mở AMIS → bấm dấu trang <b>Kéo lead tuyển sinh</b> → chờ ~1 phút → ↻ Tải lại số.</p>':'')
      +'<p class="leg" style="margin:4px 0 0">HS mới = trẻ <b>đi học buổi đầu tiên</b> trong tháng (mỗi trẻ 1 lần trong đời). <b>Tomia</b> = điểm danh thật, phủ 15 cơ sở → tin số này. <b>CRM</b> = lead ai đó bấm "Kết thúc thành công" trong tháng. Lệch = hồ sơ CRM chưa cập nhật. Danh sách chi tiết ↓.</p></div>'
      +'<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Danh sách '+fmt(_nhList.length)+' bé đi học buổi đầu tháng '+_dcM+' — tên · cơ sở · lớp · ngày</summary>'
      +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>#</th><th>Học sinh</th><th>Cơ sở</th><th>Lớp</th><th>Ngày đi học đầu</th></tr></thead><tbody>'
