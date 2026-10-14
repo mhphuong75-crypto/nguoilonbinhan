@@ -1984,9 +1984,9 @@ async function render(){
    +chM.map(m=>kpi("Ngắn ngày T"+(+m.slice(5)),fmt(chSys[m].nganngay),"","không tính vào nghỉ thật")).join("")
    +'</div>'
    +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Danh sách kết thúc khóa ngắn ngày ('+fmt(_nganNgayRows.length)+' hồ sơ / 3 tháng)</p>'
-   +'<div class="tw"><table><thead><tr><th>Mã HS / tên</th><th>Cơ sở</th><th>Ngày thôi học</th><th>Nhóm lý do</th></tr></thead><tbody>'
-   +(_nganNgayRows.length?_nganNgayRows.map(r=>'<tr><td>'+_escNghi(r.ten_hs||r.ma_hs||"—")+'</td><td>'+_escNghi(_stripCp(r.campus))+'</td><td class="mono">'+_escNghi(_dmy(r.ngay_thoi_hoc))+'</td><td>'+_escNghi(r.nhom_ly_do||r.ly_do||"—")+'</td></tr>').join("")
-     :'<tr><td colspan="4">Không có hồ sơ ngắn ngày trong 3 tháng theo dữ liệu hiện có</td></tr>')
+   +'<div class="tw"><table><thead><tr><th>Mã học sinh</th><th>Cơ sở</th><th>Ngày thôi học</th></tr></thead><tbody>'
+   +(_nganNgayRows.length?_nganNgayRows.map(r=>'<tr><td>'+_escNghi(r.ma_hs||"—")+'</td><td>'+_escNghi(_stripCp(r.campus))+'</td><td class="mono">'+_escNghi(_dmy(r.ngay_thoi_hoc))+'</td></tr>').join("")
+     :'<tr><td colspan="3">Không có hồ sơ ngắn ngày trong 3 tháng theo dữ liệu hiện có</td></tr>')
    +'</tbody></table></div></div>';
   // Card exit/lắng nghe — tháng gần nhất CÓ HS nghỉ (= tháng hiện hành khi đã có số; đầu tháng chưa có thì hiện tháng liền trước, ghi rõ). KHÔNG lũy kế. Lý do/trend ở churnMoiCard.
   const _exMon = chM.find(m=>chSys[m].churn>0)||chLatest;
