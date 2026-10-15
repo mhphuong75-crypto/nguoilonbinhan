@@ -1910,17 +1910,35 @@ async function render(){
   const _dmy = s=>{ s=String(s||""); return s.length>=10? s.slice(8,10)+"/"+s.slice(5,7) : s; };
   // ===== CARD GOP (V2): Hoc sinh nghi theo thang — churn 3 thang x co so, tach tot nghiep (CRM song) =====
   const _isTN = s=>/tốt nghiệp|tot nghiep|lên lớp 1|len lop 1|hoàn thành chương trình|graduat/i.test(String(s||""));
+  // Quy tắc phân loại tháng: khóa ngắn ngày vẫn là "thôi học", nhưng KHÔNG phải churn thật.
+  // Ưu tiên nhom_ly_do chuẩn hóa trong CRM; lý do chưa rõ tạm nằm ở churn chờ đối soát.
+  const _chuanNhomNghi=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").toLowerCase().trim();
+  const _phanLoaiNghiThang=r=>{
+    const s=_chuanNhomNghi(r.nhom_ly_do);
+    if(/tot nghiep|len lop 1|hoan thanh chuong trinh|graduat/.test(s))return"tn";
+    if(/ngan ngay|ngan han|ket thuc (khoa |chuong trinh )?trai nghiem/.test(s))return"nganngay";
+    if(/khong nhap hoc|rut coc|hoan coc/.test(s))return"khongnhaphoc";
+    return"churn";
+  };
   const chM = (function(){var out=[];var y=+_thNay.slice(0,4),mo=+_thNay.slice(5,7);for(var i=0;i<3;i++){var yy=y,mm=mo-i;while(mm<=0){mm+=12;yy--;}out.push(yy+"-"+String(mm).padStart(2,"0"));}return out;})();
-  const chSys={}; chM.forEach(m=>chSys[m]={churn:0,tn:0});
+  const chSys={}; chM.forEach(m=>chSys[m]={churn:0,tn:0,nganngay:0,khongnhaphoc:0,chuaLyDo:0});
   const chCamp={};
-  (clyAll||[]).forEach(function(r){var m=String(r.thang||"");if(!chSys[m])return;var tn=_isTN(r.nhom_ly_do);var cp=_stripCp(r.campus)||"(chưa gán)";var o=chCamp[cp]||(chCamp[cp]={});var c=o[m]||(o[m]={churn:0,tn:0});if(tn){c.tn++;chSys[m].tn++;}else{c.churn++;chSys[m].churn++;}});
+  (clyAll||[]).forEach(function(r){
+    const m=String(r.thang||"");if(!chSys[m])return;
+    const loai=_phanLoaiNghiThang(r);
+    const cp=_stripCp(r.campus)||"(chưa gán)";
+    const o=chCamp[cp]||(chCamp[cp]={});
+    const c=o[m]||(o[m]={churn:0,tn:0,nganngay:0,khongnhaphoc:0});
+    chSys[m][loai]++;c[loai]++;
+    if(loai==="churn"&&_chuanNhomNghi(r.nhom_ly_do)==="chua ghi ly do")chSys[m].chuaLyDo++;
+  });
   const _chRecent=o=>chM.slice(0,2).reduce((a,m)=>a+((o[m]||{}).churn||0),0);
   const cxRows=Object.entries(chCamp).filter(e=>chM.some(m=>(e[1][m]||{}).churn||(e[1][m]||{}).tn)).sort((a,b)=>_chRecent(b[1])-_chRecent(a[1]));
   const chChurnTot=chM.reduce((a,m)=>a+chSys[m].churn,0);
   const chThis=chM[0],chPrev=chM[1];
   const _lb=m=>"T"+(+m.slice(5,7));
-  const chDataM=chM.filter(m=>chSys[m].churn+chSys[m].tn>0); const chLatest=chDataM[0]||chPrev;
-  const chLD={}; (clyAll||[]).filter(r=>String(r.thang||"")===chLatest && !_isTN(r.nhom_ly_do)).forEach(r=>{var k=r.nhom_ly_do||"Chưa ghi lý do";chLD[k]=(chLD[k]||0)+1;});
+  const chDataM=chM.filter(m=>chSys[m].churn+chSys[m].tn+chSys[m].nganngay+chSys[m].khongnhaphoc>0); const chLatest=chDataM[0]||chPrev;
+  const chLD={}; (clyAll||[]).filter(r=>String(r.thang||"")===chLatest && _phanLoaiNghiThang(r)==="churn").forEach(r=>{var k=r.nhom_ly_do||"Chưa ghi lý do";chLD[k]=(chLD[k]||0)+1;});
   const chLDRows=Object.entries(chLD).sort((a,b)=>b[1]-a[1]);
   const chLatestTot=chSys[chLatest]?chSys[chLatest].churn:0;
   // Blind spot TT/LĐ: khong co trong CRM -> nghi thang chua do duoc. Chi co proxy vang dai tu Tomia (mv_nghi_chuoi).
@@ -1928,13 +1946,15 @@ async function render(){
   const _ttN=_ttldRows.filter(r=>String(r.campus||"").toUpperCase().indexOf("TÂN THUẬN")>=0).length;
   const _ldN=_ttldRows.filter(r=>String(r.campus||"").toUpperCase().indexOf("LINH ĐÀM")>=0).length;
   const churnMoiCard = !(clyAll||[]).length ? "" :
-   '<div class="card"><h2>Học sinh nghỉ theo tháng — nghỉ thật vs tốt nghiệp <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
-   +'<p class="sub">Từ AMIS CRM · trường <b>Ngày thôi học</b> · 3 tháng gần nhất · <b>nghỉ thật</b> = churn (KHÔNG gồm tốt nghiệp/lên lớp 1) · tháng này ('+_lb(chThis)+') còn <b>đang tích luỹ</b></p>'
+   '<div class="card"><h2>Học sinh nghỉ THỰC TẾ theo tháng — tách ngắn ngày <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
+   +'<p class="sub">Từ AMIS CRM · trường <b>Ngày thôi học</b> · 3 tháng gần nhất · <b>nghỉ thật</b> KHÔNG gồm khóa ngắn ngày, tốt nghiệp, rút cọc chưa nhập học; trường hợp chưa ghi lý do cần xác minh · tháng này ('+_lb(chThis)+') còn <b>đang tích luỹ</b></p>'
    +'<div class="kpis">'
    +kpi("Nghỉ thật "+_lb(chThis),fmt(chSys[chThis].churn),"","tháng này — đang tích luỹ, chưa chốt")
    +kpi("Nghỉ thật "+_lb(chPrev),fmt(chSys[chPrev].churn),"","tháng liền trước — đã đủ")
    +kpi("Tốt nghiệp "+_lb(chPrev),fmt(chSys[chPrev].tn),"","ra đúng lộ trình — không phải churn")
-   +kpi("Nghỉ thật 3 tháng",fmt(chChurnTot),"","tổng churn trong cửa sổ")+"</div>"
+   +kpi("Nghỉ thật 3 tháng",fmt(chChurnTot),"","chưa tính ngắn ngày / tốt nghiệp / rút cọc")+"</div>"
+   +'<p class="leg" style="color:var(--warn)">⚠ Tháng 9 đang đối soát ngày thôi học với CRM: dữ liệu Supabase có hồ sơ sai kỳ. Đây là số phân loại từ nguồn hiện có, chưa phải số nghiệm thu cuối cùng.</p>'
+   +'<p class="leg">Học sinh kết thúc khóa ngắn ngày được tính là <b>thôi học</b> nhưng trình bày trong block riêng bên dưới; không cộng vào KPI nghỉ thật. Rút cọc khi chưa nhập học cũng không tính nghỉ thật.</p>'
    +'<div class="tw" style="margin-top:14px"><table style="min-width:420px"><thead><tr><th>Cơ sở</th>'
    +chM.slice().reverse().map(m=>'<th>Nghỉ '+_lb(m)+'</th>').join("")+'<th>TN '+_lb(chPrev)+'</th></tr></thead><tbody>'
    +cxRows.map(function(e){var cp=e[0],d=e[1];
@@ -1953,10 +1973,25 @@ async function render(){
      +'</tbody></table></div>':"")
    +'<p class="leg"><b style="color:var(--crit)">Đỏ</b> ≥5 nghỉ/tháng · <b style="color:var(--warn)">cam</b> 3–4 — cơ sở cần soi. Số lấy trực tiếp từ CRM (nguồn sống), thay cho file KHNS export tay.</p>'
    +'<div class="q"><b>Câu hỏi:</b> cơ sở nào nghỉ thật <b>tăng dần</b> qua 3 tháng? Tháng này ai đã gọi exit từng ca để biết vì sao mất?</div></div>';
+  // Card ngắn ngày riêng: nguồn cùng v_nghi_lydo, không cộng vào nghỉ thật hoặc exit churn.
+  const _nganNgayRows=(clyAll||[]).filter(r=>chM.includes(String(r.thang||""))&&_phanLoaiNghiThang(r)==="nganngay")
+     .slice().sort((a,b)=>String(b.ngay_thoi_hoc||"").localeCompare(String(a.ngay_thoi_hoc||"")));
+  const _escNghi=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const nganNgayCard =
+   '<div class="card"><h2>Học sinh kết thúc khóa ngắn ngày — block riêng</h2>'
+   +'<p class="sub">Vẫn ghi nhận là học sinh thôi học, nhưng <b>KHÔNG cộng vào nghỉ thật</b>. Nguồn AMIS CRM qua v_nghi_lydo · 3 tháng gần nhất; ngày nghỉ chưa đối soát thì số còn có thể điều chỉnh.</p>'
+   +'<div class="kpis">'
+   +chM.map(m=>kpi("Ngắn ngày T"+(+m.slice(5)),fmt(chSys[m].nganngay),"","không tính vào nghỉ thật")).join("")
+   +'</div>'
+   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Danh sách kết thúc khóa ngắn ngày ('+fmt(_nganNgayRows.length)+' hồ sơ / 3 tháng)</p>'
+   +'<div class="tw"><table><thead><tr><th>Mã học sinh</th><th>Cơ sở</th><th>Ngày thôi học</th></tr></thead><tbody>'
+   +(_nganNgayRows.length?_nganNgayRows.map(r=>'<tr><td>'+_escNghi(r.ma_hs||"—")+'</td><td>'+_escNghi(_stripCp(r.campus))+'</td><td class="mono">'+_escNghi(_dmy(r.ngay_thoi_hoc))+'</td></tr>').join("")
+     :'<tr><td colspan="3">Không có hồ sơ ngắn ngày trong 3 tháng theo dữ liệu hiện có</td></tr>')
+   +'</tbody></table></div></div>';
   // Card exit/lắng nghe — tháng gần nhất CÓ HS nghỉ (= tháng hiện hành khi đã có số; đầu tháng chưa có thì hiện tháng liền trước, ghi rõ). KHÔNG lũy kế. Lý do/trend ở churnMoiCard.
-  const _exMon = chLatest;
+  const _exMon = chM.find(m=>chSys[m].churn>0)||chLatest;
   const _exLaNay = (_exMon===_thNay);
-  const exRows = (clyAll||[]).filter(r=>String(r.thang||"")===_exMon);
+  const exRows = (clyAll||[]).filter(r=>String(r.thang||"")===_exMon && _phanLoaiNghiThang(r)==="churn");
   const exTong = exRows.length;
   const exCoLD = exRows.filter(r=>r.da_lang_nghe===true).length;
   const exThieu = exRows.filter(r=>r.da_lang_nghe!==true && r.da_lang_nghe!==false).length;
@@ -1975,7 +2010,7 @@ async function render(){
     +'<p class="leg">Chưa có HS nghỉ nào trong CRM (3 tháng gần nhất). Xem thẻ <b>"Học sinh nghỉ theo tháng"</b> phía trên.</p></div>')
    :
    ('<div class="card"><h2>Lắng nghe phụ huynh học sinh nghỉ học — tháng '+_exSo+' <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· '+_exMon+(_exLaNay?' · tháng này':' · tháng gần nhất có HS nghỉ')+' · nguồn sống CRM</span></h2>'
-    +'<p class="sub">'+(_exLaNay?'Tháng này đang tích luỹ. ':'Tháng '+_thNay.slice(5)+' chưa có bé nào nghỉ — số dưới là <b>tháng '+_exSo+'</b> (gần nhất có nghỉ). ')+'Trong <b>'+exTong+'</b> bé nghỉ — đã hoàn thành lắng nghe phụ huynh bao nhiêu?</p>'
+    +'<p class="sub">'+(_exLaNay?'Tháng này đang tích luỹ. ':'Tháng '+_thNay.slice(5)+' chưa có bé nào nghỉ thật — số dưới là <b>tháng '+_exSo+'</b> (gần nhất có nghỉ thật). ')+'Trong <b>'+exTong+'</b> hồ sơ nghỉ thật (đã tách ngắn ngày, tốt nghiệp, rút cọc) — đã hoàn thành lắng nghe phụ huynh bao nhiêu?</p>'
     +'<div class="kpis">'
     +kpi("Nghỉ tháng "+_exSo,fmt(exTong),"","số sống từ CRM"+(_exLaNay?" — đang tích luỹ":""))
     +kpi("Đã hoàn thành lắng nghe",fmt(exCoLD),"","đã tích hoàn thành trong CRM")
@@ -2368,6 +2403,7 @@ async function render(){
 
    +SEC("G · Học sinh nghỉ — tháng này + xu hướng 3 tháng · đã lắng nghe (exit) · CRM nguồn sống")
    +churnMoiCard
+   +nganNgayCard
    +churnNayCard
 
    +moGap
@@ -2404,7 +2440,7 @@ async function render(){
 
    +'<div class="zone" id="zdom">'
    +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — mục tiêu vs thực tế (lead theo nguồn + nhập học Tomia/CRM) · phễu · kết nối phụ huynh")+leadNguonCard+ktCard+hsCard+caCard+dsCard+choCard+cohCard+ctCard+'</div>'
-   +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — tháng này + xu hướng 3 tháng · đã lắng nghe (exit) · nghỉ liên tục · CRM nguồn sống")+churnMoiCard+churnNayCard+ngCard+'</div>'
+   +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — tháng này + xu hướng 3 tháng · đã lắng nghe (exit) · nghỉ liên tục · CRM nguồn sống")+churnMoiCard+nganNgayCard+churnNayCard+ngCard+'</div>'
    +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
    +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
    +'<div class="dom" data-dom="channel">'+SEC("Channel — Meta · việc PH làm trên web · ai giơ tay · Website · Google · Messenger")+metaCard+cmpCard+evCard+wCard+webCard+chanCard+kwCard+nearCard+pageCard+hrCard+'</div>'
