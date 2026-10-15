@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NLBA · Đồng bộ nghỉ học V8</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;background:#f3f7f5;color:#182b27}*{box-sizing:border-box}body{margin:0;padding:30px 15px}.wrap{max-width:650px;margin:0 auto;background:white;border:1px solid #cbdcd5;border-radius:16px;padding:28px;box-shadow:0 10px 25px #001a100c}h1{font-size:22px;margin:0 0 9px}p{line-height:1.55}small,.sub{color:#63746d}button,a.btn{background:#176746;color:#fff;display:inline-block;padding:10px 15px;border-radius:8px;border:0;text-decoration:none;font:inherit;cursor:pointer;margin:4px 0}.secondary{background:#e8f0ec!important;color:#174b37!important}.status{white-space:pre-wrap;border-radius:9px;background:#ecf4f1;padding:12px;margin:18px 0;font-size:14px;line-height:1.6}.err{background:#ffe7e5}.ok{background:#e7f5ea}.hidden{display:none}input{max-width:100%}code{word-break:break-word}</style></head><body>
+<div class="wrap">
+<h1>Người lớn bình an · Đồng bộ nghỉ học V8</h1>
+<p class="sub">Trang này nhận dữ liệu từ bookmark CRM và chuyển vào Supabase sau khi kiểm tra tài khoản NLBA. Không cần đưa khóa bí mật vào bookmark.</p>
+<div id="identity" class="status">Đang kiểm tra đăng nhập NLBA…</div>
+<div id="status" class="status">Đang chờ bookmark V8 gửi dữ liệu CRM…</div>
+<div id="login" class="hidden">
+<p>Chị cần đăng nhập NLBA trước khi sử dụng tính năng đồng bộ. Sau khi đăng nhập xong, quay lại CRM và bấm bookmark V8 một lần nữa.</p>
+<a class="btn" href="./index.html" target="_blank" rel="noopener">Mở NLBA để đăng nhập</a>
+<button class="secondary" id="recheck">Kiểm tra lại đăng nhập</button>
+</div>
+<div id="manual">
+<details><summary>Nếu cửa sổ bookmark bị chặn: nhập file V7/V8 để đồng bộ</summary>
+<p>Chỉ dùng file JSON tải từ CRM do bookmark NLBA tạo, không lấy dữ liệu từ nguồn khác.</p>
+<input type="file" id="file" accept=".json,application/json">
+<button class="secondary" id="manualBtn">Kiểm tra và đồng bộ file</button></details>
+</div>
+<p><small>Nếu chưa được cấp quyền đồng bộ, chức năng sẽ từ chối ghi. Chỉ dữ liệu vượt qua tất cả kiểm tra mới được cập nhật vào báo cáo.</small></p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){'use strict';
+const CRM_ORIGIN='https://amisapp.misa.vn';
+const SB_URL='https://fxxgfihjirxbfmhwarkl.supabase.co';
+const SB_KEY='sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T';
+const CLIENT=supabase.createClient(SB_URL,SB_KEY);
+const $=id=>document.getElementById(id);
+let payload=null,nonce=null,processing=false,authReady=false;
+function state(message,ok){$('status').textContent=message;$('status').className='status '+(ok===true?'ok':ok===false?'err':'');}
+function report(message,ok){state(message,ok);if(window.opener&&!window.opener.closed){window.opener.postMessage({type:'NLBA_V8_RESULT',nonce,ok:ok===true,message},CRM_ORIGIN);}}
+function explainError(err){return err&&err.message?err.message:String(err||'Lỗi không xác định');}
+async function identity(){
+  try{const {data:{session},error}=await CLIENT.auth.getSession();if(error)throw error;
+   if(session){const {data:{user},error:whoErr}=await CLIENT.auth.getUser();if(whoErr||!user)throw whoErr||Error('Phiên đăng nhập không hợp lệ');
+     $('identity').textContent='Đã đăng nhập NLBA: '+(user.email||'tài khoản xác thực');$('login').classList.add('hidden');authReady=true;return session;}
+  }catch(_){/* require login */}
+  $('identity').textContent='Chưa đăng nhập NLBA';$('login').classList.remove('hidden');authReady=false;return null;
+}
+async function upload(){
+ if(processing||!payload)return;
+ const session=await identity();
+ if(!session){state('Đã nhận dữ liệu CRM nhưng cần đăng nhập NLBA. Đăng nhập ở tab mới, rồi bấm "Kiểm tra lại đăng nhập".',false);return;}
+ processing=true;state('Đang kiểm tra dữ liệu và cập nhật Supabase…');
+ try{
+  const response=await fetch(SB_URL+'/functions/v1/nlba-exit-sync-v8',{
+    method:'POST',headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify(payload),mode:'cors',cache:'no-store'});
+  const obj=await response.json().catch(()=>({error:'Phản hồi không phải JSON'}));
+  if(!response.ok||!obj.ok)throw Error((obj&&obj.error)||'HTTP '+response.status);
+  const r=obj.result||{};
+  const month=r.by_month||{};
+  const message='ĐỒNG BỘ V8 THÀNH CÔNG\n'+
+    'Tổng hồ sơ CRM: '+payload.total_records+'\n'+
+    'Hồ sơ có ngày thôi học: '+r.with_exit_date+'\n'+
+    'Tháng 9/2026: '+(month['2026-09']||0)+' hồ sơ, chưa tách ngắn ngày\n'+
+    'Tháng 10/2026: '+(month['2026-10']||0)+' hồ sơ, chưa tách ngắn ngày\n'+
+    (r.already_applied?'Dữ liệu đã được cập nhật trước đó.':'Đã kiểm tra và cập nhật đủ một lần.');
+  report(message,true);
+  payload=null;
+ }catch(e){report('V8 KHÔNG GHI DỮ LIỆU: '+explainError(e),false);}
+ finally{processing=false;}
+}
+function checkFile(obj){
+ if(!obj||obj.schema_version!=='nlba-exit-sync-v8'||obj.mode!=='FULL_SNAPSHOT'||
+    !Array.isArray(obj.records)||obj.records.length!==obj.total_records||
+    obj.total_records<3750||obj.complete_pagination!==true)throw Error('Đây không phải JSON V8 đầy đủ. Không gửi lên Supabase.');
+ if(!Number.isFinite(Date.parse(obj.exported_at))||Math.abs(Date.now()-Date.parse(obj.exported_at))>15*60000)
+    throw Error('File quá 15 phút hoặc không có thời điểm xuất. Vui lòng chạy lại V8.');
+ return obj;
+}
+window.addEventListener('message',async event=>{
+ if(event.origin!==CRM_ORIGIN||event.source!==window.opener)return;
+ if(!event.data||event.data.type!=='NLBA_V8_SNAPSHOT')return;
+ try{
+   if(nonce&&event.data.nonce!==nonce)throw Error('Mã phiên đồng bộ không khớp');
+   nonce=event.data.nonce;
+   payload=checkFile(event.data.payload);
+   state('Nhận được '+payload.total_records+' hồ sơ CRM. Chuẩn bị cập nhật…');
+   await upload();
+ }catch(e){report('Kiểm tra dữ liệu thất bại: '+explainError(e),false);}
+});
+function ready(){if(window.opener&&!window.opener.closed){window.opener.postMessage({type:'NLBA_V8_READY'},CRM_ORIGIN)}}
+$('recheck').onclick=async()=>{await identity();if(payload)await upload()};
+$('manualBtn').onclick=async()=>{
+ try{
+  const file=$('file').files&&$('file').files[0];if(!file)throw Error('Chưa chọn file JSON');
+  if(file.size>1400000)throw Error('File vượt giới hạn');
+  payload=checkFile(JSON.parse(await file.text()));
+  await upload();
+ }catch(e){state('Không thể dùng file: '+explainError(e),false)}
+};
+CLIENT.auth.onAuthStateChange(()=>{setTimeout(()=>{if(payload&&!processing)upload()},0)});
+identity().then(ready).catch(ready);
+})();
+</script></body></html>
