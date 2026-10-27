@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-12 · b64";
+const BUILD="2026-10-21 · b65-deposit-audit";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -361,6 +361,9 @@ async function render(){
   const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
   const KQ = await napKho(CP, buocLai);
+  const depRes=await sb.from("v_nlba_dat_coc_doi_soat").select("snapshot_ts,ma_tuyen_sinh,ten_tuyen_sinh,campus,ngay_dat_coc,ngay_nhap_du_kien,tomia_ngay_dau,so_tre_trung_ten,tomia_cap_nhat_den").order("ngay_dat_coc",{ascending:false}).limit(150);
+  const depRows=depRes.error?null:(depRes.data||[]);
+  const depError=depRes.error?String(depRes.error.message||depRes.error):null;
   buocLai=false;
   soLanVe++;
   DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
@@ -1089,8 +1092,32 @@ async function render(){
    +'Số liệu 180 ngày: 60% ca chốt trong 14 ngày đầu, 79% trong 30 ngày — vẫn có 12% chốt sau 60 ngày, nên đừng xoá, chỉ hạ nhịp.</p>'
    +'<div class="q"><b>Quy tắc:</b> mỗi hồ sơ trong danh sách này chỉ rời khỏi đây theo hai đường — <b>lên bước tiếp</b>, hoặc <b>đóng kèm lý do</b>. Không có đường thứ ba là “để đấy”.</div></div>';
 
+  // SOURCE: latest CRM deposit snapshot; old materialized "25" must never be reused.
+  const depEsc=x=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const depLoc=(depRows||[]).filter(r=>hopCP(r.campus));
+  const depOne=depLoc.filter(r=>Number(r.so_tre_trung_ten)===1);
+  const depOther=depLoc.filter(r=>Number(r.so_tre_trung_ten)!==1);
+  const depRow=r=>'<tr><td class="mono">'+depEsc(r.ma_tuyen_sinh)+'</td><td>'+depEsc(r.ten_tuyen_sinh)
+    +'</td><td>'+depEsc(r.campus||"—")+'</td><td class="mono">'+depEsc(r.ngay_dat_coc)
+    +'</td><td class="mono">'+depEsc(r.ngay_nhap_du_kien||"—")+'</td><td>'
+    +(Number(r.so_tre_trung_ten)===1?'Có điểm danh cùng tên/cơ sở từ '+depEsc(r.tomia_ngay_dau):'Chưa xác minh mã trẻ')
+    +'</td><td>'+(Number(r.so_tre_trung_ten)===1?'Xác nhận đúng mã trẻ; nếu khớp, đổi CRM thành Kết thúc thành công':'Đối chiếu mã trẻ, lịch nhập học và cập nhật CRM')+'</td></tr>';
+  const depCard='<div class="card"><h2>Đặt cọc — Đối soát CRM &amp; Tomia</h2>'
+    +'<p class="sub">Điều kiện: Ngày đặt cọc trong 90 ngày + trạng thái CRM hiện tại Đã đặt cọc / giữ chỗ</p>'
+    +(depRows===null?'<p class="note">Không đọc được snapshot: '+depEsc(depError)+'. Không sử dụng số 25 cũ.</p>'
+    :!depRows.length?'<p class="note">Chưa có snapshot CRM hợp lệ; không thể kết luận bằng 0.</p>'
+    :'<div class="kpis">'+kpi("CRM còn đặt cọc",fmt(depLoc.length),"","Nguồn CRM xuất ngày 21/10/2026")
+      +kpi("Trùng tên + campus Tomia",fmt(depOne.length),"","Cần đối chiếu đúng mã học sinh")
+      +kpi("Chưa xác minh mã trẻ",fmt(depOther.length),"","Không mặc định chưa đi học")+'</div>'
+      +'<p class="leg"><b>Thời điểm:</b> CRM snapshot '+depEsc(depRows[0].snapshot_ts.slice(0,10))
+      +'; Tomia điểm danh đến '+depEsc(depRows[0].tomia_cap_nhat_den||"—")
+      +'. Snapshot chưa tự đồng bộ hằng ngày. Trùng tên + cơ sở chưa xác nhận cùng trẻ; không trùng không có nghĩa chưa đi học.</p>'
+      +'<div class="tw"><table style="min-width:980px"><thead><tr><th>Mã tuyển sinh</th><th>Hồ sơ</th><th>Campus</th><th>Ngày cọc</th><th>Ngày nhập học dự kiến</th><th>Tomia</th><th>Hành động trên CRM</th></tr></thead><tbody>'
+      +[...depOne,...depOther].map(depRow).join("")+'</tbody></table></div>'
+      +'<p class="leg">Khi CRM đã chuyển Không có nhu cầu / Kết thúc thành công, cần đồng bộ snapshot mới để tự loại khỏi danh sách. NLBA không tự sửa CRM.</p>')
+    +'</div>';
   // ----- THE: DANH SACH TUNG HO SO THEO TANG PHEU -----
-  const dsLoc=(ds||[]).filter(r=>hopCP(r.campus));
+  const dsLoc=(ds||[]).filter(r=>hopCP(r.campus)&&r.tang!=="6. Đặt cọc");
   // «b64» tách hồ sơ ĐÃ ĐÓNG (Từ chối / Đã đi học) ra khỏi danh sách-việc — chỉ giữ hồ sơ còn mở
   const _dongDs=r=>{const t=String(r.tang||"");return t.indexOf("Từ chối")>=0||t.indexOf("Đã đi học")>=0;};
   const dsOpen=dsLoc.filter(r=>!_dongDs(r));
@@ -2391,6 +2418,7 @@ async function render(){
    +SEC("A · Tuyển sinh — lead thành học sinh · theo campus")
    +hsCard
    +caCard
+   +depCard
    +dsCard
    +choCard
 
@@ -2439,7 +2467,7 @@ async function render(){
    +dongGap+cdCard+'</div>'
 
    +'<div class="zone" id="zdom">'
-   +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — mục tiêu vs thực tế (lead theo nguồn + nhập học Tomia/CRM) · phễu · kết nối phụ huynh")+leadNguonCard+ktCard+hsCard+caCard+dsCard+choCard+cohCard+ctCard+'</div>'
+   +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — mục tiêu vs thực tế (lead theo nguồn + nhập học Tomia/CRM) · phễu · kết nối phụ huynh")+leadNguonCard+ktCard+hsCard+caCard+depCard+dsCard+choCard+cohCard+ctCard+'</div>'
    +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — tháng này + xu hướng 3 tháng · đã lắng nghe (exit) · nghỉ liên tục · CRM nguồn sống")+churnMoiCard+nganNgayCard+churnNayCard+ngCard+'</div>'
    +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
    +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
