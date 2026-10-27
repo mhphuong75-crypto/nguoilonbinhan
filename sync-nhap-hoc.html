@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NLBA · Đồng bộ nhập học</title>
+<style>
+body{font:16px system-ui;background:#f3f7f5;color:#182b27;
+margin:0;padding:30px 16px}
+main{max-width:650px;margin:auto;background:white;padding:26px;
+border:1px solid #cbdcd5;border-radius:16px}
+h1{font-size:23px}p{line-height:1.6}
+.status{white-space:pre-wrap;background:#edf4f0;padding:14px;
+border-radius:9px;margin:16px 0;line-height:1.6}
+button,a{font:inherit}
+button{padding:10px 15px;border:0;border-radius:8px;
+background:#176746;color:white;cursor:pointer;margin-top:10px}
+button:disabled{opacity:.5;cursor:default}
+input{max-width:100%}.error{background:#ffe7e5}
+.ok{background:#e7f5ea}
+</style>
+</head>
+<body>
+<main>
+<h1>NLBA · Đồng bộ nhập học CRM</h1>
+<p>Nguồn: phân hệ Học sinh → Ngày nhập học chính thức.
+Trang này chỉ cập nhật bảng nhập học riêng.</p>
+<div id="identity" class="status">Đang kiểm tra đăng nhập…</div>
+<p><a href="./index.html" target="_blank" rel="noopener">
+Mở NLBA để đăng nhập</a></p>
+<button id="recheck">Kiểm tra lại đăng nhập</button>
+<div id="status" class="status">Đang chờ dữ liệu từ bookmark CRM…</div>
+<button id="upload" disabled>Đồng bộ dữ liệu đã nhận</button>
+<details>
+<summary>Dùng file JSON khi cửa sổ bookmark bị chặn</summary>
+<p>Chọn file do bookmark nhập học NLBA tạo.</p>
+<input id="file" type="file" accept=".json,application/json">
+<button id="read">Đọc file</button>
+</details>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
+<script>
+(function(){
+"use strict";
+
+const CRM="https://amisapp.misa.vn";
+const URL_SB="https://fxxgfihjirxbfmhwarkl.supabase.co";
+const KEY="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
+const client=supabase.createClient(URL_SB,KEY);
+const $=id=>document.getElementById(id);
+
+let payload=null;
+let nonce=null;
+let processing=false;
+
+function status(text,type){
+  $("status").textContent=text;
+  $("status").className="status "+(type||"");
+}
+function controls(){
+  $("upload").disabled=processing||!payload;
+  $("read").disabled=processing;
+  $("file").disabled=processing;
+}
+function report(message,ok){
+  status(message,ok?"ok":"error");
+  if(nonce&&window.opener&&!window.opener.closed){
+    window.opener.postMessage({
+      type:"NLBA_ADMISSION_RESULT",
+      nonce,
+      ok,
+      message
+    },CRM);
+  }
+}
+async function identity(){
+  const {data,error}=await client.auth.getSession();
+  if(error)throw error;
+  const session=data.session;
+  if(!session){
+    $("identity").textContent="Chưa đăng nhập NLBA.";
+    return null;
+  }
+  const result=await client.auth.getUser();
+  if(result.error||!result.data.user){
+    $("identity").textContent="Phiên đăng nhập không hợp lệ.";
+    return null;
+  }
+  $("identity").textContent="Đã đăng nhập: "+
+    (result.data.user.email||"tài khoản NLBA");
+  return session;
+}
+function validate(obj){
+  if(!obj||
+     obj.schema_version!=="nlba-admission-sync-v1"||
+     obj.mode!=="FULL_SNAPSHOT"||
+     obj.source_host!=="amisapp.misa.vn"||
+     obj.complete_pagination!==true||
+     !Number.isInteger(obj.total_records)||
+     obj.total_records<3750||obj.total_records>20000||
+     !Array.isArray(obj.records)||
+     obj.records.length!==obj.total_records||
+     !Number.isInteger(obj.has_admission_date)||
+     obj.has_admission_date<1||
+     obj.has_admission_date>obj.total_records){
+    throw Error("File nhập học không đầy đủ hoặc sai cấu trúc.");
+  }
+  const time=Date.parse(obj.exported_at);
+  if(!Number.isFinite(time)||
+     time<Date.now()-15*60000||
+     time>Date.now()+2*60000){
+    throw Error("Dữ liệu quá 15 phút. Hãy chạy lại bookmark.");
+  }
+  return obj;
+}
+function accept(obj){
+  payload=validate(obj);
+  status("Đã nhận "+payload.total_records+" hồ sơ CRM.\n"+
+    "Có ngày nhập học: "+payload.has_admission_date+" hồ sơ.\n"+
+    "Bấm “Đồng bộ dữ liệu đã nhận” để cập nhật.");
+  controls();
+}
+async function upload(){
+  if(processing||!payload)return;
+  processing=true;
+  controls();
+
+  let requestStarted=false;
+  try{
+    validate(payload);
+    const session=await identity();
+    if(!session){
+      status("Hãy đăng nhập NLBA ở tab mới, quay lại đây "+
+        "và bấm đồng bộ.","error");
+      return;
+    }
+
+    status("Đang kiểm tra và đồng bộ nhập học…");
+    requestStarted=true;
+    const response=await fetch(
+      URL_SB+"/functions/v1/nlba-admission-sync-v1",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "apikey":KEY,
+          "Authorization":"Bearer "+session.access_token
+        },
+        body:JSON.stringify(payload),
+        cache:"no-store"
+      }
+    );
+    const obj=await response.json();
+    if(!response.ok||obj.ok!==true){
+      throw Error(obj.error||"HTTP "+response.status);
+    }
+
+    const result=obj.result||{};
+    const months=result.by_month||{};
+    const message="ĐỒNG BỘ NHẬP HỌC THÀNH CÔNG\n"+
+      "Tổng hồ sơ: "+result.total_records+"\n"+
+      "Có ngày nhập học: "+result.with_admission_date+"\n"+
+      "Toàn tháng 10/2026: "+(months["2026-10"]||0)+" hồ sơ\n"+
+      "(Bao gồm ngày sau hôm nay nếu CRM có ghi.)\n"+
+      "Chưa thay đổi cách hiển thị trên trang báo cáo.";
+
+    payload=null;
+    report(message,true);
+  }catch(error){
+    report(
+      (requestStarted?
+        "Chưa xác nhận đồng bộ thành công. ":
+        "Chưa gửi dữ liệu. ")+
+      (error.message||String(error))+
+      (requestStarted?
+        "\nNếu lỗi mạng, cần kiểm tra bảng trước khi thử lại.":""),
+      false
+    );
+  }finally{
+    processing=false;
+    controls();
+  }
+}
+
+window.addEventListener("message",event=>{
+  if(event.origin!==CRM||event.source!==window.opener||
+     event.data?.type!=="NLBA_ADMISSION_SNAPSHOT"||
+     processing)return;
+
+  try{
+    const incoming=event.data.nonce;
+    if(typeof incoming!=="string"||
+       !/^[a-f0-9]{36}$/.test(incoming)){
+      throw Error("Mã phiên không hợp lệ.");
+    }
+    if(nonce&&nonce!==incoming){
+      throw Error("Mã phiên đồng bộ không khớp.");
+    }
+    nonce=incoming;
+    accept(event.data.payload);
+  }catch(error){
+    report(error.message||String(error),false);
+  }
+});
+
+$("upload").onclick=upload;
+$("recheck").onclick=()=>identity().catch(error=>{
+  status(error.message||String(error),"error");
+});
+$("read").onclick=async()=>{
+  try{
+    const file=$("file").files[0];
+    if(!file)throw Error("Chưa chọn file JSON.");
+    if(file.size>8000000)throw Error("File vượt giới hạn 8 MB.");
+    nonce=null;
+    accept(JSON.parse(await file.text()));
+  }catch(error){
+    payload=null;
+    controls();
+    status(error.message||String(error),"error");
+  }
+};
+
+identity().catch(()=>{
+  $("identity").textContent="Chưa kiểm tra được đăng nhập NLBA.";
+}).finally(()=>{
+  if(window.opener&&!window.opener.closed){
+    window.opener.postMessage({
+      type:"NLBA_ADMISSION_READY"
+    },CRM);
+  }
+});
+})();
+</script>
+</body>
+</html>
