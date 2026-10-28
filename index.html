@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-10-21 · b65-deposit-audit";
+const BUILD="2026-10-28 · b66-crm-admission";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -264,13 +264,102 @@ function delta(cur,prev,goodUp=true){
 const kpi=(l,v,d,h)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v mono">'+v+"</div>"+(d||"")
  +(h?'<div class="hint">'+h+"</div>":"")+"</div>";
 
+// NLBA b66: nguồn nhập học CRM Học sinh; không dùng trạng thái Tuyển sinh.
+const escNH = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const campusNH = value => String(value || '').normalize('NFC').trim().replace(/^campus\s+/i, '').replace(/\s+/g, ' ').toLocaleUpperCase('vi-VN');
+async function docNhapHocCRM() {
+  try {
+    const metadata = () => sb.from('nlba_nhap_hoc_crm').select('captured_at', {count:'exact'}).order('captured_at', {ascending:false}).limit(1);
+    const first = await metadata();
+    if (first.error) throw first.error;
+    const stamp = first.data?.[0]?.captured_at;
+    if (!stamp || !Number.isInteger(first.count) || first.count < 3750) throw Error('Chưa đọc được snapshot nhập học đầy đủ. Kiểm tra quyền đọc hoặc chạy bookmark nhập học.');
+    const rows = [], seen = new Set();
+    let expected = null;
+    for (let page = 0; page < 40; page++) {
+      const result = await sb.from('nlba_nhap_hoc_crm')
+        .select('ma_hs,ten_hs,campus,lop,dien_thoai,ngay_nhap_hoc,captured_at', {count:'exact'})
+        .eq('captured_at', stamp).not('ngay_nhap_hoc', 'is', null)
+        .order('ma_hs', {ascending:true}).range(page * 500, page * 500 + 499);
+      if (result.error) throw result.error;
+      if (!Number.isInteger(result.count) || (expected !== null && expected !== result.count)) throw Error('Nguồn nhập học thay đổi giữa lúc đọc. Bấm Tải lại số.');
+      expected = result.count;
+      for (const row of result.data || []) {
+        if (!row.ma_hs || seen.has(row.ma_hs) || row.captured_at !== stamp) throw Error('Snapshot nhập học bị trùng hoặc không nhất quán.');
+        seen.add(row.ma_hs); rows.push({...row,campus:campusNH(row.campus)});
+      }
+      if (rows.length === expected) break;
+      if (!result.data?.length || rows.length > expected) throw Error('Nguồn nhập học trả thiếu dữ liệu.');
+    }
+    if (rows.length !== expected) throw Error('Nguồn nhập học vượt giới hạn hoặc chưa đầy đủ.');
+    const last = await metadata();
+    if (last.error) throw last.error;
+    if (last.count !== first.count || last.data?.[0]?.captured_at !== stamp) throw Error('CRM vừa được đồng bộ trong lúc mở báo cáo. Bấm Tải lại số.');
+    return {data:rows,error:null,snapshot:{capturedAt:stamp,totalRecords:first.count,datedRecords:rows.length}};
+  } catch (error) {
+    return {data:null,error:{message:error.message || String(error)},snapshot:null};
+  }
+}
+function taoTheNhapHoc({rows,meta,error,tomia,targets,CP,pv,homNay,tomiaError}) {
+  const reference = new Date(homNay + 'T00:00:00Z');
+  const current = reference.toISOString().slice(0,7);
+  if (pv === 'truoc') reference.setUTCMonth(reference.getUTCMonth() - 1, 1);
+  const month = reference.toISOString().slice(0,7), year = +month.slice(0,4), number = +month.slice(5,7);
+  const ready = !error && !!meta;
+  const cp = campusNH(CP), inCampus = r => !cp || campusNH(r.campus) === cp;
+  const localRows = (rows || []).filter(inCampus);
+  const selected = localRows.filter(r => String(r.ngay_nhap_hoc).slice(0,7) === month).sort((a,b) => String(a.ngay_nhap_hoc).localeCompare(String(b.ngay_nhap_hoc)) || String(a.ma_hs).localeCompare(String(b.ma_hs)));
+  const due = selected.filter(r => r.ngay_nhap_hoc <= homNay), future = selected.filter(r => r.ngay_nhap_hoc > homNay);
+  const tom = (tomia || []).filter(inCampus).filter(r => String(r.ngay_dau).slice(0,7) === month && String(r.ngay_dau).slice(0,10) <= homNay);
+  const tomiaCount = new Set(tom.map(r => r.ma_tre)).size;
+  // Kế hoạch hiện có không có cột năm: chỉ sử dụng cho năm 2026.
+  const planRows = year === 2026 ? (targets || []).filter(inCampus) : [];
+  const plan = planRows.filter(r => +r.thang === number), hasPlan = plan.length > 0;
+  const goal = plan.reduce((sum,r) => sum + (+r.tuyen_moi || 0), 0);
+  const workingDays = (y,m,limit) => {let n=0;for(let d=1;d<=limit;d++){const w=new Date(Date.UTC(y,m-1,d)).getUTCDay();if(w>=1&&w<=5)n++;}return n;};
+  const lastDay = new Date(Date.UTC(year,number,0)).getUTCDate();
+  const elapsed = month < current ? lastDay : month === current ? +homNay.slice(8,10) : 0;
+  const pace = hasPlan ? goal * workingDays(year,number,elapsed) / workingDays(year,number,lastDay) : null;
+  const shown = n => ready ? fmt(n) : '—';
+  const captured = meta ? new Date(meta.capturedAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour12:false}) : 'chưa đọc được';
+  let result = '<div class="card"><h2>Mục tiêu và nhập học CRM — tháng '+number+'/'+year+'</h2>'
+    +'<p class="sub">'+escNH(CP || 'Toàn hệ thống')+' · nguồn: Học sinh → Ngày nhập học chính thức · tháng này / tháng trước theo ô chọn thời gian</p>'
+    +'<p class="leg">Đồng bộ lúc <b>'+escNH(captured)+'</b> (giờ Việt Nam)'+(meta?' · '+fmt(meta.totalRecords)+' hồ sơ toàn hệ thống':'')+'. Bấm “Tải lại số” sau khi chạy bookmark để đọc snapshot mới.</p>'
+    +(ready?'':'<div class="gap"><b>Chưa đọc được nhập học CRM.</b> '+escNH(error || 'Chưa có snapshot hoặc tài khoản chưa được cấp quyền đọc.')+' Không dùng số chốt tuyển sinh để thay thế.</div>')
+    +'<div class="kpis">'
+    +kpi('Mục tiêu tháng '+number,hasPlan?fmt(goal):'—','','học sinh mới cả tháng · kế hoạch 2026')
+    +kpi('CRM · toàn tháng '+number,shown(selected.length),'','có ngày nhập học trong tháng; gồm ngày sau hôm nay')
+    +kpi('CRM · đến '+homNay.slice(8,10)+'/'+homNay.slice(5,7),shown(due.length),'','ngày nhập học từ đầu tháng đến hôm nay')
+    +kpi('CRM · sau hôm nay',shown(future.length),'','đã ghi ngày nhập học; chưa cộng vào số đến hôm nay')
+    +kpi('Nhịp đến hôm nay',pace===null?'—':dec(pace,1),'','mục tiêu × số ngày học đã qua / tổng ngày học')
+    +kpi('CRM đến hôm nay − nhịp',!ready||pace===null?'—':dec(due.length-pace,1),'','so cùng mốc đến hôm nay')+'</div>'
+    +'<div class="q"><b>Đối chiếu hai nguồn:</b> CRM có ngày trong tháng: <b>'+shown(selected.length)+'</b>; CRM đến hôm nay: <b>'+shown(due.length)+'</b>; Tomia có ngày đầu ghi nhận trong tháng đến hôm nay: <b>'+(tomiaError?'chưa đọc được':fmt(tomiaCount))+'</b>.<br>Hai nguồn có định nghĩa và phạm vi khác nhau. Cần đối chiếu từng mã học sinh trước khi kết luận thiếu hồ sơ; chênh số lượng không chứng minh có hồ sơ chưa chốt.</div>';
+  if (ready) {
+    const columns = [['ma_hs','Mã học sinh'],['ten_hs','Học sinh'],['campus','Cơ sở'],['lop','Lớp'],['dien_thoai','Điện thoại'],['ngay_nhap_hoc','Ngày nhập học']];
+    result += '<details style="margin-top:14px"><summary style="cursor:pointer">Danh sách '+fmt(selected.length)+' học sinh CRM tháng '+number+' — mã · tên · cơ sở · điện thoại · ngày nhập học</summary><div class="tw"><table><thead><tr><th>#</th>'
+      +columns.map(c=>'<th>'+c[1]+'</th>').join('')+'<th>Mốc ngày</th></tr></thead><tbody>'
+      +selected.map((r,i)=>'<tr><td>'+(i+1)+'</td>'+columns.map(c=>'<td>'+escNH(r[c[0]] || '—')+'</td>').join('')+'<td>'+(r.ngay_nhap_hoc>homNay?'Sau hôm nay':'Đến hôm nay')+'</td></tr>').join('')
+      +'</tbody></table></div></details>';
+  }
+  result += '<p class="leg"><b>Định nghĩa:</b> mỗi mã học sinh được tính một lần theo Ngày nhập học chính thức đang lưu ở phân hệ Học sinh. Ngày trống không được tính. Không phụ thuộc trạng thái hiện tại, lớp hay ngày tạo lead. Tomia được giữ làm nguồn đối chiếu; ngày đầu ghi nhận trong dữ liệu không tự chứng minh đó là lần đi học đầu tiên trong đời.</p>';
+  const campusNames = [...new Set([...selected.map(r=>r.campus || '(CHƯA GÁN CAMPUS)'),...plan.map(r=>campusNH(r.campus) || '(CHƯA GÁN CAMPUS)')])].sort();
+  result += '<h3>Tháng '+number+' theo cơ sở</h3><div class="tw"><table><thead><tr><th>Cơ sở</th><th>Mục tiêu</th><th>CRM toàn tháng</th><th>Đến hôm nay</th><th>Sau hôm nay</th></tr></thead><tbody>'
+    +campusNames.map(c=>{const rr=selected.filter(r=>(r.campus || '(CHƯA GÁN CAMPUS)')===c),pp=plan.filter(r=>campusNH(r.campus)===c);return '<tr><td>'+escNH(c)+'</td><td>'+(pp.length?fmt(pp.reduce((n,r)=>n+(+r.tuyen_moi||0),0)):'—')+'</td><td>'+shown(rr.length)+'</td><td>'+shown(rr.filter(r=>r.ngay_nhap_hoc<=homNay).length)+'</td><td>'+shown(rr.filter(r=>r.ngay_nhap_hoc>homNay).length)+'</td></tr>';}).join('')
+    +'<tr><td><b>Tổng phạm vi đang chọn</b></td><td>'+(hasPlan?fmt(goal):'—')+'</td><td>'+shown(selected.length)+'</td><td>'+shown(due.length)+'</td><td>'+shown(future.length)+'</td></tr></tbody></table></div>';
+  if (planRows.length) {
+    result += '<h3>Tháng 7–12/'+year+' · kế hoạch và ngày nhập học CRM</h3><div class="tw"><table><thead><tr><th>Tháng</th><th>Mục tiêu</th><th>CRM toàn tháng</th><th>CRM đến hôm nay</th><th>Ngày sau hôm nay</th></tr></thead><tbody>'
+      +[7,8,9,10,11,12].map(m=>{const key=year+'-'+String(m).padStart(2,'0'),rr=localRows.filter(r=>r.ngay_nhap_hoc.slice(0,7)===key),pp=planRows.filter(r=>+r.thang===m);return '<tr><td>'+m+'/'+year+'</td><td>'+(pp.length?fmt(pp.reduce((n,r)=>n+(+r.tuyen_moi||0),0)):'—')+'</td><td>'+shown(rr.length)+'</td><td>'+shown(rr.filter(r=>r.ngay_nhap_hoc<=homNay).length)+'</td><td>'+shown(rr.filter(r=>r.ngay_nhap_hoc>homNay).length)+'</td></tr>';}).join('')+'</tbody></table></div>';
+  }
+  return result+'</div>';
+}
+
 let KHO=null, buocLai=false;   // kho tam trong bo nho: doi campus/thoi gian khong goi lai 25 truy van
 const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","meta_campaign_daily",
   "gsc_page","v_web_su_kien","v_web_trang","web_click","v_siso","mv_lead_campus","v_diem_danh",
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
-  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang"];
+  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -315,7 +404,8 @@ function taoTruyVan(CP){ return [
     sb.from("hs_churn_thang").select("campus_code,campus_ten,thang,hs_nghi,hs_totnghiep").limit(500),
     sb.from("v_gv_lop").select("campus,campus_ten,so_gv,so_chu_nhiem,tong_lop").limit(50),
     sb.from("v_nghi_lydo").select("ma_hs,thang,ngay_thoi_hoc,ly_do,ten_hs,campus,nhom_ly_do,da_lang_nghe").order("ngay_thoi_hoc",{ascending:false}).limit(1000),
-    sb.from("crm_lead_thang").select("thang,campus,nguon,so_lead").limit(2000)
+    sb.from("crm_lead_thang").select("thang,campus,nguon,so_lead").limit(2000),
+    null // nguồn nhập học tải có kiểm tra phân trang trong bocMot, không gọi sớm
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -327,7 +417,7 @@ const bocMot=async(CP,i)=>{
   const t=performance.now(); let r=null, thu=0;
   for(let lan=0;lan<2;lan++){
     thu++;
-    try{ r=await taoTruyVan(CP)[i]; }
+    try{ r=await (TEN_NGUON[i]==="nlba_nhap_hoc_crm" ? docNhapHocCRM() : taoTruyVan(CP)[i]); }
     catch(e){ r={data:null,error:{message:String(e&&e.message||e)}}; }
     if(!r||!r.error||!HET_GIO.test(r.error.message||"")) break;
     await new Promise(s=>setTimeout(s,700));     // het gio -> nghi mot nhip roi thu lai dung 1 lan
@@ -368,7 +458,11 @@ async function render(){
   soLanVe++;
   DC.ghi(soLanVe===1?"mo_app":"tai_lai", CP||"toàn hệ thống",
          (KHO&&KHO.tong)?KHO.tong/1000:null);
-  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi},{data:hrHopDong},{data:phKN},{data:churnThang},{data:gvLop},{data:nghiLyDoCrm},{data:leadThang}] = KQ;
+  const [{data:ga},{data:gs},{data:gqAll},{data:mt},{data:mc},{data:gpAll},{data:ev},{data:lp},{data:wc},{data:hs},{data:tsi},{data:dd},{data:ddT},{data:wTong},{data:tw},{data:ct},{data:lyDo},{data:coh},{data:viec},{data:ds},{data:suCo},{data:nghi},{data:hara},{data:nguoi},{data:supa},{data:nhapHoc},{data:tuoiDL},{data:lamMoi},{data:choDS},{data:luuTru},{data:finCampus},{data:hocSinh},{data:nghiAgg},{data:hrActive},{data:hrNghi},{data:hrHopDong},{data:phKN},{data:churnThang},{data:gvLop},{data:nghiLyDoCrm},{data:leadThang},{data:nhapHocCRM}] = KQ;
+  const crmNHResult=KQ[TEN_NGUON.indexOf("nlba_nhap_hoc_crm")]||{};
+  const crmNHMeta=crmNHResult.snapshot||null;
+  const crmNHError=crmNHResult.error?String(crmNHResult.error.message||crmNHResult.error):null;
+  const crmNHReady=!crmNHError&&!!crmNHMeta;
   // the chan doan: moi nguon tra ve bao nhieu dong, loi gi. Khong bao giờ de nguon chet im lang.
   const nguonRows=KQ.map((r,i)=>({ten:TEN_NGUON[i], n:(r&&r.data)?r.data.length:0, loi:(r&&r.error)?(r.error.message||JSON.stringify(r.error)):null}));
   const nguonHong=nguonRows.filter(x=>x.loi||x.n===0);
@@ -409,6 +503,7 @@ async function render(){
     (hs||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa gán campus)")ds.add(r.campus)});
     (dd||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa rõ)")ds.add(r.campus)});
     (tsi||[]).forEach(r=>{if(r.campus&&r.campus!=="(chưa rõ)"&&r.campus!=="TRUNG TÂM")ds.add(r.campus)});
+    (nhapHocCRM||[]).forEach(r=>{if(r.campus)ds.add(r.campus)});
     [...ds].sort().forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;$("camp").appendChild(o)});
   }
   const nhanCP = CP ? CP : "toàn hệ thống";
@@ -1228,21 +1323,24 @@ async function render(){
   const _s=_mon.toISOString().slice(0,10), _e=_sun.toISOString().slice(0,10);
   const tomiaTuan=new Set((nhapHoc||[])
     .filter(r=>r.campus&&hopCP(r.campus))
-    .filter(r=>{const d=_ngay(r.ngay_dau);return d&&d>=_s&&d<=_e;})
+    .filter(r=>{const d=_ngay(r.ngay_dau);return d&&d>=_s&&d<=_e&&d<=homNay;})
     .map(r=>r.ma_tre)).size;
   const coTomiaTuan=(nhapHoc||[]).length>0;
+  const crmNHWeek=w=>{const d=new Date(w+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+6);
+    const hi=d.toISOString().slice(0,10);
+    return (nhapHocCRM||[]).filter(r=>(!CP||campusNH(r.campus)===campusNH(CP))&&r.ngay_nhap_hoc>=w&&r.ngay_nhap_hoc<=hi&&r.ngay_nhap_hoc<=homNay).length;};
   const chenhTomia=tuanNay?tomiaTuan-ctTuanCua(tuanNay.tuan):null;
   // b27: Tomia theo TUNG tuan + luy ke trong thang -> noi duoc so tuan voi so thang (37)
   const _nhCP=(nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus))
     .map(r=>({ma:r.ma_tre,d:_ngay(r.ngay_dau)})).filter(r=>r.d);
   const _sunOf=w=>{const t=new Date(w+"T00:00:00Z");t.setUTCDate(t.getUTCDate()+6);return t;};
   const tomiaWkN=w=>{const lo=w,hi=_sunOf(w).toISOString().slice(0,10);
-    const s=new Set();_nhCP.forEach(r=>{if(r.d>=lo&&r.d<=hi)s.add(r.ma);});return s.size;};
+    const s=new Set();_nhCP.forEach(r=>{if(r.d>=lo&&r.d<=hi&&r.d<=homNay)s.add(r.ma);});return s.size;};
   // luy ke: dem theo THANG cua ngay Chu nhat cua tuan (de tuan 31/08 chua tre thang 9 tinh vao thang 9)
   const tomiaLuyKe=w=>{const _td=new Date(homNay+"T00:00:00Z");const mth=_td.getUTCMonth()+1,yr=_td.getUTCFullYear();
     const hi=_sunOf(w).toISOString().slice(0,10);const s=new Set();
     _nhCP.forEach(r=>{const dt=new Date(r.d+"T00:00:00Z");
-      if(dt.getUTCFullYear()===yr&&dt.getUTCMonth()+1===mth&&r.d<=hi)s.add(r.ma);});return s.size;};
+      if(dt.getUTCFullYear()===yr&&dt.getUTCMonth()+1===mth&&r.d<=hi&&r.d<=homNay)s.add(r.ma);});return s.size;};
   const luyKeThang=tuanNay?tomiaLuyKe(String(tuanNay.tuan).slice(0,10)):0;
   const ctCard = !twRows.length ? "" :
    '<div class="card"><h2>Tuần này so với chỉ tiêu</h2><p class="sub">'+nhanCP+' · mỗi tuần so với chỉ tiêu <b>của tháng chứa tuần đó</b> ÷ 4 · nguồn: file kế hoạch 2026</p>'
@@ -1251,23 +1349,21 @@ async function render(){
    +kpi("Chỉ tiêu tuần",dec(tuanNay?ctTuanCua(tuanNay.tuan):ctTuan,1),"","chỉ tiêu tháng "+(tuanNay?+String(tuanNay.tuan).slice(5,7):thangNay)+" ("+fmt(tuanNay?ctThangCua(tuanNay.tuan):ctThang)+") ÷ 4")
    +kpi("Đi học tuần này — Tomia",coTomiaTuan?fmt(tomiaTuan):"—","",'<b>trẻ thật sự đến lớp tuần này</b> — đếm theo mã trẻ')
    +kpi("Lũy kế tháng — Tomia",coTomiaTuan?fmt(luyKeThang):"—","",'tổng trẻ đi học buổi đầu <b>từ đầu tháng đến hết tuần này</b>')
-   +kpi("Chốt trên CRM tuần này",fmt(tuanNay?tuanNay.dh:0),"",'người bấm “Kết thúc thành công” — thường thấp hơn thực tế')
+   +kpi("Nhập học CRM tuần này",crmNHReady?fmt(crmNHWeek(_s)):"—","",'Học sinh → Ngày nhập học chính thức · đến hôm nay')
    +kpi("Chênh (theo Tomia)",(chenhTomia==null||!coTomiaTuan)?"—":'<span class="'+(chenhTomia>=0?"up":"down")+'">'+(chenhTomia>=0?"+":"")+dec(chenhTomia,1)+"</span>","","thực tế Tomia trừ chỉ tiêu tuần")
    +kpi("Đang kẹt giữa phễu",fmt(ketTot),"","đã vào phễu nhưng chưa ra kết quả")+"</div>"
-   +(coTomiaTuan?'<div class="q" style="margin-top:6px"><b>Đọc bảng dưới:</b> cột <b>Tomia</b> = trẻ <b>thật sự đến lớp</b> tuần đó (đếm được, phủ 15 campus); cộng dồn xuống cột <b>Lũy kế</b> — bằng đúng con số cả tháng (VD tháng 9: 8 + 20 + 9 = <b>37</b>). '
-     +'Cột <b>CRM</b> = cùng nhóm trẻ nhưng chỉ tính lead ai đó <b>bấm “chốt”</b> — phụ thuộc người nhớ cập nhật, nên tháng 9 chỉ 15, thấp hơn Tomia ~2,5 lần. '
-     +'Cột <b>vs chỉ tiêu</b> tính theo Tomia (số thật). Khi hai nguồn lệch, tin Tomia.</div>':"")
-   +'<div class="tw" style="margin-top:14px"><table style="min-width:720px"><thead><tr><th>Tuần</th><th>Lead mới</th><th>Đặt cọc</th><th>Chỉ tiêu</th><th>Đi học · Tomia</th><th>Đi học · CRM</th><th>Lũy kế Tomia (tháng)</th><th>vs chỉ tiêu</th></tr></thead><tbody>'
+   +'<div class="q"><b>Đọc bảng dưới:</b> CRM = ngày nhập học chính thức ở phân hệ Học sinh; Tomia = ngày đầu ghi nhận trong dữ liệu điểm danh. Cả hai cắt đến hôm nay. Không mặc định hai nguồn là cùng nhóm trẻ và không diễn giải chênh số lượng thành hồ sơ chưa chốt.</div>'
+   +'<div class="tw" style="margin-top:14px"><table style="min-width:720px"><thead><tr><th>Tuần</th><th>Lead mới</th><th>Đặt cọc</th><th>Chỉ tiêu</th><th>Ngày đầu · Tomia</th><th>Ngày nhập học · CRM</th><th>Lũy kế Tomia (tháng)</th><th>vs chỉ tiêu</th></tr></thead><tbody>'
    +twRows.map(r=>{const w=String(r.tuan).slice(0,10);const ctR=ctTuanCua(r.tuan);
      const tomW=coTomiaTuan?tomiaWkN(w):null;const lk=coTomiaTuan?tomiaLuyKe(w):null;
-     const base=(tomW==null?r.dh:tomW);const d=base-ctR;const cls=d>=0?"up":"down";
+     const base=tomW;const d=base===null?null:base-ctR;const cls=d>=0?"up":"down";
      return "<tr><td>"+w+'</td><td class="mono">'+fmt(r.lead)+'</td><td class="mono">'+fmt(r.coc)
      +'</td><td class="mono" style="opacity:.6">'+dec(ctR,1)
-     +'</td><td class="mono"><b>'+(tomW==null?"—":fmt(tomW))+'</b></td><td class="mono" style="opacity:.7">'+fmt(r.dh)
+     +'</td><td class="mono"><b>'+(tomW==null?"—":fmt(tomW))+'</b></td><td class="mono" style="opacity:.7">'+(crmNHReady?fmt(crmNHWeek(w)):'—')
      +'</td><td class="mono">'+(lk==null?"—":fmt(lk))
-     +'</td><td class="mono"><span class="'+cls+'">'+(d>=0?"+":"")+dec(d,1)+"</span></td></tr>"}).join("")
+     +'</td><td class="mono"><span class="'+cls+'">'+(d===null?'—':(d>=0?"+":"")+dec(d,1))+"</span></td></tr>"}).join("")
    +"</tbody></table></div>"
-   +'<p class="leg">Cột <b>Đi học · Tomia</b> in đậm là số thật để so với chỉ tiêu. <b>Lũy kế</b> reset đầu mỗi tháng (tính theo Chủ nhật của tuần). CRM để tham chiếu — chênh lệch chính là số hồ sơ chưa ai bấm “chốt” trên CRM.</p>'
+   +'<p class="leg">Tomia được giữ để tham chiếu riêng trong bảng tuần; chỉ số nhập học CRM ở thẻ tháng lấy từ Ngày nhập học chính thức. Không dùng trạng thái lead thay thế khi nguồn nhập học bị lỗi.</p>'
    +(ktRows.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Đang kẹt — và không ai ghi vì sao</p>'
      +'<div class="tw"><table><thead><tr><th>Đang ở bước</th><th>Số lead</th><th>Im lặng TB (ngày)</th><th>Chưa ghi lý do</th></tr></thead><tbody>'
      +ktRows.map(([k,v])=>"<tr><td>"+k+'</td><td class="mono">'+fmt(v.n)+'</td><td class="mono">'+Math.round(v.ngay/v.n)
@@ -1283,9 +1379,7 @@ async function render(){
      +ketRecent.slice(0,20).map(r=>"<tr><td>"+(r.ten||"(không tên)")+"</td><td>"+nhan(r.campus)+"</td><td>"+r.giai_doan
        +'</td><td class="mono">'+fmt(r.so_ngay_im_lang)+' ngày</td><td class="mono">'+(r.ngay_doi?String(r.ngay_doi).slice(0,10):"—")+"</td></tr>").join("")+"</tbody></table></div>"
      +(ketRecent.length>20?'<p class="note" style="margin-top:6px">Chỉ hiện 20/'+fmt(ketRecent.length)+' lead kẹt mới nhất. <b>Còn '+fmt(ketRecent.length-20)+' lead nữa — mở CRM để xử lý toàn bộ, không để trong app.</b></p>':"") : "")
-   +'<p class="leg"><b>Cách đọc:</b> “Đi học” = lead đã chuyển sang <i>Kết thúc thành công</i> trong tuần đó. '
-   +'CRM chỉ lưu <b>trạng thái hiện tại</b>, không lưu lịch sử chuyển bước — nên tuần được tính theo <i>ngày cập nhật gần nhất</i>. '
-   +'Một lead được sửa lại vì lý do khác sẽ nhảy sang tuần mới. Số này đủ để thấy xu hướng, chưa đủ để chấm KPI cá nhân.</p>'
+   +'<p class="leg"><b>Phạm vi:</b> các cột lead và đặt cọc vẫn thuộc phễu Tuyển sinh. Cột nhập học CRM đọc riêng phân hệ Học sinh theo ngày nhập học.</p>'
    +'<div class="q"><b>Câu hỏi cho từng campus:</b> trong 10 dòng trên, ai đã gọi lại lần cuối, ngày nào, và phụ huynh nói gì? '
    +'Nếu không ai trả lời được thì <b>đó mới là con số cần sửa</b>, không phải tỷ lệ chốt.</div></div>';
 
@@ -1463,7 +1557,7 @@ async function render(){
   const TEN_VIET={"mv_lead_campus":"phễu lead theo campus","mv_tuan_campus":"bảng tuần từng campus",
    "mv_can_ly_do":"lý do im lặng","mv_cohort_tuan":"cohort tuần","mv_viec_tuan":"việc trong tuần",
    "mv_danh_sach":"danh sách gọi","v_diem_danh":"điểm danh","mv_nghi_chuoi":"trẻ nghỉ dài",
-   "v_su_co":"sự cố","mv_nhap_hoc":"nhập học","mv_supa":"kiểm việc SUPA","v_harasocial":"tin nhắn Harasocial",
+   "v_su_co":"sự cố","mv_nhap_hoc":"ngày đầu ghi nhận Tomia","nlba_nhap_hoc_crm":"nhập học CRM Học sinh","mv_supa":"kiểm việc SUPA","v_harasocial":"tin nhắn Harasocial",
    "ga4_daily_channel":"Google Analytics","meta_campaign_daily":"Meta Ads"};
   const vietTen=n=>TEN_VIET[n]||n;
   const bangChet=ds=>ds.filter(n=>{const i=TEN_NGUON.indexOf(n); return i>=0 && KQ[i] && KQ[i].error;});
@@ -1564,7 +1658,7 @@ async function render(){
    +'<summary>⏳ Dữ liệu điểm danh đang trễ — thiếu '+treNgay+' ngày học</summary>'
    +'<p class="sub">Ngày học gần nhất có điểm danh: <b>'+bdNgay+'</b> · hôm nay '+homNay+'</p>'
    +'<p class="leg" style="margin-top:-6px;font-size:13.5px;color:var(--ink2)">Thiếu <b class="down">'+treNgay+' ngày học</b>. '
-   +'Mọi con số về trẻ có mặt, vắng, trẻ nghỉ dài và <b>nhập học thực tế</b> ở dưới đều <b>đang thiếu '+treNgay+' ngày</b> — '
+   +'Các số liệu Tomia về trẻ có mặt, vắng, trẻ nghỉ dài và <b>ngày đầu ghi nhận</b> ở dưới đều <b>đang thiếu '+treNgay+' ngày</b> — '
    +'đó là dữ liệu chưa về, <b>không phải</b> trường tuyển kém hay trẻ nghỉ nhiều.</p>'
    +'<div class="q">'+cachSuaTomia+'</div></details>' : "";
 
@@ -1590,142 +1684,10 @@ async function render(){
    +'<p class="leg">Dòng tô đậm là <b>ngày đang xét</b> ở bảng dưới — ngày học gần nhất có điểm danh. '
    +'Ô “—” nghĩa là ngày đó chưa có số, không phải bằng 0.</p></div>';
 
-  // ----- THE: MUC TIEU va THUC TE -----
-  // Quyet dinh: MUC TIEU chuan la THANG. Tuan/ngay chi la NHIP (pace), khong phai moc cham diem.
-  // Ly do: muc tieu thang / 15 campus / 4 tuan ~ 1,3 hoc sinh mot campus mot tuan.
-  // Mot tuan chot 0 roi tuan sau chot 3 khong noi len gi — do tuan cho lag measure nay la do nhieu.
-  const ktLoc=(ct||[]).filter(r=>hopCP(r.campus));
-  const ktT={}; ktLoc.forEach(r=>{const m=+r.thang; if(!m||m<1||m>12)return;
-    const o=ktT[m]||(ktT[m]={thang:m,moi:0,si:0}); o.moi+=+r.tuyen_moi||0; o.si+=+r.si_so_kh||0;});
-  const ktDs=Object.keys(ktT).map(k=>ktT[k]).sort((a,b)=>a.thang-b.thang);
-  const namNay=+homNay.slice(0,4), thangHT=+homNay.slice(5,7);
-  // «b61» thẻ nhập học theo THÁNG: ô thời gian "Tháng trước" → tháng trước; còn lại (Tháng này/Hôm nay/7 ngày) → tháng hiện tại.
-  const _prevM = thangHT>1 ? thangHT-1 : 12;
-  const _selM = (pv==="truoc") ? _prevM : thangHT;
-  const soNgayThang=m=>new Date(Date.UTC(namNay,m,0)).getUTCDate();
-  const soTuanThang=m=>soNgayThang(m)/7;
-  const soNgayHoc=m=>{let n=0; const h=soNgayThang(m);
-    for(let d=1;d<=h;d++){const w=new Date(Date.UTC(namNay,m-1,d)).getUTCDay(); if(w>=1&&w<=5)n++;} return n;};
-  const ngayHocDaQua=m=>{const het=(m===thangHT)? +homNay.slice(8,10) : soNgayThang(m); let n=0;
-    for(let d=1;d<=het;d++){const w=new Date(Date.UTC(namNay,m-1,d)).getUTCDay(); if(w>=1&&w<=5)n++;} return n;};
-  const ktNay=ktT[_selM]||null;
-
-  // THUC TE: uu tien v_tuan_campus (dinh nghia goc). Neu view do chet -> dung tam v_lead_campus,
-  // nhung day la so COHORT (theo thang TAO lead), khong phai so nhap hoc trong thang -> phai ghi ro.
-  // THUC TE = tre DI HOC BUOI DAU TIEN (v_nhap_hoc, nguon Tomia).
-  // Day la su viec quan sat duoc, phu ca 15 campus, khong phu thuoc ai nho cap nhat CRM.
-  // Chi lui ve CRM khi v_nhap_hoc chua co du lieu.
-  const ktCoNH=(nhapHoc||[]).length>0;
-  const CHOTX=/thành công/i;
-  const _tsiCo=(tsi||[]).length>0;  // «b63» mv_lead_campus (stg_raw 'amis_opportunity') có dữ liệu không — rỗng = chưa kéo lead tuyển sinh
-  const thucT={}, thucCam={};
-  if(ktCoNH){
-    (nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).forEach(r=>{
-      const d=chiNgay(r.ngay_dau); if(!d||+d.slice(0,4)!==namNay)return; const m=+d.slice(5,7);
-      thucT[m]=(thucT[m]||0)+1;
-      if(m===_selM) thucCam[r.campus]=(thucCam[r.campus]||0)+1;});
-  } else {
-    (tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).forEach(r=>{
-      const d=chiNgay(r.ngay); if(!d||+d.slice(0,4)!==namNay)return; const m=+d.slice(5,7);
-      thucT[m]=(thucT[m]||0)+(+r.so_lead||0);
-      if(m===_selM) thucCam[r.campus]=(thucCam[r.campus]||0)+(+r.so_lead||0);});
-  }
-  const ktCoThuc=Object.keys(thucT).length>0;
-  const nhipNay=ktNay? ktNay.moi*ngayHocDaQua(_selM)/soNgayHoc(_selM) : null;
-  const thucNay=thucT[_selM]||0;
-  const ktCam=ktLoc.filter(r=>+r.thang===_selM)
-    .map(r=>({c:r.campus,moi:+r.tuyen_moi||0,si:+r.si_so_kh||0,
-              thuc:(thucCam[r.campus]||0),
-              nhip:(+r.tuyen_moi||0)*ngayHocDaQua(_selM)/soNgayHoc(_selM)}))
-    .filter(r=>r.moi||r.si||r.thuc)
-    .sort((a,b)=>(a.thuc-a.nhip)-(b.thuc-b.nhip));   // tut nhip nhieu nhat len truoc
-  // Danh sách bé đi học buổi đầu + đối chiếu Tomia vs CRM — theo THÁNG (accumulated)
-  // Tháng đối chiếu _dcM: 'Tháng trước'→tháng trước · 'Tháng này'→tháng hiện tại · (Hôm nay/7 ngày/mặc định)→tháng mới nhất có dữ liệu (lùi nếu đầu tháng)
-  const _khMs=Object.keys(thucT).map(Number).filter(function(m){return thucT[m]>0;});
-  const _curDay=+homNay.slice(8,10);
-  let _khM=_khMs.length?Math.max.apply(null,_khMs):thangHT;
-  if(_khM===thangHT && _curDay<5 && _khMs.some(function(m){return m<thangHT;})) _khM=Math.max.apply(null,_khMs.filter(function(m){return m<thangHT;}));
-  const _dcM = (pv==="truoc") ? _prevM : (pv==="thang" ? thangHT : _khM);
-  const _khLaNay=(_dcM===thangHT);
-  const _nhList=(nhapHoc||[]).filter(r=>r.campus&&hopCP(r.campus)).filter(function(r){var d=chiNgay(r.ngay_dau);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_dcM;}).sort(function(a,b){return String(a.ngay_dau).localeCompare(String(b.ngay_dau));});
-  const _nhCRM=(tsi||[]).filter(r=>r.campus&&hopCP(r.campus)&&CHOTX.test(r.giai_doan||"")).filter(function(r){var d=chiNgay(r.ngay);return d&&+d.slice(0,4)===namNay&&+d.slice(5,7)===_dcM;}).reduce(function(a,r){return a+(+r.so_lead||0);},0);
-  const ktCard = !ktDs.length ?
-   '<div class="card"><h2>Mục tiêu và thực tế</h2>'
-   +'<p class="sub">'+nhanCP+' · bảng <code>chi_tieu</code> trả về <b class="down">0 dòng</b></p>'
-   +'<div class="q">Chưa có mục tiêu nào để so. Xem thẻ <b>Chẩn đoán nguồn dữ liệu</b> — '
-   +'nếu <code>chi_tieu</code> báo lỗi thì bảng hỏng; nếu 0 dòng không lỗi thì file kế hoạch 2026 chưa được nạp lên.</div></div>'
-   :
-   '<div class="card"><h2>Mục tiêu và thực tế — tháng '+_selM+(_selM===thangHT?' (tháng này)':' (tháng trước)')+'</h2>'
-   +'<p class="sub">'+nhanCP+' · mục tiêu: file kế hoạch 2026 · thực tế: <b>trẻ đi học buổi đầu tiên</b> (điểm danh Tomia) · <b>theo ô thời gian đầu trang</b> (Tháng này / Tháng trước)</p>'
-   +'<div class="kpis">'
-   +kpi("Mục tiêu tháng "+_selM,ktNay?fmt(ktNay.moi):"—","","học sinh mới cả tháng")
-   +kpi(_selM===thangHT?"Nhịp đến hôm nay":"Mục tiêu (cả tháng)",nhipNay==null?"—":dec(nhipNay,1),"",
-        _selM===thangHT?("đã qua "+ngayHocDaQua(_selM)+"/"+soNgayHoc(_selM)+" ngày học"):"tháng đã xong — mốc cả tháng")
-   +kpi("Thực tế tháng "+_selM,ktCoThuc?fmt(thucNay):"—","",ktCoNH?"trẻ đi học buổi đầu tiên":"tạm tính từ CRM — xem ghi chú")
-   +kpi(_selM===thangHT?"So với nhịp":"So với mục tiêu",(!ktCoThuc||nhipNay==null)?"—":
-        '<span class="'+(thucNay-nhipNay>=0?"up":"down")+'">'+(thucNay-nhipNay>=0?"+":"")+dec(thucNay-nhipNay,1)+"</span>",
-        "","thực tế trừ nhịp — đây là con số cần nhìn")+"</div>"
-   +(ktCoNH?'<div style="margin:12px 0 4px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:11px 14px;background:rgba(78,182,157,.06)">'
-     +'<p style="margin:0;font-weight:700">Tổng HS đi học mới <b>tháng '+_dcM+'</b>'+((pv==="thang"||pv==="truoc")?'':(_khLaNay?'':' (tháng mới nhất có dữ liệu)'))+' — đối chiếu 2 nguồn: Tomia <b>'+fmt(_nhList.length)+'</b> · CRM (chốt) '+(_tsiCo?('<b>'+fmt(_nhCRM)+'</b>'+(_nhList.length!==_nhCRM?' <span style="color:var(--warn)">→ lệch '+fmt(Math.abs(_nhList.length-_nhCRM))+(_nhList.length>_nhCRM?' hồ sơ CRM chưa bấm chốt':' (CRM nhiều hơn Tomia — kiểm tra điểm danh)')+'</span>':'')):'<b style="color:var(--warn)">chưa kéo lead tuyển sinh hôm nay</b>')+'</p>'
-     +(!_tsiCo?'<p class="leg" style="margin:4px 0 0;color:var(--warn)">⚠ Cột CRM trống vì <b>bookmarklet "Kéo lead tuyển sinh" (amis_opportunity)</b> chưa chạy trong đợt kéo gần nhất — dữ liệu lead chi tiết (<code>stg_raw</code>) đã bị dọn. Số lead THÁNG vẫn đúng (bảng lead ở trên). Cách sửa: mở AMIS → bấm dấu trang <b>Kéo lead tuyển sinh</b> → chờ ~1 phút → ↻ Tải lại số.</p>':'')
-     +'<p class="leg" style="margin:4px 0 0">HS mới = trẻ <b>đi học buổi đầu tiên</b> trong tháng (mỗi trẻ 1 lần trong đời). <b>Tomia</b> = điểm danh thật, phủ 15 cơ sở → tin số này. <b>CRM</b> = lead ai đó bấm "Kết thúc thành công" trong tháng. Lệch = hồ sơ CRM chưa cập nhật. Danh sách chi tiết ↓.</p></div>'
-     +'<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Danh sách '+fmt(_nhList.length)+' bé đi học buổi đầu tháng '+_dcM+' — tên · cơ sở · lớp · ngày</summary>'
-     +'<div class="tw" style="margin-top:8px"><table><thead><tr><th>#</th><th>Học sinh</th><th>Cơ sở</th><th>Lớp</th><th>Ngày đi học đầu</th></tr></thead><tbody>'
-     +_nhList.map(function(r,i){return "<tr><td class=\"mono\">"+(i+1)+"</td><td>"+(r.ten_tre||r.ma_tre||"—")+"</td><td>"+(r.campus||"—")+"</td><td>"+(r.lop||"—")+'</td><td class="mono">'+(r.ngay_dau||"—")+"</td></tr>";}).join("")
-     +'</tbody></table></div></details>':"")
-   +(ktCoNH
-     ? '<p class="leg" style="margin-top:12px"><b>“Nhập học thực tế” nghĩa là gì:</b> một trẻ được tính vào ngày em <b>đi học buổi đầu tiên</b>, '
-       +'lấy từ điểm danh Tomia. Mỗi trẻ chỉ tính <b>một lần</b> trong đời.<br>'
-       +'Chọn cách đếm này vì: đó là <b>việc đã xảy ra</b>, không phải trạng thái ai đó nhớ bấm trong CRM; '
-       +'nó phủ <b>cả 15 campus</b> kể cả Tân Thuận và Linh Đàm vốn không dùng AMIS; và không ai “chốt” được nó bằng một cú click.<br>'
-       +'Điểm yếu: <b>trễ theo nhịp đồng bộ + xuất báo cáo Tomia</b>. Xem dòng ⏱ ở thẻ “Từng ngày học” — '
-       +'nếu điểm danh trễ vài ngày thì số tháng này còn thiếu, không phải trường tuyển kém.<br>'
-       +'<span style="opacity:.6">Số tháng 5/2026 không dùng được: Tomia bắt đầu ghi từ 04/05 nên toàn bộ trẻ đang học khi đó bị tính là “buổi đầu”.</span></p>'
-     : '<div class="gap"><b>Thực tế đang là số tạm.</b> <code>v_nhap_hoc</code> chưa có dữ liệu nên app đếm tạm từ CRM: '
-       +'<i>lead TẠO trong tháng đó và nay ở trạng thái “Kết thúc thành công”</i> — đó là số cohort, không phải số nhập học trong tháng.</div>')
-   +'<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng 7 → 12 — mục tiêu là mốc <b>tháng</b>, tuần chỉ là nhịp</p>'
-   +'<div class="tw"><table style="min-width:760px"><thead><tr><th>Tháng</th><th>Mục tiêu tháng</th><th>Thực tế</th><th>Chênh</th><th>% đạt</th>'
-   +'<th>Nhịp/tuần (÷4)</th><th>Nhịp/tuần (theo lịch)</th><th>Nhịp/ngày học</th></tr></thead><tbody>'
-   +ktDs.filter(r=>r.thang>=7).map(r=>{const th=(ktCoThuc&&thucT[r.thang]!=null)?thucT[r.thang]:null, d=(th==null?null:th-r.moi);
-     return "<tr"+(r.thang===_selM?' style="background:var(--soft)"':"")+"><td>"+(r.thang===_selM?"<b>Tháng "+r.thang+"</b>":"Tháng "+r.thang)
-      +'</td><td class="mono">'+fmt(r.moi)
-      +'</td><td class="mono">'+(th==null?'<span style="opacity:.3">—</span>':fmt(th))
-      +'</td><td class="mono">'+(d==null?'<span style="opacity:.3">—</span>':'<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+fmt(d)+"</span>")
-      +'</td><td class="mono">'+(d==null||!r.moi?'<span style="opacity:.3">—</span>':pct(th/r.moi,0))
-      +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/4,1)
-      +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/soTuanThang(r.thang),1)
-      +'</td><td class="mono" style="opacity:.6">'+dec(r.moi/soNgayHoc(r.thang),2)+"</td></tr>";}).join("")
-   +'<tr><td><b>Tháng 7–12</b></td><td class="mono"><b>'+fmt(ktDs.filter(r=>r.thang>=7).reduce((a,r)=>a+r.moi,0))+"</b></td>"
-   +'<td class="mono"><b>'+(ktCoThuc?fmt(ktDs.filter(r=>r.thang>=7).reduce((a,r)=>a+(thucT[r.thang]||0),0)):"—")+"</b></td>"
-   +"<td></td><td></td><td></td><td></td><td></td></tr>"
-   +"</tbody></table></div>"
-   +'<p class="leg"><b>Vì sao mục tiêu chấm theo tháng chứ không theo tuần:</b> mục tiêu tháng '+_selM+" ("+(ktNay?fmt(ktNay.moi):"—")
-   +') chia cho '+(ktCam.length||1)+' campus rồi chia cho 4 tuần ra <b>'+(ktNay&&ktCam.length?dec(ktNay.moi/ktCam.length/4,1):"—")
-   +' học sinh</b> mỗi campus mỗi tuần. Ở mức đó, một tuần chốt 0 rồi tuần sau chốt 2 <i>không nói lên điều gì</i> — '
-   +'đó là nhiễu, không phải tín hiệu. Nên: <b>tuần dùng để xem nhịp</b> (đang đi kịp chưa), '
-   +'<b>tháng mới dùng để chấm</b>. Còn họp tuần thì đo <b>lead measure</b> — cuộc gọi, tham quan — ở bảng điểm theo ngày phía trên.</p>'
-   +'<p class="leg"><b>Ba cột nhịp khác nhau ở mẫu số:</b> ÷4 là quy ước cũ; “theo lịch” chia cho số tuần thật ('
-   +dec(soTuanThang(_selM),2)+' tuần trong tháng '+_selM+'). Cộng 4 tuần theo quy ước ÷4 sẽ <b>vượt mục tiêu tháng ~'
-   +dec((soTuanThang(_selM)/4-1)*100,0)+'%</b>. Muốn đổi thì sửa <code>METRIC_DEFINITIONS.md</code> — tôi không tự đổi mẫu số.</p>'
-   +(ktCam.length ? '<p class="sub" style="margin:18px 0 6px;text-transform:none;letter-spacing:0">Tháng '+_selM+' theo campus — tụt nhịp nhiều nhất trước</p>'
-     +'<div class="tw"><table style="min-width:640px"><thead><tr><th>Campus</th><th>Mục tiêu tháng</th><th>Nhịp đến hôm nay</th><th>Thực tế</th><th>So với nhịp</th><th>Sĩ số kế hoạch</th></tr></thead><tbody>'
-     +ktCam.map(r=>{const d=r.thuc-r.nhip;
-       return "<tr"+(d<-1?' style="background:rgba(220,38,38,.09)"':"")+"><td>"+nhan(r.c)
-       +'</td><td class="mono">'+fmt(r.moi)+'</td><td class="mono" style="opacity:.65">'+dec(r.nhip,1)
-       +'</td><td class="mono">'+(ktCoThuc?fmt(r.thuc):'<span style="opacity:.3">—</span>')
-       +'</td><td class="mono">'+(ktCoThuc?'<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+dec(d,1)+"</span>":'<span style="opacity:.3">—</span>')
-       +'</td><td class="mono">'+(r.si?fmt(r.si):'<span style="opacity:.3">—</span>')+"</td></tr>";}).join("")
-     +'<tr><td><b>Toàn hệ thống</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.moi,0))
-     +'</b></td><td class="mono"><b>'+dec(ktCam.reduce((a,r)=>a+r.nhip,0),1)
-     +'</b></td><td class="mono"><b>'+(ktCoThuc?fmt(ktCam.reduce((a,r)=>a+r.thuc,0)):"—")
-     +'</b></td><td class="mono"><b>'+(ktCoThuc?dec(ktCam.reduce((a,r)=>a+r.thuc-r.nhip,0),1):"—")
-     +'</b></td><td class="mono"><b>'+fmt(ktCam.reduce((a,r)=>a+r.si,0))+"</b></td></tr>"
-     +"</tbody></table></div>"
-     +'<p class="leg"><b>“Nhịp đến hôm nay”</b> = mục tiêu tháng × (số ngày học đã qua ÷ tổng ngày học của tháng). '
-     +'Nó trả lời: <i>đến giờ này lẽ ra phải có bao nhiêu?</i> — công bằng hơn so thẳng với mục tiêu cả tháng khi tháng chưa hết.</p>' : "")
-   +'<div class="q"><b>Câu hỏi cho campus đỏ:</b> tụt nhịp là do <b>ít lead vào</b>, hay <b>lead vào mà không ai chạm lần hai</b>? '
-   +'Hai nguyên nhân này sửa ở hai chỗ hoàn toàn khác nhau — bảng cohort ở chế độ ① phân biệt được.</div></div>';
-
+  // b66: nhập học CRM Học sinh, toàn tháng và đến hôm nay tách riêng.
+  const ktCard=taoTheNhapHoc({rows:nhapHocCRM,meta:crmNHMeta,error:crmNHError,
+    tomia:nhapHoc,targets:ct,CP,pv,homNay,
+    tomiaError:!!KQ[TEN_NGUON.indexOf("mv_nhap_hoc")]?.error});
 
   // khong bao gio tra ve rong im lang: neu thieu du lieu thi noi ro thieu gi
   const bdThieu = (!bdNgay||!bdRows.length) ?
