@@ -53,6 +53,14 @@ const $=id=>document.getElementById(id);
 let payload=null;
 let nonce=null;
 let processing=false;
+const autoMode=new URLSearchParams(location.search).get("auto")==="2";
+let autoHandshake=null;
+let autoAccepted=false;
+if(autoMode){
+  $("upload").hidden=true;
+  $("file").closest("details").hidden=true;
+  status("Chế độ một nút · Đang kết nối với bookmark CRM…");
+}
 
 function status(text,type){
   $("status").textContent=text;
@@ -67,7 +75,7 @@ function report(message,ok){
   status(message,ok?"ok":"error");
   if(nonce&&window.opener&&!window.opener.closed){
     window.opener.postMessage({
-      type:"NLBA_ADMISSION_RESULT",
+      type:autoMode?"NLBA_ADMISSION_AUTO_V2_RESULT":"NLBA_ADMISSION_RESULT",
       nonce,
       ok,
       message
@@ -157,10 +165,15 @@ async function upload(){
 
     const result=obj.result||{};
     const months=result.by_month||{};
+    const currentMonth=new Intl.DateTimeFormat('en-CA',{
+      timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit'
+    }).formatToParts(new Date());
+    const year=currentMonth.find(p=>p.type==='year').value;
+    const month=currentMonth.find(p=>p.type==='month').value;
     const message="ĐỒNG BỘ NHẬP HỌC THÀNH CÔNG\n"+
       "Tổng hồ sơ: "+result.total_records+"\n"+
       "Có ngày nhập học: "+result.with_admission_date+"\n"+
-      "Toàn tháng 10/2026: "+(months["2026-10"]||0)+" hồ sơ\n"+
+      "Toàn tháng "+month+"/"+year+": "+(months[year+"-"+month]||0)+" hồ sơ\n"+
       "(Bao gồm ngày sau hôm nay nếu CRM có ghi.)\n"+
       "Chưa thay đổi cách hiển thị trên trang báo cáo.";
 
@@ -183,6 +196,34 @@ async function upload(){
 }
 
 window.addEventListener("message",event=>{
+  if(autoMode){
+    if(event.origin!==CRM||event.source!==window.opener)return;
+    const incoming=event.data?.nonce;
+    if(typeof incoming!=="string"||!/^[a-f0-9]{36}$/.test(incoming))return;
+    if(nonce&&nonce!==incoming)return;
+    if(event.data.type==="NLBA_ADMISSION_AUTO_V2_HELLO"){
+      nonce=incoming;
+      if(!autoHandshake){
+        autoHandshake=identity().then(session=>({
+          ok:!!session,
+          message:session?"NLBA sẵn sàng.":"Phiên NLBA đã hết. Đăng nhập NLBA rồi bấm lại bookmark."
+        })).catch(()=>({ok:false,message:"Không kiểm tra được đăng nhập NLBA. Chưa gửi dữ liệu."}));
+      }
+      autoHandshake.then(result=>{
+        if(!result.ok)status(result.message,"error");
+        window.opener.postMessage({type:"NLBA_ADMISSION_AUTO_V2_READY",nonce,...result},CRM);
+      });
+    }else if(event.data.type==="NLBA_ADMISSION_AUTO_V2_SNAPSHOT"&&
+      nonce===incoming&&autoHandshake&&!autoAccepted&&!processing){
+      autoAccepted=true;
+      autoHandshake.then(result=>{
+        if(!result.ok)throw Error(result.message);
+        accept(event.data.payload);
+        return upload();
+      }).catch(error=>report(error.message||String(error),false));
+    }
+    return;
+  }
   if(event.origin!==CRM||event.source!==window.opener||
      event.data?.type!=="NLBA_ADMISSION_SNAPSHOT"||
      processing)return;
@@ -224,7 +265,7 @@ $("read").onclick=async()=>{
 identity().catch(()=>{
   $("identity").textContent="Chưa kiểm tra được đăng nhập NLBA.";
 }).finally(()=>{
-  if(window.opener&&!window.opener.closed){
+  if(!autoMode&&window.opener&&!window.opener.closed){
     window.opener.postMessage({
       type:"NLBA_ADMISSION_READY"
     },CRM);
