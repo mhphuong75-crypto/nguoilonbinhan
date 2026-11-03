@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-03 · b71-ty-le-nghi-phep";
+const BUILD="2026-11-03 · b72-ty-le-tomia";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -466,21 +466,20 @@ function tachNghiPhepVaLuuTru({episodes,archived,CP,campusMap}) {
   const sort=(a,b)=>String(a.campus).localeCompare(String(b.campus))||String(a.ten_tre).localeCompare(String(b.ten_tre));
   return {archived:archivedRows.sort(sort),candidates:candidates.sort(sort),otherAbsences:otherAbsences.sort(sort)};
 }
-function taoTheNghiPhep({episodes,archived,CP,campusMap,through,episodeError,archiveError,enrollment,enrollmentError}) {
+function taoTheNghiPhep({episodes,archived,CP,campusMap,through,episodeError,archiveError,attendance,attendanceError}) {
   const groups=tachNghiPhepVaLuuTru({episodes,archived,CP,campusMap});
   const rows=groups.candidates.slice().sort((a,b)=>(+b.so_buoi||0)-(+a.so_buoi||0)||String(a.ten_tre||'').localeCompare(String(b.ten_tre||'')));
   const five=rows.filter(r=>Number(r.so_buoi)>=5);
   const ready=!episodeError&&!archiveError;
-  const enrolledRows=(enrollment||[]).filter(r=>r.nhom==='Đang đi học'&&(!CP||campusNH(r.campus)===campusNH(CP)));
-  const enrollmentValid=!enrollmentError&&enrolledRows.length>0&&enrolledRows.every(r=>r.so_hs!==null&&r.so_hs!==''&&Number.isFinite(Number(r.so_hs))&&Number(r.so_hs)>=0);
-  const enrolled=enrolledRows.reduce((n,r)=>n+Number(r.so_hs),0);
+  const enrollmentValid=!attendanceError&&attendance&&['di_hoc','vang'].every(k=>attendance[k]!=null&&Number.isFinite(Number(attendance[k]))&&Number(attendance[k])>=0);
+  const enrolled=enrollmentValid?Number(attendance.di_hoc)+Number(attendance.vang):0;
   const rateValid=ready&&enrollmentValid&&enrolled>0&&five.length<=enrolled;
   const rate=rateValid?pct(five.length/enrolled,1):'—';
   let out='<div class="card"><h2>Học sinh nghỉ phép dài ngày</h2><p class="sub">'+escNH(CP||'Toàn hệ thống')+' · điểm danh Tomia · mỗi mã học sinh một dòng</p>'
     +'<div class="kpis">'+kpi('Nghỉ phép từ 3 ngày',ready?fmt(rows.length):'—','','ngày học liên tiếp · gồm cả nhóm từ 5 ngày')
     +kpi('Nghỉ phép từ 5 ngày',ready?fmt(five.length):'—','','ngày học liên tiếp · nằm trong nhóm từ 3 ngày')
-    +kpi('Tỷ lệ nghỉ phép từ 5 ngày',rate,'',rateValid?fmt(five.length)+' trẻ nghỉ phép / '+fmt(enrolled)+' trẻ đang học':'Chưa đủ dữ liệu để tính tỷ lệ')+'</div>';
-  out+='<p class="note">Tỷ lệ = số trẻ nghỉ phép từ 5 ngày học liên tiếp ÷ sĩ số “Đang đi học” (v_siso) của cùng phạm vi × 100%. Đây là tỷ lệ đối chiếu Tomia với sĩ số hiện có; hai nguồn chưa được xác nhận cùng mốc cập nhật.</p>';
+    +kpi('Tỷ lệ nghỉ phép từ 5 ngày',rate,'',rateValid?fmt(five.length)+' trẻ nghỉ phép / '+fmt(enrolled)+' trẻ có mặt + vắng · '+escNH(attendance.ngay):'Chưa đủ dữ liệu để tính tỷ lệ')+'</div>';
+  out+='<p class="note">Tỷ lệ = số trẻ nghỉ phép từ 5 ngày học liên tiếp ÷ tổng trẻ có mặt + vắng trên Tomia vào ngày học gần nhất của cùng phạm vi × 100%. Mẫu số gồm cả trẻ vắng, không chỉ trẻ có mặt.</p>';
   if(!ready)return out+'<div class="gap">Chưa đọc đủ dữ liệu điểm danh hoặc dữ liệu loại trừ lưu trữ. Chưa xác định được số học sinh nghỉ phép.</div></div>';
   out+='<p class="leg">Chỉ lấy đợt vắng mới nhất có lý do “Có phép”, chưa ghi nhận đi học trở lại sau đợt đó. Đếm ngày học từ dữ liệu điểm danh, không đếm số ngày lịch đã trôi qua. Mốc điểm danh đang có: <b>'+escNH(through||'chưa xác minh')+'</b>.</p>';
   out+=rows.length?'<div class="tw"><table><thead><tr><th>Mã Tomia</th><th>Học sinh</th><th>Cơ sở</th><th>Lớp</th><th>Nghỉ từ</th><th>Buổi vắng cuối</th><th>Số ngày học nghỉ</th><th>Nhóm</th></tr></thead><tbody>'
@@ -1083,7 +1082,7 @@ async function render(){
   // b68: nghỉ phép và lưu trữ được dựng thành hai bảng không giao nhau.
   const archiveCampusMap={};(finCampus||[]).forEach(r=>{if(r.campus_code&&r.campus_ten)archiveCampusMap[r.campus_code]=r.campus_ten});
   const archiveThrough=(dd||[]).filter(r=>!CP||campusNH(r.campus)===campusNH(CP)).map(r=>String(r.ngay||'').slice(0,10)).sort().slice(-1)[0];
-  const ngCard=taoTheNghiPhep({episodes:nghi,archived:luuTru,CP,campusMap:archiveCampusMap,through:archiveThrough,enrollment:hs,enrollmentError:!!KQ[TEN_NGUON.indexOf('v_siso')]?.error,
+  const ngCard=taoTheNghiPhep({episodes:nghi,archived:luuTru,CP,campusMap:archiveCampusMap,through:archiveThrough,attendance:ddNay,attendanceError:!!KQ[TEN_NGUON.indexOf('v_diem_danh')]?.error,
     episodeError:!!KQ[TEN_NGUON.indexOf('mv_nghi_chuoi')]?.error,
     archiveError:!!KQ[TEN_NGUON.indexOf('tomia_archived')]?.error});
 
