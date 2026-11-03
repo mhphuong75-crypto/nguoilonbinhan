@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-03 · b69-leave-3-5-days";
+const BUILD="2026-11-03 · b70-tre-nghi-phep";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -354,7 +354,7 @@ function taoTheNhapHoc({rows,meta,error,tomia,targets,CP,pv,homNay,tomiaError,to
   return result+'</div>';
 }
 
-// Chỉ đề xuất ứng viên theo tên + cơ sở. Không đồng nhất mã Tomia với mã CRM.
+// Chỉ đề xuất trẻ theo tên + cơ sở. Không đồng nhất mã Tomia với mã CRM.
 const tenDoiChieuNH = value => String(value || '').normalize('NFC').trim().replace(/\s+/g,' ').toLocaleUpperCase('vi-VN');
 function doiChieuNhapHoc({crm,tomia,lo,hi,CP}) {
   const key = (name,campus) => tenDoiChieuNH(name)+'\u0000'+campusNH(campus);
@@ -370,8 +370,8 @@ function doiChieuNhapHoc({crm,tomia,lo,hi,CP}) {
     findings.push({tomia:t||null,crm:c||null,kind,reason});
   }
   const describe=(t,c)=>{
-    if(!c.ngay_nhap_hoc)return ['crm_no_date','Ứng viên CRM trùng tên + cơ sở nhưng trống ngày nhập học'];
-    if(c.ngay_nhap_hoc!==t.ngay_dau)return ['different_date','Ứng viên trùng tên + cơ sở có ngày khác nhau'];
+    if(!c.ngay_nhap_hoc)return ['crm_no_date','Trẻ CRM trùng tên + cơ sở nhưng trống ngày nhập học'];
+    if(c.ngay_nhap_hoc!==t.ngay_dau)return ['different_date','Trẻ trùng tên + cơ sở có ngày khác nhau'];
     return null;
   };
   for(const t of tomia.filter(r=>inCampus(r)&&inWindow(r.ngay_dau))) {
@@ -379,7 +379,7 @@ function doiChieuNhapHoc({crm,tomia,lo,hi,CP}) {
     if(!candidates.length){
       const other=crm.filter(r=>tenDoiChieuNH(r.ten_hs)===tenDoiChieuNH(t.ten_tre));
       if(other.length)other.forEach(c=>add(t,c,'other_campus','Tên trùng nhưng khác hoặc thiếu cơ sở — cần xác minh'));
-      else add(t,null,'tomia_only','Chưa tìm thấy ứng viên cùng tên trong snapshot CRM');
+      else add(t,null,'tomia_only','Chưa tìm thấy trẻ cùng tên trong snapshot CRM');
     }else if(candidates.length!==1||twins.length!==1){
       candidates.forEach(c=>add(t,c,'ambiguous','Trùng tên + cơ sở có nhiều mã — chưa ghép được'));
     }else{
@@ -392,7 +392,7 @@ function doiChieuNhapHoc({crm,tomia,lo,hi,CP}) {
     if(!candidates.length){
       const other=tomia.filter(r=>tenDoiChieuNH(r.ten_tre)===tenDoiChieuNH(c.ten_hs));
       if(other.length)other.forEach(t=>add(t,c,'other_campus','Tên trùng nhưng khác hoặc thiếu cơ sở — cần xác minh'));
-      else add(null,c,'crm_only','Chưa tìm thấy ứng viên cùng tên trong dữ liệu Tomia đang có');
+      else add(null,c,'crm_only','Chưa tìm thấy trẻ cùng tên trong dữ liệu Tomia đang có');
     }else if(candidates.length!==1||twins.length!==1){
       candidates.forEach(t=>add(t,c,'ambiguous','Trùng tên + cơ sở có nhiều mã — chưa ghép được'));
     }else{
@@ -410,13 +410,13 @@ function taoBangDoiChieuNH({crm,tomia,month,homNay,CP,through,error}) {
   if(hi<lo)return '<div class="gap">Tomia chưa có dữ liệu đến tháng đang chọn. Chưa đối chiếu hồ sơ tháng này.</div>';
   const result=doiChieuNhapHoc({crm:crm||[],tomia:tomia||[],lo,hi,CP});
   const visible=new Set(result.findings.map(r=>r.tomia?'T:'+r.tomia.ma_tre:'C:'+r.crm.ma_hs));
-  const groups=[['tomia_only','Chưa tìm thấy ứng viên CRM'],['crm_only','Chưa tìm thấy ứng viên Tomia'],['crm_no_date','CRM trống ngày nhập học'],['different_date','Ngày hai nguồn khác nhau'],['other_campus','Tên trùng, cơ sở khác'],['ambiguous','Trùng tên cần xác minh']];
+  const groups=[['tomia_only','Chưa tìm thấy trẻ CRM'],['crm_only','Chưa tìm thấy trẻ Tomia'],['crm_no_date','CRM trống ngày nhập học'],['different_date','Ngày hai nguồn khác nhau'],['other_campus','Tên trùng, cơ sở khác'],['ambiguous','Trùng tên cần xác minh']];
   const row=r=>{const t=r.tomia||{},c=r.crm||{};return '<tr><td>'+escNH(r.reason)+'</td><td>'+escNH(t.ten_tre||c.ten_hs||'—')+'</td><td>'+escNH(t.ma_tre||'—')+'</td><td>'+escNH(c.ma_hs||'—')+'</td><td>'+escNH(t.campus||'—')+'</td><td>'+escNH(c.campus||'—')+'</td><td>'+escNH(t.lop||'—')+'</td><td>'+escNH(c.lop||'—')+'</td><td>'+escNH(t.ngay_dau||'—')+'</td><td>'+escNH(c.ngay_nhap_hoc||'—')+'</td></tr>';};
   let html='<h3>Danh sách cần đối chiếu CRM – Tomia</h3><p class="leg">Cùng khoảng <b>'+lo+' → '+hi+'</b> · Tomia có điểm danh gần nhất đến <b>'+escNH(through)+'</b>. Trong khoảng này: Tomia '+fmt(result.tomiaInWindow)+' mã; CRM '+fmt(result.crmInWindow)+' mã. Ngày sau mốc này không bị quy thành thiếu hồ sơ.</p>'
-    +'<div class="q"><b>Đây là danh sách đề nghị kiểm tra.</b> Hai hệ thống dùng mã khác nhau; tên + cơ sở chỉ tạo ứng viên ghép. Cần xác nhận đúng trẻ trước khi cập nhật CRM. Tên lớp được đặt khác nhau có thể chỉ là khác cách gọi. Không dùng chênh tổng số để suy ra số học sinh thiếu hồ sơ.</div>'
-    +'<p class="leg">Có '+fmt(result.sameDay)+' ứng viên duy nhất trùng tên + cơ sở + ngày (chưa xác minh danh tính). Danh sách dưới có '+fmt(visible.size)+' mã phía đang kiểm tra và '+fmt(result.findings.length)+' dòng ứng viên; một mã có thể có nhiều ứng viên.</p>';
+    +'<div class="q"><b>Đây là danh sách đề nghị kiểm tra.</b> Hai hệ thống dùng mã khác nhau; tên + cơ sở chỉ tạo trẻ ghép. Cần xác nhận đúng trẻ trước khi cập nhật CRM. Tên lớp được đặt khác nhau có thể chỉ là khác cách gọi. Không dùng chênh tổng số để suy ra số học sinh thiếu hồ sơ.</div>'
+    +'<p class="leg">Có '+fmt(result.sameDay)+' trẻ duy nhất trùng tên + cơ sở + ngày (chưa xác minh danh tính). Danh sách dưới có '+fmt(visible.size)+' mã phía đang kiểm tra và '+fmt(result.findings.length)+' dòng trẻ; một mã có thể có nhiều trẻ.</p>';
   for(const [kind,title] of groups){const found=result.findings.filter(r=>r.kind===kind);if(!found.length)continue;
-    html+='<details style="margin:12px 0" open><summary style="cursor:pointer"><b>'+title+'</b> · '+fmt(found.length)+' dòng ứng viên</summary><div class="tw"><table style="min-width:1200px"><thead><tr><th>Cần kiểm tra</th><th>Học sinh</th><th>Mã Tomia</th><th>Mã CRM</th><th>Cơ sở Tomia</th><th>Cơ sở CRM</th><th>Lớp Tomia</th><th>Lớp CRM</th><th>Ngày đầu Tomia</th><th>Ngày nhập học CRM</th></tr></thead><tbody>'+found.map(row).join('')+'</tbody></table></div></details>';
+    html+='<details style="margin:12px 0" open><summary style="cursor:pointer"><b>'+title+'</b> · '+fmt(found.length)+' dòng trẻ</summary><div class="tw"><table style="min-width:1200px"><thead><tr><th>Cần kiểm tra</th><th>Học sinh</th><th>Mã Tomia</th><th>Mã CRM</th><th>Cơ sở Tomia</th><th>Cơ sở CRM</th><th>Lớp Tomia</th><th>Lớp CRM</th><th>Ngày đầu Tomia</th><th>Ngày nhập học CRM</th></tr></thead><tbody>'+found.map(row).join('')+'</tbody></table></div></details>';
   }
   if(!result.findings.length)html+='<p class="leg">Chưa phát hiện khác biệt theo quy tắc tên + cơ sở + ngày trong phạm vi dữ liệu hiện có. Điều này không thay thế việc xác nhận mã học sinh giữa hai hệ thống.</p>';
   return html+'<p class="leg"><b>Cách xử lý:</b> kiểm tra danh tính → đối chiếu ngày nhập học và ngày điểm danh → kiểm tra cơ sở/lớp → cập nhật nguồn đúng nếu cần → chạy bookmark nguồn tương ứng và Tải lại số. Không sửa CRM chỉ để tổng hai nguồn bằng nhau.</p>';
