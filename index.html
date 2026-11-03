@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-03 · b68-leave-archive";
+const BUILD="2026-11-03 · b69-leave-3-5-days";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -468,22 +468,18 @@ function tachNghiPhepVaLuuTru({episodes,archived,CP,campusMap}) {
 }
 function taoTheNghiPhep({episodes,archived,CP,campusMap,through,episodeError,archiveError}) {
   const groups=tachNghiPhepVaLuuTru({episodes,archived,CP,campusMap});
-  const table=(rows,cols)=>'<div class="tw"><table><thead><tr>'+cols.map(c=>'<th>'+c[1]+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>'<td>'+escNH(r[c[0]]||'—')+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
-  let out='<div class="card"><h2>Nghỉ phép dài ngày</h2><p class="sub">'+escNH(CP||'Toàn hệ thống')+' · nguồn điểm danh Tomia · mỗi mã trẻ một dòng</p>'
-    +'<p class="leg"><b>Điều kiện nhận diện từ điểm danh:</b> đợt vắng mới nhất từ 3 buổi học liên tiếp trở lên, lý do tổng hợp là “Có phép”, chưa thấy điểm danh đi học sau đợt đó. Giữ ngưỡng 3 buổi của bảng cũ; không tính khoảng cách ngày lịch thành số buổi nghỉ.</p>'
-    +'<div class="gap"><b>Chưa xác nhận danh sách nghỉ phép dài ngày đang còn học.</b> Dữ liệu trạng thái lưu trữ/đang học chưa đầy đủ cho mọi cơ sở. Các dòng dưới chỉ là ứng viên cần đối soát; không có trong bảng lưu trữ không chứng minh trẻ còn đang học. Không suy ra đã gọi phụ huynh từ lý do “Có phép”.</div>';
-  if(episodeError||archiveError){out+='<p class="leg">Chưa đọc đủ nguồn '+(episodeError?'điểm danh':'')+(episodeError&&archiveError?' và ':'')+(archiveError?'lưu trữ':'')+'. Không lập danh sách nghỉ phép khi chưa loại được trẻ có bản ghi lưu trữ.</p>';}
-  else {
-    out+='<p class="leg">Chưa có mốc đối soát trạng thái lưu trữ từng cơ sở. Ngày điểm danh gần nhất toàn hệ thống: '+escNH(through||'chưa xác minh')+'. Thời gian vắng không chứng minh nghỉ hẳn.</p>'
-      +'<details open><summary><b>Ứng viên nghỉ phép dài ngày — chưa xác minh trạng thái lưu trữ ('+fmt(groups.candidates.length)+' mã trẻ)</b></summary>'
-      +(groups.candidates.length?table(groups.candidates,[['ma_tre','Mã Tomia'],['ten_tre','Học sinh'],['campus','Cơ sở'],['lop','Lớp'],['tu_ngay','Đợt vắng mới nhất từ'],['den_ngay','Buổi vắng cuối'],['so_buoi','Số buổi vắng'],['ly_do','Trạng thái xin phép']]):'<p>Không có ứng viên theo điều kiện trên trong dữ liệu đã nhận. Không đồng nghĩa cơ sở không có trẻ nghỉ phép dài ngày.</p>')+'</details>';
-    if(groups.otherAbsences.length)out+='<details style="margin-top:14px"><summary>Vắng dài ngày không phép/chưa rõ lý do — không tính là nghỉ phép ('+fmt(groups.otherAbsences.length)+' mã trẻ)</summary>'+table(groups.otherAbsences,[['ma_tre','Mã Tomia'],['ten_tre','Học sinh'],['campus','Cơ sở'],['lop','Lớp'],['tu_ngay','Từ'],['den_ngay','Đến'],['so_buoi','Số buổi'],['ly_do','Lý do']])+'</details>';
-  }
-  out+='</div><div class="card"><h2>Trẻ đã lưu trữ — danh sách riêng</h2><p class="sub">'+escNH(CP||'Toàn hệ thống')+' · chỉ các mã có bản ghi trong nguồn lưu trữ đã nhận</p>'
-    +'<p class="leg">Không cộng nhóm này vào nghỉ phép dài ngày. Bảng lưu trữ hiện có thể chỉ bao phủ một phần cơ sở; ngày lưu trữ là ngày ghi trên bản ghi, không phải ngày đồng bộ hay bằng chứng dữ liệu đã đầy đủ.</p>';
-  if(archiveError)out+='<div class="gap">Không đọc được nguồn lưu trữ. Chưa xác định được danh sách.</div>';
-  else out+=(groups.archived.length?table(groups.archived,[['ma_tre','Mã Tomia'],['ten_tre','Học sinh'],['campus','Cơ sở / mã cơ sở'],['lop','Lớp từ dữ liệu điểm danh'],['archived_at','Ngày lưu trữ đã ghi nhận']]):'<p><b>Chưa có bản ghi lưu trữ trong phạm vi đang chọn.</b> Không diễn giải là cơ sở không có trẻ lưu trữ.</p>');
-  return out+'</div>';
+  const rows=groups.candidates.slice().sort((a,b)=>(+b.so_buoi||0)-(+a.so_buoi||0)||String(a.ten_tre||'').localeCompare(String(b.ten_tre||'')));
+  const five=rows.filter(r=>Number(r.so_buoi)>=5);
+  const ready=!episodeError&&!archiveError;
+  let out='<div class="card"><h2>Học sinh nghỉ phép dài ngày</h2><p class="sub">'+escNH(CP||'Toàn hệ thống')+' · điểm danh Tomia · mỗi mã học sinh một dòng</p>'
+    +'<div class="kpis">'+kpi('Nghỉ phép từ 3 ngày',ready?fmt(rows.length):'—','','ngày học liên tiếp · gồm cả nhóm từ 5 ngày')
+    +kpi('Nghỉ phép từ 5 ngày',ready?fmt(five.length):'—','','ngày học liên tiếp · nằm trong nhóm từ 3 ngày')+'</div>';
+  if(!ready)return out+'<div class="gap">Chưa đọc đủ dữ liệu điểm danh hoặc dữ liệu loại trừ lưu trữ. Chưa xác định được số học sinh nghỉ phép.</div></div>';
+  out+='<p class="leg">Chỉ lấy đợt vắng mới nhất có lý do “Có phép”, chưa ghi nhận đi học trở lại sau đợt đó. Đếm ngày học từ dữ liệu điểm danh, không đếm số ngày lịch đã trôi qua. Mốc điểm danh đang có: <b>'+escNH(through||'chưa xác minh')+'</b>.</p>';
+  out+=rows.length?'<div class="tw"><table><thead><tr><th>Mã Tomia</th><th>Học sinh</th><th>Cơ sở</th><th>Lớp</th><th>Nghỉ từ</th><th>Buổi vắng cuối</th><th>Số ngày học nghỉ</th><th>Nhóm</th></tr></thead><tbody>'
+    +rows.map(r=>'<tr><td>'+escNH(r.ma_tre)+'</td><td>'+escNH(r.ten_tre||'—')+'</td><td>'+escNH(r.campus||'—')+'</td><td>'+escNH(r.lop||'—')+'</td><td>'+escNH(r.tu_ngay||'—')+'</td><td>'+escNH(r.den_ngay||'—')+'</td><td>'+fmt(r.so_buoi)+'</td><td>'+(Number(r.so_buoi)>=5?'Từ 5 ngày':'3–4 ngày')+'</td></tr>').join('')+'</tbody></table></div>'
+    :'<p>Không có học sinh đáp ứng điều kiện nghỉ phép từ 3 ngày trong dữ liệu đang đọc của phạm vi này.</p>';
+  return out+'<p class="note">Đổi cơ sở hoặc chọn Toàn hệ thống ở đầu trang để xem số và danh sách tương ứng. Đã loại các mã lưu trữ có trong dữ liệu đã nhận; dữ liệu lưu trữ hiện chưa đầy đủ cho mọi cơ sở. “Có phép” không đồng nghĩa đã gọi phụ huynh.</p></div>';
 }
 
 let KHO=null, buocLai=false;   // kho tam trong bo nho: doi campus/thoi gian khong goi lai 25 truy van
@@ -1079,7 +1075,7 @@ async function render(){
 
   // b68: nghỉ phép và lưu trữ được dựng thành hai bảng không giao nhau.
   const archiveCampusMap={};(finCampus||[]).forEach(r=>{if(r.campus_code&&r.campus_ten)archiveCampusMap[r.campus_code]=r.campus_ten});
-  const archiveThrough=(dd||[]).map(r=>String(r.ngay||'').slice(0,10)).sort().slice(-1)[0];
+  const archiveThrough=(dd||[]).filter(r=>!CP||campusNH(r.campus)===campusNH(CP)).map(r=>String(r.ngay||'').slice(0,10)).sort().slice(-1)[0];
   const ngCard=taoTheNghiPhep({episodes:nghi,archived:luuTru,CP,campusMap:archiveCampusMap,through:archiveThrough,
     episodeError:!!KQ[TEN_NGUON.indexOf('mv_nghi_chuoi')]?.error,
     archiveError:!!KQ[TEN_NGUON.indexOf('tomia_archived')]?.error});
