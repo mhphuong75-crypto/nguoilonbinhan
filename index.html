@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-03 · b72-ty-le-tomia";
+const BUILD="2026-11-04 · b73-amis-sync-health";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -438,6 +438,16 @@ async function docTomiaNhapHocDoiChieu() {
     return {data:rows,error:null,snapshot:{throughDate:latest.data?.[0]?.ngay||null,totalRecords:rows.length}};
   }catch(error){return {data:null,error:{message:error.message||String(error)},snapshot:null};}
 }
+function kiemTraDongBoLead(rows,error,now){
+  if(error)return {ok:false,day:null,hours:null,message:'Chưa tải được tổng lead tuyển sinh'};
+  const stamps=(rows||[]).map(r=>Date.parse(r.snapshot_ts)).filter(Number.isFinite);
+  if(!stamps.length)return {ok:false,day:null,hours:null,message:'Chưa có mốc đồng bộ tổng lead'};
+  const latest=Math.max(...stamps),hours=Math.max(0,(now-latest)/3600000);
+  const day=new Date(latest+7*3600000).toISOString().slice(0,10);
+  const ok=latest<=now+120000&&hours<=30;
+  return {ok,day,hours:Math.round(hours),message:ok?'Bình thường — tổng lead đã tải thành công':'Tổng lead chưa có lần đồng bộ mới trong 30 giờ'};
+}
+
 async function docMocTuyenSinhAmis() {
   try {
     const r=await sb.from('stg_raw').select('ts',{count:'exact'}).eq('nguon','amis_opportunity').order('ts',{ascending:false}).limit(1);
@@ -539,7 +549,7 @@ function taoTruyVan(CP){ return [
     sb.from("hs_churn_thang").select("campus_code,campus_ten,thang,hs_nghi,hs_totnghiep").limit(500),
     sb.from("v_gv_lop").select("campus,campus_ten,so_gv,so_chu_nhiem,tong_lop").limit(50),
     sb.from("v_nghi_lydo").select("ma_hs,thang,ngay_thoi_hoc,ly_do,ten_hs,campus,nhom_ly_do,da_lang_nghe").order("ngay_thoi_hoc",{ascending:false}).limit(1000),
-    sb.from("crm_lead_thang").select("thang,campus,nguon,so_lead").limit(2000),
+    sb.from("crm_lead_thang").select("thang,campus,nguon,so_lead,snapshot_ts").limit(2000),
     null, // nguồn nhập học tải có kiểm tra phân trang trong bocMot, không gọi sớm
     null // metadata riêng của nguồn Tuyển sinh AMIS
 ];}
@@ -1627,11 +1637,9 @@ async function render(){
     bang:["meta_campaign_daily"]}
   ].map(x=>{
     if(x.kho==="AMIS"){
-      const source=KQ[TEN_NGUON.indexOf("amis_opportunity (mốc riêng)")]||{};
-      const record=source.data?.[0];
-      const gio=record?.lastRaw?Math.max(0,Math.round((Date.now()-new Date(record.lastRaw).getTime())/3600000)):null;
-      const nhan=source.error?"Chưa kiểm tra được snapshot chi tiết Tuyển sinh":!record?"Chưa có metadata riêng cho Tuyển sinh":record.rawRows===0?"Nguồn chi tiết amis_opportunity hiện trống; ngày bên trái là ngày tạo lead trong bảng đang hiển thị, không phải ngày đồng bộ":"Snapshot Tuyển sinh có "+fmt(record.rawRows)+" hồ sơ. Ngày bên trái là ngày tạo lead; chưa xác minh mốc làm mới riêng của bảng tính sẵn";
-      return Object.assign({},x,{gio,cua:4,nhan,mau:"var(--warn)",treHoc:null,chet:bangChet(x.bang||[]),lamMoiTre:false,rawSource:true});
+      const sync=kiemTraDongBoLead(leadThang,!!KQ[TEN_NGUON.indexOf('crm_lead_thang')]?.error,Date.now());
+      return Object.assign({},x,{den:sync.day,gio:sync.hours,cua:sync.ok?0:4,nhan:sync.message,mau:sync.ok?"var(--good)":"var(--warn)",treHoc:null,chet:[],lamMoiTre:false,rawSource:true});
+
     }
     const t=x.kho?tDL[x.kho]:null, gio=t?t.gio:null;
     const chet=bangChet(x.bang||[]);
@@ -1689,6 +1697,7 @@ async function render(){
        +'<td class="mono">'+(x.den||"—")+'</td>'
        +'<td style="color:'+x.mau+'">'+(x.cua===0?"✓ ":(x.cua===1?"⚠ ":(x.cua===3?"⛔ ":"⏳ ")))+x.nhan+'</td></tr>').join("")
    +'</tbody></table></div>'
+   +'<p class="note">AMIS: trạng thái trên kiểm tra tổng lead theo tháng. Chi tiết lead theo ngày/phễu là nguồn riêng; trạng thái này không xác nhận phần chi tiết đã đầy đủ.</p>'
    +(chetTatCa.length? '<div class="q" style="border-color:var(--crit)"><b>⛔ Máy chủ không trả kịp '+chetTatCa.length+' bảng:</b> '
        +chetTatCa.map(vietTen).join(" · ")
        +'.<br>Các thẻ dùng những bảng này <b>không hiện trên trang</b> — nghĩa là <b>chưa lấy được</b>, '
