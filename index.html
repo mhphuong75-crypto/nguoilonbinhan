@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-04 · b73-amis-sync-health";
+const BUILD="2026-11-04 · b74-supa-sync-health";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -438,6 +438,16 @@ async function docTomiaNhapHocDoiChieu() {
     return {data:rows,error:null,snapshot:{throughDate:latest.data?.[0]?.ngay||null,totalRecords:rows.length}};
   }catch(error){return {data:null,error:{message:error.message||String(error)},snapshot:null};}
 }
+function kiemTraDongBoSupa(syncAt,hasRows,readError,now){
+  const stamp=Date.parse(syncAt);
+  if(readError)return {ok:false,hours:null,message:'Chưa tải được bảng kiểm việc SUPA'};
+  if(!Number.isFinite(stamp))return {ok:false,hours:null,message:'Chưa xác minh được lần đồng bộ SUPA'};
+  const hours=Math.max(0,(now-stamp)/3600000);
+  if(stamp>now+120000||hours>30)return {ok:false,hours:Math.round(hours),message:'SUPA chưa có lần đồng bộ mới trong 30 giờ'};
+  if(!hasRows)return {ok:false,hours:Math.round(hours),message:'Đã nhận lần đồng bộ nhưng chưa có dữ liệu kiểm việc'};
+  return {ok:true,hours:Math.round(hours),message:'Bình thường — đã đồng bộ và tải được dữ liệu kiểm việc'};
+}
+
 function kiemTraDongBoLead(rows,error,now){
   if(error)return {ok:false,day:null,hours:null,message:'Chưa tải được tổng lead tuyển sinh'};
   const stamps=(rows||[]).map(r=>Date.parse(r.snapshot_ts)).filter(Number.isFinite);
@@ -1636,6 +1646,12 @@ async function render(){
    {ten:"Meta Ads",               kho:null,         den:maxNg(mc,"day"),     tay:false, do:"lich", han:3,
     bang:["meta_campaign_daily"]}
   ].map(x=>{
+    if(x.kho==="SUPA"){
+      const sync=kiemTraDongBoSupa(tDL.SUPA?.luc,Array.isArray(supa)&&supa.length>0,
+        !!KQ[TEN_NGUON.indexOf('mv_supa')]?.error||!!KQ[TEN_NGUON.indexOf('v_tuoi_du_lieu')]?.error,Date.now());
+      return Object.assign({},x,{gio:sync.hours,cua:sync.ok?0:4,nhan:sync.message,mau:sync.ok?"var(--good)":"var(--warn)",treHoc:null,
+        chet:bangChet(x.bang||[]),lamMoiTre:false,rawSource:true});
+    }
     if(x.kho==="AMIS"){
       const sync=kiemTraDongBoLead(leadThang,!!KQ[TEN_NGUON.indexOf('crm_lead_thang')]?.error,Date.now());
       return Object.assign({},x,{den:sync.day,gio:sync.hours,cua:sync.ok?0:4,nhan:sync.message,mau:sync.ok?"var(--good)":"var(--warn)",treHoc:null,chet:[],lamMoiTre:false,rawSource:true});
@@ -1697,7 +1713,7 @@ async function render(){
        +'<td class="mono">'+(x.den||"—")+'</td>'
        +'<td style="color:'+x.mau+'">'+(x.cua===0?"✓ ":(x.cua===1?"⚠ ":(x.cua===3?"⛔ ":"⏳ ")))+x.nhan+'</td></tr>').join("")
    +'</tbody></table></div>'
-   +'<p class="note">AMIS: trạng thái trên kiểm tra tổng lead theo tháng. Chi tiết lead theo ngày/phễu là nguồn riêng; trạng thái này không xác nhận phần chi tiết đã đầy đủ.</p>'
+   +'<p class="note">SUPA: “Bình thường” xác nhận lần đồng bộ còn mới và đã tải được bảng kiểm việc; không xác nhận có phiếu mới mỗi ngày. Ngày kiểm việc mới nhất đang có: '+escNH(maxNg(supa,"ngay")||"chưa có")+'. AMIS: trạng thái trên kiểm tra tổng lead theo tháng. Chi tiết lead theo ngày/phễu là nguồn riêng; trạng thái này không xác nhận phần chi tiết đã đầy đủ.</p>'
    +(chetTatCa.length? '<div class="q" style="border-color:var(--crit)"><b>⛔ Máy chủ không trả kịp '+chetTatCa.length+' bảng:</b> '
        +chetTatCa.map(vietTen).join(" · ")
        +'.<br>Các thẻ dùng những bảng này <b>không hiện trên trang</b> — nghĩa là <b>chưa lấy được</b>, '
