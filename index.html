@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b75-the-cham-soc";
+const BUILD="2026-11-09 · b76-muc-tieu-the-cham-soc";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2112,12 +2112,12 @@ async function render(){
   const careSnapshotTotal=careSnapshot.reduce((sum,r)=>sum+(+r.so_the||0),0);
   const caCard='<div class="card"><h2>Kết nối phụ huynh — thẻ chăm sóc</h2>'
    +'<p class="sub">'+escNH(nhanCP)+' · Tuần '+careDate(careWeekStart)+'–'+careDate(careWeekEnd)+' (thứ Hai đến Chủ nhật) · Tháng '+careMonth+'</p>'
-   +'<p class="leg">Mục tiêu tuần: <b>10 học sinh/cơ sở</b>. Chiến dịch bắt đầu từ <b>01/08/2026</b>.</p>'
+   +'<p class="leg">Mỗi cơ sở có mục tiêu <b>10 học sinh/tuần</b> và <b>40 học sinh/tháng</b>. Chiến dịch bắt đầu từ <b>01/08/2026</b>.</p>'
    +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ đã tạo trong tuần</th><th>Tổng số học sinh có thẻ tạo trong tháng</th><th>Tỷ lệ đạt/tháng</th><th>Tổng số thẻ đã tạo toàn chiến dịch</th></tr></thead><tbody>'
    +(careCampuses.length?careCampuses.map(c=>'<tr><td>'+escNH(c)+'</td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td></tr>').join("")
      :'<tr><td colspan="5">Chưa có danh sách cơ sở trong phạm vi đang xem.</td></tr>')
    +'</tbody></table></div>'
-   +'<p class="note">Dấu — cho biết chưa đủ dữ liệu. Cần ngày tạo thẻ và mã học sinh để đếm theo tuần, tháng và từ đầu chiến dịch. Tỷ lệ tháng cần mục tiêu tháng được xác nhận.</p>'
+   +'<p class="note">Dấu — cho biết chưa đủ dữ liệu. Cần ngày tạo thẻ và mã học sinh để đếm theo tuần, tháng và từ đầu chiến dịch. Tỷ lệ đạt/tháng = số học sinh khác nhau có thẻ tạo trong tháng ÷ 40 × 100%.</p>'
    +(careSnapshot.length?'<p class="leg">Tham khảo từ nguồn tổng hợp CRM: <b>'+fmt(careSnapshotTotal)+' thẻ</b>. Nguồn này chưa xác định được khoảng ngày tạo.</p>':'')
    +'</div>';
 
