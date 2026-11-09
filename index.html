@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b76-muc-tieu-the-cham-soc";
+const BUILD="2026-11-09 · b77-doi-chieu-the-tu-van";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2109,7 +2109,14 @@ async function render(){
   const careDate=d=>d.toISOString().slice(0,10).split("-").reverse().join("/");
   const careMonth=homNay.slice(0,7).split("-").reverse().join("/");
   const careSnapshot=(phKN||[]).filter(r=>!careSelected||careCampusKey(r.campus)===careSelected);
-  const careSnapshotTotal=careSnapshot.reduce((sum,r)=>sum+(+r.so_the||0),0);
+  const careSnapshotByCampus=new Map();
+  for(const row of careSnapshot){
+    const campus=careCampusKey(row.campus)||"Chưa gán cơ sở";
+    const count=Number(row.so_the)||0;
+    careSnapshotByCampus.set(campus,(careSnapshotByCampus.get(campus)||0)+count);
+  }
+  const careSnapshotTotal=[...careSnapshotByCampus.values()].reduce((sum,count)=>sum+count,0);
+  const careSnapshotRows=[...careSnapshotByCampus].sort(([a],[b])=>a.localeCompare(b,"vi"));
   const caCard='<div class="card"><h2>Kết nối phụ huynh — thẻ chăm sóc</h2>'
    +'<p class="sub">'+escNH(nhanCP)+' · Tuần '+careDate(careWeekStart)+'–'+careDate(careWeekEnd)+' (thứ Hai đến Chủ nhật) · Tháng '+careMonth+'</p>'
    +'<p class="leg">Mỗi cơ sở có mục tiêu <b>10 học sinh/tuần</b> và <b>40 học sinh/tháng</b>. Chiến dịch bắt đầu từ <b>01/08/2026</b>.</p>'
@@ -2118,7 +2125,11 @@ async function render(){
      :'<tr><td colspan="5">Chưa có danh sách cơ sở trong phạm vi đang xem.</td></tr>')
    +'</tbody></table></div>'
    +'<p class="note">Dấu — cho biết chưa đủ dữ liệu. Cần ngày tạo thẻ và mã học sinh để đếm theo tuần, tháng và từ đầu chiến dịch. Tỷ lệ đạt/tháng = số học sinh khác nhau có thẻ tạo trong tháng ÷ 40 × 100%.</p>'
-   +(careSnapshot.length?'<p class="leg">Tham khảo từ nguồn tổng hợp CRM: <b>'+fmt(careSnapshotTotal)+' thẻ</b>. Nguồn này chưa xác định được khoảng ngày tạo.</p>':'')
+   +(careSnapshotRows.length?'<details><summary>Thẻ tư vấn đã đồng bộ từ AMIS CRM · '+fmt(careSnapshotTotal)+' thẻ tổng hợp</summary>'
+     +'<p class="note">Số liệu đối chiếu từ lần kéo dữ liệu. Khoảng ngày tạo thẻ chưa được xác định.</p>'
+     +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ đã đồng bộ</th></tr></thead><tbody>'
+     +careSnapshotRows.map(([campus,count])=>'<tr><td>'+escNH(campus)+'</td><td class="mono">'+fmt(count)+'</td></tr>').join("")
+     +'</tbody></table></div></details>':'')
    +'</div>';
 
   // ----- Channel cards tach thanh bien de dung o ca z3 va tab Channel -----
