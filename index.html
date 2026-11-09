@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b80-tong-quan-the-tu-van";
+const BUILD="2026-11-09 · b81-the-cham-soc-theo-tuan";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2144,6 +2144,40 @@ async function render(){
     +kpi("Tỷ lệ hoàn thành tháng",careMeasured.length?pct(careMonthStudents/careTarget,1):"—","",fmt(careMonthStudents)+" lượt học sinh theo cơ sở / "+fmt(careTarget)+" mục tiêu")
     +kpi("Cơ sở đạt từ 40 học sinh",careMeasured.length?fmt(careReached)+"/"+fmt(careTargetCampuses.length):"—","",careMeasured.length?pct(careReached/careTargetCampuses.length,1)+" cơ sở toàn hệ thống":"Chờ số liệu tháng")+'</div>'
     +(careCurrent&&careMeasured.length<careTargetCampuses.length?'<p class="note">Đã xác định số học sinh cho '+fmt(careMeasured.length)+'/'+fmt(careTargetCampuses.length)+' cơ sở. Tỷ lệ toàn hệ thống tính trên phần kết quả đã xác định.</p>':'');
+  const careThisWeek=careWeekStart.toISOString().slice(0,10);
+  const careWeeks=new Set([careThisWeek]);
+  const careHistorical=carePeriod?.weeklyFrom==="2026-08-01"&&/^\d{4}-\d{2}-\d{2}$/.test(carePeriod.week||"")&&carePeriod.week<=careThisWeek;
+  if(careHistorical){
+    for(let t=Date.parse("2026-07-27T00:00:00Z");t<=Date.parse(carePeriod.week+"T00:00:00Z");t+=7*86400000){
+      careWeeks.add(new Date(t).toISOString().slice(0,10));
+    }
+  }else if(/^\d{4}-\d{2}-\d{2}$/.test(carePeriod?.week||"")&&Number.isFinite(Date.parse(carePeriod.week))){
+    careWeeks.add(carePeriod.week);
+  }
+  const careWeekOptions=[...careWeeks].sort().reverse();
+  const careWeekLabel=week=>{
+    const start=new Date(week+"T00:00:00Z");
+    return careDate(start)+" – "+careDate(new Date(start.getTime()+6*86400000));
+  };
+  const careWeeklyCampuses=[...new Set([...careTargetCampuses,...careCampuses])]
+    .filter(c=>!careSelected||c===careSelected).sort((a,b)=>a.localeCompare(b,"vi"));
+  const careWeeklyTable='<div class="care-weekly"><h3>Chi tiết thẻ chăm sóc theo tuần</h3>'
+    +'<p class="leg">Đếm theo ngày tạo trên AMIS. Mục tiêu hiển thị là 10 thẻ/cơ sở/tuần. Dấu — là chưa có dữ liệu.</p>'
+    +'<label>Tuần <select onchange="this.closest(\'.care-weekly\').querySelectorAll(\'tbody[data-week]\').forEach(body=>body.hidden=body.dataset.week!==this.value)">'
+    +careWeekOptions.map(w=>'<option value="'+escNH(w)+'"'+(w===careThisWeek?' selected':'')+'>'+careWeekLabel(w)+'</option>').join("")
+    +'</select></label><div class="tw"><table><thead><tr><th>Cơ sở</th><th>Tuần</th><th>Thẻ chăm sóc / Mục tiêu</th></tr></thead>'
+    +careWeekOptions.map(w=>'<tbody data-week="'+escNH(w)+'"'+(w===careThisWeek?'':' hidden')+'>'
+      +careWeeklyCampuses.map(c=>{
+        const row=carePeriodByCampus.get(c);
+        let count=null;
+        if(row&&w===carePeriod.week)count=row.weekCards;
+        else if(row&&careHistorical&&w<=carePeriod.week&&row.cardsByWeek)count=row.cardsByWeek[w]??0;
+        return '<tr><td>'+escNH(c)+'</td><td>'+careWeekLabel(w)+'</td><td class="mono">'
+          +(Number.isInteger(count)&&count>=0?fmt(count)+"/10":"—")+'</td></tr>';
+      }).join("")+'</tbody>').join("")+'</table></div>'
+    +(careHistorical?'<p class="note">Lịch sử tính từ 01/08/2026. Tuần đầu chỉ tính các thẻ từ ngày này.</p>'
+      :'<p class="note">Để xem các tuần trước, cập nhật bookmark rồi đồng bộ lại AMIS. <a href="./cai-bookmark-the-tu-van.html?v=b81">Mở trang lấy mã bookmark</a>.</p>')
+    +'</div>';
   const caCard='<div class="card"><h2>Kết nối phụ huynh — thẻ chăm sóc</h2>'
    +'<p class="sub">'+escNH(nhanCP)+' · Tuần '+careDate(careWeekStart)+'–'+careDate(careWeekEnd)+' (thứ Hai đến Chủ nhật) · Tháng '+careMonth+'</p>'
    +'<p class="leg">Mỗi cơ sở có mục tiêu <b>10 học sinh/tuần</b> và <b>40 học sinh/tháng</b>. Chiến dịch bắt đầu từ <b>01/08/2026</b>.</p>'
@@ -2166,6 +2200,7 @@ async function render(){
     }).join("")
      :'<tr><td colspan="5">Chưa có danh sách cơ sở trong phạm vi đang xem.</td></tr>')
    +'</tbody></table></div>'
+   +careWeeklyTable
    +(careSnapshotRows.length?'<details><summary>Đối chiếu số tổng hợp từ bookmark cũ · '+fmt(careSnapshotTotal)+' thẻ tổng hợp</summary>'
      +'<p class="note">Số liệu đối chiếu từ lần kéo dữ liệu. Khoảng ngày tạo thẻ chưa được xác định.</p>'
      +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ đã đồng bộ</th></tr></thead><tbody>'
