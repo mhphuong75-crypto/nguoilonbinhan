@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-04 · b74-supa-sync-health";
+const BUILD="2026-11-09 · b75-the-cham-soc";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2097,52 +2097,29 @@ async function render(){
     +'<p class="leg">Lý do theo nhóm + so sánh 3 tháng → xem thẻ <b>"Học sinh nghỉ theo tháng"</b> phía trên (tránh lặp). <b>TT &amp; LĐ</b> không có trong CRM nên không hiện ở đây.</p>'
     +'<div class="q">'+(exChua?fmt(exChua)+' hồ sơ chưa hoàn thành — cần điều phối liên hệ lắng nghe phụ huynh.':'Không có hồ sơ được ghi nhận chưa hoàn thành lắng nghe trong kỳ này.')+'</div></div>');
 
-  // ----- THE: KET NOI PHU HUYNH (nhat ky cham soc PH hien huu, tu CRM phan he hoc sinh -> v_ph_ketnoi) -----
-  // ĐÚNG NGHĨA: campus gọi/chạm PHỤ HUYNH HIỆN HỮU mỗi ngày — để tìm lead mới (giới thiệu),
-  // mời Google review, hoặc lắng nghe-chăm sóc. KHÔNG phải nuôi lead tiềm năng trong phễu.
-  const _kntt=s=>{s=String(s||"").toLowerCase();
-    if(/hoàn thành|hoan thanh|done|xong/.test(s))return"hoan_thanh";
-    if(/đang|dang|in.?progress|processing/.test(s))return"dang_cham";
-    if(/chưa|chua|not|mới|moi|new/.test(s))return"chua_cham";
-    return"khac";};
-  const _nkn=s=>String(s||"").replace(/\s*\(\d+\)\s*$/,"").replace(/^ME\s+Green\s+/i,"").trim().toUpperCase();
-  const caThe={}; (phKN||[]).forEach(r=>{const k=_nkn(r.campus); if(!k)return; caThe[k]=(caThe[k]||0)+(+r.so_the||0);});
-  const _careDays=mon=>{const o={}; (dd||[]).forEach(r=>{const d=chiNgay(r.ngay); if(d&&d.slice(0,7)===mon){const k=_nkn(r.campus); if(!k)return;(o[k]=o[k]||new Set()).add(d);}}); const out={}; Object.keys(o).forEach(k=>out[k]=o[k].size); return out;};
-  const _careMonths=[...new Set((dd||[]).map(r=>{const d=chiNgay(r.ngay);return d?d.slice(0,7):null;}).filter(Boolean))];
-  const _careCache={}; let caRefMon=_thNay, _caRefMax=-1;
-  _careMonths.forEach(m=>{const g=_careDays(m); _careCache[m]=g; const mx=Math.max(0,...Object.values(g)); if(mx>_caRefMax){_caRefMax=mx; caRefMon=m;}});
-  const caDaysRef=_careCache[caRefMon]||{};
-  const CARE_PER_DAY=3;
-  const _caTyp=(function(){const v=Object.values(caDaysRef).filter(x=>x>0).sort((a,b)=>a-b); return v.length?v[Math.floor(v.length/2)]:0;})();
-  const caKeys=[...new Set([...Object.keys(caThe),...Object.keys(caDaysRef)])].filter(k=>k&&(!CP||k===CP)&&k!=="TRUNG TÂM");
-  const caRowsD=caKeys.map(k=>{const the=caThe[k]||0; const estDay=(caDaysRef[k]==null); const days=estDay?_caTyp:caDaysRef[k]; const can=CARE_PER_DAY*days; const p=can?the/can:null; return {k,the,days,can,p,estDay};}).sort((a,b)=>((a.p==null?9:a.p)-(b.p==null?9:b.p)));
-  const caTheSum=caRowsD.reduce((a,r)=>a+r.the,0);
-  const caCanSum=caRowsD.reduce((a,r)=>a+r.can,0);
-  const caPct=caCanSum?caTheSum/caCanSum:null;
-  const _caClr=p=>p==null?"var(--muted)":p<0.6?"var(--crit)":p<1?"var(--warn)":"var(--good)";
-  const _d7set=new Set(); (dd||[]).forEach(r=>{const d=chiNgay(r.ngay); if(!d)return; if(CP&&_nkn(r.campus)!==CP)return; _d7set.add(d);});
-  const _last7n=[...(_d7set)].sort().reverse().slice(0,7).length;
-  const caRefLbl="T"+(+caRefMon.slice(5,7));
-  const caEmpty =
-   '<div class="card" style="border-left:4px solid var(--warn)"><h2>Kết nối phụ huynh — chưa có dữ liệu, bấm "Kéo Kết nối phụ huynh"</h2>'
-   +'<p class="sub">Thẻ chăm sóc phụ huynh hiện hữu trong CRM (phân hệ Học sinh). Mở AMIS CRM → <b>Thẻ chăm sóc</b> → bấm <b>Kéo Kết nối phụ huynh</b> → chờ "XONG ✅" → tải lại app.</p></div>';
-  const caCard = (!caTheSum && !caCanSum) ? caEmpty :
-   '<div class="card"><h2>Kết nối phụ huynh — thẻ chăm sóc vs nhu cầu</h2>'
-   +'<p class="sub">Nhu cầu = <b>3 thẻ/cơ sở/ngày × số ngày có điểm danh</b> · thực tế = <b>thẻ tạo trong CRM</b> · '+nhanCP+'</p>'
-   +'<div style="margin:2px 0 12px;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:10px 13px;background:rgba(223,166,72,.07)">'
-   +'<p class="leg" style="margin:0;color:var(--warn)"><b>⚠ Số thô — chưa lọc theo tháng.</b> Thẻ chăm sóc trong CRM <b>chưa có ngày tạo</b>, nên “thẻ đã tạo” là <b>ảnh chụp tích luỹ</b>. Nhu cầu dưới đây tính theo <b>tháng đủ gần nhất ('+caRefLbl+' ≈ '+_caTyp+' ngày điểm danh)</b>; % = thẻ hiện có ÷ nhu cầu 1 tháng, <b>chưa phải % hoàn thành theo tháng chuẩn</b>.</p>'
-   +'<p class="leg" style="margin:6px 0 0">🔧 Fix thật: thêm trường <b>“ngày tạo thẻ”</b> vào bước <b>Kéo Kết nối phụ huynh</b> → mới tính đúng % theo tháng. <i>Blind spot — chủ: chưa giao · hạn: chưa có.</i></p></div>'
-   +'<div class="kpis">'
-   +kpi("Thẻ đã tạo",fmt(caTheSum),"","ảnh chụp tích luỹ trong CRM")
-   +kpi("Thẻ cần tạo / tháng",fmt(caCanSum),"","3 × ngày điểm danh "+caRefLbl)
-   +kpi("% thực hiện (thô)",caPct==null?"—":pct(caPct,0),"","thẻ hiện có ÷ nhu cầu 1 tháng")+"</div>"
-   +'<p class="leg" style="margin:10px 0 0">Nhu cầu/tuần ≈ <b>'+fmt(CARE_PER_DAY*_last7n)+' thẻ/cơ sở</b> (3 × '+_last7n+' ngày học gần nhất).</p>'
-   +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo cơ sở — % thô thấp nhất trước</p>'
-   +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Thẻ đã tạo</th><th>Ngày điểm danh '+caRefLbl+'</th><th>Cần tạo/tháng</th><th>% thô</th></tr></thead><tbody>'
-   +caRowsD.map(r=>"<tr><td>"+r.k+(r.estDay?' <span class="down" title="chưa có điểm danh — dùng số ngày điển hình">~</span>':'')+'</td><td class="mono">'+fmt(r.the)+'</td><td class="mono">'+fmt(r.days)+'</td><td class="mono">'+fmt(r.can)+'</td><td class="mono" style="color:'+_caClr(r.p)+'">'+(r.p==null?"—":pct(r.p,0))+"</td></tr>").join("")
+  // ----- Kết nối phụ huynh — thẻ chăm sóc -----
+  const careCampusKey=s=>campusNH(String(s||"").replace(/\s*\(\d+\)\s*$/,"").replace(/^ME\s+Green\s+/i,""));
+  const careSelected=careCampusKey(CP);
+  const careCampuses=[...new Set([CP,...(dd||[]).map(r=>r.campus),...(phKN||[]).map(r=>r.campus)]
+    .map(careCampusKey).filter(c=>c&&c!=="TRUNG TÂM"&&(!careSelected||c===careSelected)))]
+    .sort((a,b)=>a.localeCompare(b,"vi"));
+  const careWeekStart=new Date(homNay+"T00:00:00Z");
+  careWeekStart.setUTCDate(careWeekStart.getUTCDate()-(careWeekStart.getUTCDay()+6)%7);
+  const careWeekEnd=new Date(careWeekStart.getTime()+6*86400000);
+  const careDate=d=>d.toISOString().slice(0,10).split("-").reverse().join("/");
+  const careMonth=homNay.slice(0,7).split("-").reverse().join("/");
+  const careSnapshot=(phKN||[]).filter(r=>!careSelected||careCampusKey(r.campus)===careSelected);
+  const careSnapshotTotal=careSnapshot.reduce((sum,r)=>sum+(+r.so_the||0),0);
+  const caCard='<div class="card"><h2>Kết nối phụ huynh — thẻ chăm sóc</h2>'
+   +'<p class="sub">'+escNH(nhanCP)+' · Tuần '+careDate(careWeekStart)+'–'+careDate(careWeekEnd)+' (thứ Hai đến Chủ nhật) · Tháng '+careMonth+'</p>'
+   +'<p class="leg">Mục tiêu tuần: <b>10 học sinh/cơ sở</b>. Chiến dịch bắt đầu từ <b>01/08/2026</b>.</p>'
+   +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ đã tạo trong tuần</th><th>Tổng số học sinh có thẻ tạo trong tháng</th><th>Tỷ lệ đạt/tháng</th><th>Tổng số thẻ đã tạo toàn chiến dịch</th></tr></thead><tbody>'
+   +(careCampuses.length?careCampuses.map(c=>'<tr><td>'+escNH(c)+'</td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td></tr>').join("")
+     :'<tr><td colspan="5">Chưa có danh sách cơ sở trong phạm vi đang xem.</td></tr>')
    +'</tbody></table></div>'
-   +'<p class="leg">Dấu <b>~</b> = cơ sở chưa có dữ liệu điểm danh '+caRefLbl+', dùng số ngày điển hình ('+_caTyp+') để ước nhu cầu. <b>TÂN THUẬN &amp; LINH ĐÀM</b> không dùng AMIS CRM → 0 thẻ là do nguồn, <b>không phải bỏ bê</b>. Dữ liệu là số tổng theo cơ sở (không có tên/SĐT PH) — xem từng thẻ ở AMIS CRM → Thẻ chăm sóc.</p>'
-   +'<div class="q"><b>Câu hỏi:</b> cơ sở <b>% thô thấp nhất</b> (đầu bảng) — đang bỏ bê gọi phụ huynh hiện hữu, hay chỉ do chưa kéo thẻ mới? Khi có “ngày tạo thẻ”, % tháng thật sẽ lộ cơ sở nào thực sự tạo đủ 3 thẻ/ngày.</div></div>';
+   +'<p class="note">Dấu — cho biết chưa đủ dữ liệu. Cần ngày tạo thẻ và mã học sinh để đếm theo tuần, tháng và từ đầu chiến dịch. Tỷ lệ tháng cần mục tiêu tháng được xác nhận.</p>'
+   +(careSnapshot.length?'<p class="leg">Tham khảo từ nguồn tổng hợp CRM: <b>'+fmt(careSnapshotTotal)+' thẻ</b>. Nguồn này chưa xác định được khoảng ngày tạo.</p>':'')
+   +'</div>';
 
   // ----- Channel cards tach thanh bien de dung o ca z3 va tab Channel -----
   const webCard='<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
