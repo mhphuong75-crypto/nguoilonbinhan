@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b83-tham-truong-doi-tac";
+const BUILD="2026-11-09 · b84-dong-bo-doi-tac";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2226,7 +2226,11 @@ async function render(){
     +kpi("Ngoài ME",partnerMeasured.length?fmt(partnerOutside)+"/"+fmt(partnerCampuses.length):"—","","mục tiêu 1 lượt/cơ sở")
     +kpi("Cơ sở đạt cả hai nhóm",partnerMeasured.length?fmt(partnerReached)+"/"+fmt(partnerCampuses.length):"—","","mỗi nhóm có ít nhất một lượt")+'</div>'
     +(partnerMeasured.length<partnerCampuses.length?'<p class="note">'+(partnerResult?.error?'Chưa đọc được nguồn Đối tác từ kho dữ liệu.':'Có dữ liệu tháng cho '+fmt(partnerMeasured.length)+'/'+fmt(partnerCampuses.length)+' cơ sở. Dấu — là chưa có dữ liệu.')+'</p>':'')
-    +(!partnerRows.length?'<p class="leg"><a href="./kiem-tra-doi-tac.html">Kiểm tra trường dữ liệu AMIS để thiết lập đồng bộ</a></p>':'')
+    +(partnerSnapshot?.month===homNay.slice(0,7)&&validPartnerCount(partnerSnapshot.monthCards)
+      ?'<p class="note">Đã đọc '+fmt(partnerSnapshot.monthCards)+' thẻ tháng này. '
+        +(partnerSnapshot.unassigned?fmt(partnerSnapshot.unassigned)+' thẻ chưa xác định cơ sở đi thăm. ':'')
+        +(partnerSnapshot.unclassified?fmt(partnerSnapshot.unclassified)+' thẻ chưa phân loại trong/ngoài ME.':'')+'</p>':'')
+    +'<p class="leg"><a href="./cai-bookmark-doi-tac.html">Lấy bookmark đồng bộ Đối tác</a></p>'
     +'<div class="tw"><table><thead><tr><th>Cơ sở đi thăm</th><th>Trong ME</th><th>Ngoài ME</th><th>Chưa phân loại</th><th>Đạt mục tiêu tháng</th></tr></thead><tbody>'
     +partnerCampuses.map(c=>{
       const r=partnerByCampus.get(c);
