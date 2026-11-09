@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b78-the-tu-van-da-nhan";
+const BUILD="2026-11-09 · b79-dong-bo-the-tu-van";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -514,7 +514,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
-  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm","amis_opportunity (mốc riêng)"];
+  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm","amis_opportunity (mốc riêng)","amis_ph_ketnoi_ky"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -561,7 +561,8 @@ function taoTruyVan(CP){ return [
     sb.from("v_nghi_lydo").select("ma_hs,thang,ngay_thoi_hoc,ly_do,ten_hs,campus,nhom_ly_do,da_lang_nghe").order("ngay_thoi_hoc",{ascending:false}).limit(1000),
     sb.from("crm_lead_thang").select("thang,campus,nguon,so_lead,snapshot_ts").limit(2000),
     null, // nguồn nhập học tải có kiểm tra phân trang trong bocMot, không gọi sớm
-    null // metadata riêng của nguồn Tuyển sinh AMIS
+    null, // metadata riêng của nguồn Tuyển sinh AMIS
+    sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_ph_ketnoi_ky").order("ts",{ascending:false}).limit(1)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -2100,7 +2101,11 @@ async function render(){
   // ----- Kết nối phụ huynh — thẻ chăm sóc -----
   const careCampusKey=s=>campusNH(String(s||"").replace(/\s*\(\d+\)\s*$/,"").replace(/^ME\s+Green\s+/i,""));
   const careSelected=careCampusKey(CP);
-  const careCampuses=[...new Set([CP,...(dd||[]).map(r=>r.campus),...(phKN||[]).map(r=>r.campus)]
+  const carePeriodResult=KQ[TEN_NGUON.indexOf("amis_ph_ketnoi_ky")];
+  const carePeriod=carePeriodResult?.data?.[0]?.du_lieu;
+  const carePeriodRows=carePeriod?.version===1&&Array.isArray(carePeriod.campuses)?carePeriod.campuses:[];
+  const carePeriodByCampus=new Map(carePeriodRows.map(row=>[careCampusKey(row.campus),row]));
+  const careCampuses=[...new Set([CP,...(dd||[]).map(r=>r.campus),...(phKN||[]).map(r=>r.campus),...carePeriodRows.map(r=>r.campus)]
     .map(careCampusKey).filter(c=>c&&c!=="TRUNG TÂM"&&(!careSelected||c===careSelected)))]
     .sort((a,b)=>a.localeCompare(b,"vi"));
   const careWeekStart=new Date(homNay+"T00:00:00Z");
@@ -2120,13 +2125,25 @@ async function render(){
   const caCard='<div class="card"><h2>Kết nối phụ huynh — thẻ chăm sóc</h2>'
    +'<p class="sub">'+escNH(nhanCP)+' · Tuần '+careDate(careWeekStart)+'–'+careDate(careWeekEnd)+' (thứ Hai đến Chủ nhật) · Tháng '+careMonth+'</p>'
    +'<p class="leg">Mỗi cơ sở có mục tiêu <b>10 học sinh/tuần</b> và <b>40 học sinh/tháng</b>. Chiến dịch bắt đầu từ <b>01/08/2026</b>.</p>'
-   +'<p class="leg"><b>Thẻ tư vấn AMIS đã nhận: '+(careSnapshotRows.length?fmt(careSnapshotTotal)+' thẻ':'—')+'</b> · Số tổng hợp trong phạm vi đang xem.</p>'
-   +'<p class="note">Các cột theo kỳ đang chờ dữ liệu từng thẻ. Cần ngày tạo để phân kỳ và mã học sinh để đếm mỗi em một lần trong tháng. Tỷ lệ đạt/tháng = số học sinh có thẻ ÷ 40 × 100%.</p>'
+   +'<p class="leg"><b>Thẻ tư vấn AMIS đã nhận: '+(carePeriodRows.length
+       ?fmt(carePeriodRows.filter(r=>!careSelected||careCampusKey(r.campus)===careSelected).reduce((sum,r)=>sum+r.campaignCards,0))+' thẻ từ 01/08/2026'
+       :careSnapshotRows.length?fmt(careSnapshotTotal)+' thẻ tổng hợp':'—')+'</b> · Trong phạm vi đang xem.</p>'
+   +(carePeriodRows.length?'<p class="note">Lần đồng bộ theo kỳ gần nhất: '+escNH(carePeriod.through)+'. Tỷ lệ tháng = số học sinh có thẻ ÷ 40 × 100%.'
+       +(carePeriod.missingStudent?' Có '+fmt(carePeriod.missingStudent)+' thẻ tháng này thiếu mã học sinh.':'')+'</p>'
+     :'<p class="note">Chưa có số liệu theo kỳ từ bookmark mới. <a href="./cai-bookmark-the-tu-van.html">Cài bookmark Thẻ tư vấn</a>.</p>')
    +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ trong tuần</th><th>Học sinh có thẻ trong tháng</th><th>Tỷ lệ đạt/tháng</th><th>Số thẻ từ 01/08/2026</th></tr></thead><tbody>'
-   +(careCampuses.length?careCampuses.map(c=>'<tr><td>'+escNH(c)+'</td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td></tr>').join("")
+   +(careCampuses.length?careCampuses.map(c=>{
+      const row=carePeriodByCampus.get(c);
+      const week=row&&carePeriod.week===careWeekStart.toISOString().slice(0,10)?row.weekCards:null;
+      const students=row&&carePeriod.month===homNay.slice(0,7)&&row.monthMissing===0?row.monthStudents:null;
+      const number=n=>Number.isInteger(n)&&n>=0?fmt(n):"—";
+      return '<tr><td>'+escNH(c)+'</td><td class="mono">'+number(week)+'</td><td class="mono">'+number(students)
+        +'</td><td class="mono">'+(Number.isInteger(students)&&students>=0?pct(students/40,1):"—")
+        +'</td><td class="mono">'+number(row?.campaignCards)+'</td></tr>';
+    }).join("")
      :'<tr><td colspan="5">Chưa có danh sách cơ sở trong phạm vi đang xem.</td></tr>')
    +'</tbody></table></div>'
-   +(careSnapshotRows.length?'<details><summary>Thẻ tư vấn đã đồng bộ từ AMIS CRM · '+fmt(careSnapshotTotal)+' thẻ tổng hợp</summary>'
+   +(careSnapshotRows.length?'<details><summary>Đối chiếu số tổng hợp từ bookmark cũ · '+fmt(careSnapshotTotal)+' thẻ tổng hợp</summary>'
      +'<p class="note">Số liệu đối chiếu từ lần kéo dữ liệu. Khoảng ngày tạo thẻ chưa được xác định.</p>'
      +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ đã đồng bộ</th></tr></thead><tbody>'
      +careSnapshotRows.map(([campus,count])=>'<tr><td>'+escNH(campus)+'</td><td class="mono">'+fmt(count)+'</td></tr>').join("")
