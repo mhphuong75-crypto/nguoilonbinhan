@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b79-dong-bo-the-tu-van";
+const BUILD="2026-11-09 · b80-tong-quan-the-tu-van";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2099,7 +2099,13 @@ async function render(){
     +'<div class="q">'+(exChua?fmt(exChua)+' hồ sơ chưa hoàn thành — cần điều phối liên hệ lắng nghe phụ huynh.':'Không có hồ sơ được ghi nhận chưa hoàn thành lắng nghe trong kỳ này.')+'</div></div>');
 
   // ----- Kết nối phụ huynh — thẻ chăm sóc -----
-  const careCampusKey=s=>campusNH(String(s||"").replace(/\s*\(\d+\)\s*$/,"").replace(/^ME\s+Green\s+/i,""));
+  const careAliases={"GREEN BITIS":"BITIS","ME TÂN THUẬN":"TÂN THUẬN","VSIP HẢI PHÒNG":"VSIP"};
+  const careCampusKey=value=>{
+    const name=campusNH(String(value||"").replace(/\s*\(\d+\)\s*$/,"").replace(/^ME\s+Green\s+/i,""));
+    return careAliases[name]||name;
+  };
+  const careTargetPerCampus=40;
+  const careTargetCampuses=["BITIS","CỦ CHI","HOÀNG VĂN THỤ","HỒ TÂY","KIM MÃ","LINH ĐÀM","NGUYỄN TRỌNG TUYỂN","PHAN CHU TRINH","QUẢNG AN","QUỐC TỬ GIÁM","TÂN ĐỊNH","TÂN THUẬN","THẢO ĐIỀN","VSIP","VƯỜN ĐÀO"];
   const careSelected=careCampusKey(CP);
   const carePeriodResult=KQ[TEN_NGUON.indexOf("amis_ph_ketnoi_ky")];
   const carePeriod=carePeriodResult?.data?.[0]?.du_lieu;
@@ -2122,6 +2128,22 @@ async function render(){
   }
   const careSnapshotTotal=[...careSnapshotByCampus.values()].reduce((sum,count)=>sum+count,0);
   const careSnapshotRows=[...careSnapshotByCampus].sort(([a],[b])=>a.localeCompare(b,"vi"));
+  const careCurrent=carePeriodRows.length>0&&carePeriod.month===homNay.slice(0,7);
+  const careMonthlyRows=careCurrent?carePeriodRows:[];
+  const careMonthCards=careMonthlyRows.length&&careMonthlyRows.every(r=>Number.isInteger(r.monthCards)&&r.monthCards>=0)
+    ?careMonthlyRows.reduce((sum,r)=>sum+r.monthCards,0):null;
+  const careCovered=careTargetCampuses.filter(c=>carePeriodByCampus.has(c));
+  const careMeasured=careCurrent?careCovered.map(c=>carePeriodByCampus.get(c))
+    .filter(r=>r.monthMissing===0&&Number.isInteger(r.monthStudents)&&r.monthStudents>=0):[];
+  const careMonthStudents=careMeasured.reduce((sum,r)=>sum+r.monthStudents,0);
+  const careTarget=careTargetCampuses.length*careTargetPerCampus;
+  const careReached=careMeasured.filter(r=>r.monthStudents>=careTargetPerCampus).length;
+  const careKpis='<p class="sub">Tổng quan toàn hệ thống · Tháng '+careMonth+'</p><div class="kpis">'
+    +kpi("Thẻ tạo trong tháng",careMonthCards===null?"—":fmt(careMonthCards),"",careMonthCards===null?"Cần đồng bộ bằng bookmark mới":"Đếm theo ngày tạo trên AMIS")
+    +kpi("Mục tiêu tháng",fmt(careTarget),"",fmt(careTargetCampuses.length)+" cơ sở × 40 học sinh")
+    +kpi("Tỷ lệ hoàn thành tháng",careMeasured.length?pct(careMonthStudents/careTarget,1):"—","",fmt(careMonthStudents)+" lượt học sinh theo cơ sở / "+fmt(careTarget)+" mục tiêu")
+    +kpi("Cơ sở đạt từ 40 học sinh",careMeasured.length?fmt(careReached)+"/"+fmt(careTargetCampuses.length):"—","",careMeasured.length?pct(careReached/careTargetCampuses.length,1)+" cơ sở toàn hệ thống":"Chờ số liệu tháng")+'</div>'
+    +(careCurrent&&careMeasured.length<careTargetCampuses.length?'<p class="note">Đã xác định số học sinh cho '+fmt(careMeasured.length)+'/'+fmt(careTargetCampuses.length)+' cơ sở. Tỷ lệ toàn hệ thống tính trên phần kết quả đã xác định.</p>':'');
   const caCard='<div class="card"><h2>Kết nối phụ huynh — thẻ chăm sóc</h2>'
    +'<p class="sub">'+escNH(nhanCP)+' · Tuần '+careDate(careWeekStart)+'–'+careDate(careWeekEnd)+' (thứ Hai đến Chủ nhật) · Tháng '+careMonth+'</p>'
    +'<p class="leg">Mỗi cơ sở có mục tiêu <b>10 học sinh/tuần</b> và <b>40 học sinh/tháng</b>. Chiến dịch bắt đầu từ <b>01/08/2026</b>.</p>'
@@ -2131,6 +2153,7 @@ async function render(){
    +(carePeriodRows.length?'<p class="note">Lần đồng bộ theo kỳ gần nhất: '+escNH(carePeriod.through)+'. Tỷ lệ tháng = số học sinh có thẻ ÷ 40 × 100%.'
        +(carePeriod.missingStudent?' Có '+fmt(carePeriod.missingStudent)+' thẻ tháng này thiếu mã học sinh.':'')+'</p>'
      :'<p class="note">Chưa có số liệu theo kỳ từ bookmark mới. <a href="./cai-bookmark-the-tu-van.html">Cài bookmark Thẻ tư vấn</a>.</p>')
+   +careKpis
    +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ trong tuần</th><th>Học sinh có thẻ trong tháng</th><th>Tỷ lệ đạt/tháng</th><th>Số thẻ từ 01/08/2026</th></tr></thead><tbody>'
    +(careCampuses.length?careCampuses.map(c=>{
       const row=carePeriodByCampus.get(c);
@@ -2138,7 +2161,7 @@ async function render(){
       const students=row&&carePeriod.month===homNay.slice(0,7)&&row.monthMissing===0?row.monthStudents:null;
       const number=n=>Number.isInteger(n)&&n>=0?fmt(n):"—";
       return '<tr><td>'+escNH(c)+'</td><td class="mono">'+number(week)+'</td><td class="mono">'+number(students)
-        +'</td><td class="mono">'+(Number.isInteger(students)&&students>=0?pct(students/40,1):"—")
+        +'</td><td class="mono">'+(Number.isInteger(students)&&students>=0?pct(students/careTargetPerCampus,1):"—")
         +'</td><td class="mono">'+number(row?.campaignCards)+'</td></tr>';
     }).join("")
      :'<tr><td colspan="5">Chưa có danh sách cơ sở trong phạm vi đang xem.</td></tr>')
