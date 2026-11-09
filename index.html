@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b82-bang-tuan-theo-thang";
+const BUILD="2026-11-09 · b83-tham-truong-doi-tac";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -514,7 +514,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
-  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm","amis_opportunity (mốc riêng)","amis_ph_ketnoi_ky"];
+  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm","amis_opportunity (mốc riêng)","amis_ph_ketnoi_ky","amis_doi_tac_ky"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
@@ -562,7 +562,8 @@ function taoTruyVan(CP){ return [
     sb.from("crm_lead_thang").select("thang,campus,nguon,so_lead,snapshot_ts").limit(2000),
     null, // nguồn nhập học tải có kiểm tra phân trang trong bocMot, không gọi sớm
     null, // metadata riêng của nguồn Tuyển sinh AMIS
-    sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_ph_ketnoi_ky").order("ts",{ascending:false}).limit(1)
+    sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_ph_ketnoi_ky").order("ts",{ascending:false}).limit(1),
+    sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_doi_tac_ky").order("ts",{ascending:false}).limit(1)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -2206,6 +2207,35 @@ async function render(){
      +'</tbody></table></div></details>':'')
    +'</div>';
 
+  const partnerResult=KQ[TEN_NGUON.indexOf("amis_doi_tac_ky")];
+  const partnerSnapshot=partnerResult?.data?.[0]?.du_lieu;
+  const validPartnerCount=value=>Number.isInteger(value)&&value>=0;
+  const partnerRows=partnerSnapshot?.version===1&&partnerSnapshot.month===homNay.slice(0,7)&&Array.isArray(partnerSnapshot.campuses)
+    ?partnerSnapshot.campuses.filter(r=>r&&typeof r.campus==="string"&&[r.internal,r.external,r.unknown].every(validPartnerCount)):[];
+  const partnerByCampus=new Map(partnerRows.map(r=>[careCampusKey(r.campus),r]));
+  const partnerCampuses=careTargetCampuses.filter(c=>!careSelected||c===careSelected);
+  const partnerMeasured=partnerCampuses.map(c=>partnerByCampus.get(c)).filter(Boolean);
+  const partnerInside=partnerMeasured.reduce((sum,r)=>sum+r.internal,0);
+  const partnerOutside=partnerMeasured.reduce((sum,r)=>sum+r.external,0);
+  const partnerReached=partnerMeasured.filter(r=>r.internal>=1&&r.external>=1).length;
+  const partnerCard='<div class="card"><h2>Đối tác — thăm trường</h2>'
+    +'<p class="sub">'+escNH(nhanCP)+' · Tháng '+careMonth+' · AMIS CRM → Tất cả Đối tác</p>'
+    +'<p class="leg">Mỗi thẻ đối tác tạo mới tính là một lượt thăm, theo ngày tạo thẻ. Mục tiêu tháng của mỗi cơ sở là một lượt trong ME và một lượt ngoài ME.</p>'
+    +'<div class="kpis">'
+    +kpi("Trong ME",partnerMeasured.length?fmt(partnerInside)+"/"+fmt(partnerCampuses.length):"—","","mục tiêu 1 lượt/cơ sở")
+    +kpi("Ngoài ME",partnerMeasured.length?fmt(partnerOutside)+"/"+fmt(partnerCampuses.length):"—","","mục tiêu 1 lượt/cơ sở")
+    +kpi("Cơ sở đạt cả hai nhóm",partnerMeasured.length?fmt(partnerReached)+"/"+fmt(partnerCampuses.length):"—","","mỗi nhóm có ít nhất một lượt")+'</div>'
+    +(partnerMeasured.length<partnerCampuses.length?'<p class="note">'+(partnerResult?.error?'Chưa đọc được nguồn Đối tác từ kho dữ liệu.':'Có dữ liệu tháng cho '+fmt(partnerMeasured.length)+'/'+fmt(partnerCampuses.length)+' cơ sở. Dấu — là chưa có dữ liệu.')+'</p>':'')
+    +(!partnerRows.length?'<p class="leg"><a href="./kiem-tra-doi-tac.html">Kiểm tra trường dữ liệu AMIS để thiết lập đồng bộ</a></p>':'')
+    +'<div class="tw"><table><thead><tr><th>Cơ sở đi thăm</th><th>Trong ME</th><th>Ngoài ME</th><th>Chưa phân loại</th><th>Đạt mục tiêu tháng</th></tr></thead><tbody>'
+    +partnerCampuses.map(c=>{
+      const r=partnerByCampus.get(c);
+      const slots=r?Number(r.internal>=1)+Number(r.external>=1):null;
+      return '<tr><td>'+escNH(c)+'</td><td class="mono">'+(r?fmt(r.internal)+"/1":"—")
+        +'</td><td class="mono">'+(r?fmt(r.external)+"/1":"—")+'</td><td class="mono">'+(r?fmt(r.unknown):"—")
+        +'</td><td class="mono">'+(slots===null?"—":slots===2?"Đạt · 2/2":fmt(slots)+"/2")+'</td></tr>';
+    }).join("")+'</tbody></table></div></div>';
+
   // ----- Channel cards tach thanh bien de dung o ca z3 va tab Channel -----
   const webCard='<div class="card"><h2>Website</h2><p class="sub">'+start+" → "+end+" · "+n+' ngày</p>'
    +'<div class="kpis">'
@@ -2574,7 +2604,7 @@ async function render(){
    +dongGap+cdCard+'</div>'
 
    +'<div class="zone" id="zdom">'
-   +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — mục tiêu vs thực tế (lead theo nguồn + nhập học Tomia/CRM) · phễu · kết nối phụ huynh")+leadNguonCard+ktCard+hsCard+caCard+dsCard+depCard+choCard+cohCard+ctCard+'</div>'
+   +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — mục tiêu vs thực tế (lead theo nguồn + nhập học Tomia/CRM) · phễu · kết nối phụ huynh")+leadNguonCard+ktCard+hsCard+caCard+partnerCard+dsCard+depCard+choCard+cohCard+ctCard+'</div>'
    +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — tháng này + xu hướng 3 tháng · đã lắng nghe (exit) · nghỉ liên tục · CRM nguồn sống")+churnMoiCard+nganNgayCard+churnNayCard+ngCard+'</div>'
    +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
    +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
