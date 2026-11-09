@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b85-an-link-bookmark-doi-tac";
+const BUILD="2026-11-09 · b86-doi-tac-gon";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2229,13 +2229,13 @@ async function render(){
     +(partnerSnapshot?.month===homNay.slice(0,7)&&validPartnerCount(partnerSnapshot.monthCards)
       ?'<p class="note">Đã đọc '+fmt(partnerSnapshot.monthCards)+' thẻ tháng này. '
         +(partnerSnapshot.unassigned?fmt(partnerSnapshot.unassigned)+' thẻ chưa xác định cơ sở đi thăm. ':'')
-        +(partnerSnapshot.unclassified?fmt(partnerSnapshot.unclassified)+' thẻ chưa phân loại trong/ngoài ME.':'')+'</p>':'')
-    +'<div class="tw"><table><thead><tr><th>Cơ sở đi thăm</th><th>Trong ME</th><th>Ngoài ME</th><th>Chưa phân loại</th><th>Đạt mục tiêu tháng</th></tr></thead><tbody>'
+        +'</p>':'')
+    +'<div class="tw"><table><thead><tr><th>Cơ sở đi thăm</th><th>Trong ME</th><th>Ngoài ME</th><th>Đạt mục tiêu tháng</th></tr></thead><tbody>'
     +partnerCampuses.map(c=>{
       const r=partnerByCampus.get(c);
       const slots=r?Number(r.internal>=1)+Number(r.external>=1):null;
       return '<tr><td>'+escNH(c)+'</td><td class="mono">'+(r?fmt(r.internal)+"/1":"—")
-        +'</td><td class="mono">'+(r?fmt(r.external)+"/1":"—")+'</td><td class="mono">'+(r?fmt(r.unknown):"—")
+        +'</td><td class="mono">'+(r?fmt(r.external)+"/1":"—")
         +'</td><td class="mono">'+(slots===null?"—":slots===2?"Đạt · 2/2":fmt(slots)+"/2")+'</td></tr>';
     }).join("")+'</tbody></table></div></div>';
 
