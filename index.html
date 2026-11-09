@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b77-doi-chieu-the-tu-van";
+const BUILD="2026-11-09 · b78-the-tu-van-da-nhan";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2120,11 +2120,12 @@ async function render(){
   const caCard='<div class="card"><h2>Kết nối phụ huynh — thẻ chăm sóc</h2>'
    +'<p class="sub">'+escNH(nhanCP)+' · Tuần '+careDate(careWeekStart)+'–'+careDate(careWeekEnd)+' (thứ Hai đến Chủ nhật) · Tháng '+careMonth+'</p>'
    +'<p class="leg">Mỗi cơ sở có mục tiêu <b>10 học sinh/tuần</b> và <b>40 học sinh/tháng</b>. Chiến dịch bắt đầu từ <b>01/08/2026</b>.</p>'
-   +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ đã tạo trong tuần</th><th>Tổng số học sinh có thẻ tạo trong tháng</th><th>Tỷ lệ đạt/tháng</th><th>Tổng số thẻ đã tạo toàn chiến dịch</th></tr></thead><tbody>'
+   +'<p class="leg"><b>Thẻ tư vấn AMIS đã nhận: '+(careSnapshotRows.length?fmt(careSnapshotTotal)+' thẻ':'—')+'</b> · Số tổng hợp trong phạm vi đang xem.</p>'
+   +'<p class="note">Các cột theo kỳ đang chờ dữ liệu từng thẻ. Cần ngày tạo để phân kỳ và mã học sinh để đếm mỗi em một lần trong tháng. Tỷ lệ đạt/tháng = số học sinh có thẻ ÷ 40 × 100%.</p>'
+   +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ trong tuần</th><th>Học sinh có thẻ trong tháng</th><th>Tỷ lệ đạt/tháng</th><th>Số thẻ từ 01/08/2026</th></tr></thead><tbody>'
    +(careCampuses.length?careCampuses.map(c=>'<tr><td>'+escNH(c)+'</td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td></tr>').join("")
      :'<tr><td colspan="5">Chưa có danh sách cơ sở trong phạm vi đang xem.</td></tr>')
    +'</tbody></table></div>'
-   +'<p class="note">Dấu — cho biết chưa đủ dữ liệu. Cần ngày tạo thẻ và mã học sinh để đếm theo tuần, tháng và từ đầu chiến dịch. Tỷ lệ đạt/tháng = số học sinh khác nhau có thẻ tạo trong tháng ÷ 40 × 100%.</p>'
    +(careSnapshotRows.length?'<details><summary>Thẻ tư vấn đã đồng bộ từ AMIS CRM · '+fmt(careSnapshotTotal)+' thẻ tổng hợp</summary>'
      +'<p class="note">Số liệu đối chiếu từ lần kéo dữ liệu. Khoảng ngày tạo thẻ chưa được xác định.</p>'
      +'<div class="tw"><table><thead><tr><th>Cơ sở</th><th>Số thẻ đã đồng bộ</th></tr></thead><tbody>'
