@@ -40,7 +40,7 @@ jobs:
         if: always()
         timeout-minutes: 12
         run: |
-          curl -sS -X POST "${SUPABASE_URL}/rest/v1/rpc/lam_moi_kho" \
+          curl -sS -X POST "${SUPABASE_URL}/rest/v1/rpc/nlba_request_tomia_refresh" \
             -H "apikey: ${SUPABASE_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_KEY}" \
             -H "Content-Type: application/json" \
