@@ -1,0 +1,48 @@
+name: Nhap Tomia sau bookmark
+
+on:
+  schedule:
+    - cron: "15 2 * * *"
+    - cron: "45 2 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/tomia.py
+      - .github/workflows/tomia.yml
+
+concurrency:
+  group: keo-du-lieu
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tomia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install openpyxl
+      - name: Nhap day du cac sheet Tomia
+        timeout-minutes: 30
+        run: python scripts/tomia.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      - name: Lam moi bao cao
+        if: always()
+        timeout-minutes: 12
+        run: |
+          curl --fail-with-body -sS -X POST "${SUPABASE_URL}/rest/v1/rpc/lam_moi_kho" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 660 -d '{}'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
