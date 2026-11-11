@@ -65,6 +65,7 @@ def danh_sach_tep():
         offset += len(page)
     files.sort(key=lambda item: (item.get("updated_at") or item.get("created_at") or "", item["name"]))
     return [{"path": PREFIX + item["name"],
+             "captured_at": item.get("updated_at") or item.get("created_at") or "",
              "captured_on": (item.get("updated_at") or item.get("created_at") or "")[:10]}
             for item in files]
 
@@ -343,12 +344,27 @@ BOC = [
 def main():
     teps = danh_sach_tep()
     print(f"Tim thay {len(teps)} tep Tomia")
+    completed = set()
+    offset = 0
+    while True:
+        page = json.loads(goi(f"{SB_URL}/rest/v1/ingest_run?select=message&source=eq.tomia_file_v1"
+                              f"&status=eq.ok&order=run_id&limit=1000&offset={offset}"))
+        if not isinstance(page, list):
+            raise ValueError("Khong doc duoc nhat ky nhap Tomia")
+        completed.update(row["message"] for row in page)
+        if len(page) < 1000:
+            break
+        offset += len(page)
     tong = {}
     errors = []
     tickets = {}
     captured_on = {}
+    import_logs = []
     for tep in teps:
         ten = tep["path"]
+        identity = json.dumps({"file": ten, "captured_at": tep["captured_at"]}, sort_keys=True)
+        if tep["captured_at"] and identity in completed:
+            continue
         try:
             noi_dung = goi(f"{SB_URL}/storage/v1/object/{BUCKET}/{ten}", raw=True)
             wb = openpyxl.load_workbook(io.BytesIO(noi_dung), read_only=True, data_only=True)
@@ -373,6 +389,7 @@ def main():
                     ghi(bang, dong, xd)
                     tong[bang] = tong.get(bang, 0) + len(dong)
             wb.close()
+            import_logs.append({"source": "tomia_file_v1", "status": "ok", "message": identity})
             print(f"  {ten}: xong")
         except Exception as e:
             print(f"  {ten}: LOI {type(e).__name__} {e}")
@@ -401,6 +418,9 @@ def main():
             accepted.append(row)
         ghi("tomia_ticket", accepted, "ma_ticket")
         tong["tomia_ticket"] = len(accepted)
+    for start in range(0, len(import_logs), 1000):
+        goi(f"{SB_URL}/rest/v1/ingest_run", "POST", import_logs[start:start + 1000],
+            {"Prefer": "return=minimal"})
     for k, v in tong.items():
         print(f"Ghi {v} dong vao {k}")
 
