@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-09 · b86-doi-tac-gon";
+const BUILD="2026-11-11 · b88-doi-soat-su-co";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -1027,16 +1027,18 @@ async function render(){
   const scLoc=(suCo||[]).filter(r=>hopCP(r.campus));
   const _thMS=homNay.slice(0,7);                                  // "YYYY-MM" thang hien hanh
   const _trongThang=r=>String(r.ngay_tao||"").slice(0,7)===_thMS;
-  const scMoTatCa=scLoc.filter(r=>r.con_mo);                      // dang mo, moi thoi gian
+  const scConMo=r=>r.con_mo===true&&!/đóng|hoàn tất|hoàn thành|closed|resolved/i.test(String(r.trang_thai||""));
+  const scCanRaSoat=r=>r.he_trong===true||/khẩn cấp|khẩn|critical|urgent/i.test(String(r.muc_do||""));
+  const scMoTatCa=scLoc.filter(scConMo);                      // dang mo, moi thoi gian
   const scMo=scMoTatCa.filter(_trongThang);                      // dang mo, TAO trong thang hien hanh
-  const scNang=scMo.filter(r=>r.he_trong);
+  const scNang=scMo.filter(scCanRaSoat);
   const scChuaGiao=scMo.filter(r=>!r.nguoi_duoc_giao);
   const scTBngay=scMo.length?Math.round(scMo.reduce((a,r)=>a+(+r.so_ngay_mo||0),0)/scMo.length):0;
   // an toan tre em (nguyen tac 1): su co nghiem trong CU (truoc thang nay) van dang mo -> KHONG giau
-  const scNangCu=scMoTatCa.filter(r=>r.he_trong&&!_trongThang(r))
+  const scNangCu=scMoTatCa.filter(r=>scCanRaSoat(r)&&!_trongThang(r))
     .sort((a,b)=>(+b.so_ngay_mo||0)-(+a.so_ngay_mo||0));
   const scTheoCampus={}; scMo.forEach(r=>{const k=r.campus||"(chưa rõ)";
-    const o=scTheoCampus[k]||(scTheoCampus[k]={mo:0,nang:0,lau:0}); o.mo++; if(r.he_trong)o.nang++;
+    const o=scTheoCampus[k]||(scTheoCampus[k]={mo:0,nang:0,lau:0}); o.mo++; if(scCanRaSoat(r))o.nang++;
     if((+r.so_ngay_mo||0)>30)o.lau++});
   const scCampusRows=Object.entries(scTheoCampus).sort((a,b)=>b[1].nang-a[1].nang||b[1].mo-a[1].mo);
   // ===== b18: 7 TIEU CHI "NGHIEM TRONG" DO PHUONG DINH NGHIA (14/09/2026) =====
@@ -1058,29 +1060,29 @@ async function render(){
   const scCard = !scLoc.length ? "" :
    '<div class="card" style="border-color:#7f1d1d"><h2>🚨 An toàn &amp; sự cố</h2>'
    +'<p class="sub">Từ Tomia · '+nhanCP+' · ticket vận hành, hành vi, an toàn, sức khoẻ</p>'
-   +'<p class="leg" style="margin-top:-6px">⏱ Chỉ đếm ticket <b>đang mở, tạo trong tháng '+_thMS+'</b> (tháng hiện hành). Sự cố nghiêm trọng cũ hơn hiển thị riêng ở dưới — <b>không giấu</b>.</p>'
+   +'<p class="leg" style="margin-top:-6px">⏱ Chỉ đếm ticket <b>đang mở, tạo trong tháng '+_thMS+'</b> (tháng hiện hành). Các sự cố cũ cần rà soát được liệt kê riêng bên dưới.</p>'
    +'<div class="kpis">'
    +kpi("Còn mở (tháng này)",fmt(scMo.length),"","tạo trong tháng "+_thMS+", chưa đóng")
    +kpi("Nghi nghiêm trọng",fmt(scNghi.length),"","khớp 7 tiêu chí — cần người xác nhận")
    +kpi("Chưa giao cho ai",fmt(scChuaGiao.length),"","không có người được giao")
    +kpi("Mở trung bình",fmt(scTBngay)+" ngày","","tính đến hôm nay")+"</div>"
    +(scNangCu.length ? '<div style="margin:14px 0;padding:10px 12px;border:1px solid #7f1d1d;border-radius:8px;background:rgba(220,38,38,.08)">'
-     +'<p style="margin:0 0 4px;font-weight:700;color:#f87171">⚠️ '+fmt(scNangCu.length)+' sự cố nghiêm trọng CŨ (trước tháng '+_thMS+') vẫn đang mở theo lần kéo gần nhất</p>'
-     +'<p class="leg" style="margin:0 0 8px">Có thể đã đóng ở Tomia nhưng app chưa kéo lại — <b>vào Tomia kiểm tra &amp; đóng</b>. Đây là an toàn trẻ nên không bỏ qua.</p>'
+     +'<p style="margin:0 0 4px;font-weight:700;color:#f87171">⚠️ '+fmt(scNangCu.length)+' sự cố cũ cần đối soát trạng thái với Tomia (trước tháng '+_thMS+')</p>'
+     +'<p class="leg" style="margin:0 0 8px">Danh sách dựa trên trạng thái trong kho NLBA. Cần đối chiếu lại từng mã với Tomia. Phạm vi gồm nhóm An toàn, Hành vi hoặc mức Cao, Khẩn cấp. Mức độ gốc được hiển thị theo từng thẻ.</p>'
      +'<details><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Xem danh sách</summary>'
-     +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Campus</th><th>Việc gì</th><th>Mức</th><th>Đã mở</th></tr></thead><tbody>'
-     +scNangCu.map(r=>'<tr><td>'+(r.ngay_tao||"—")+'</td><td>'+nhan(r.campus)+'</td><td>'+(r.tieu_de||"—")+'</td><td>'+(r.muc_do||"—")+'</td><td class="mono"><span class="down">'+fmt(r.so_ngay_mo)+' ngày</span></td></tr>').join("")
+     +'<div class="tw"><table><thead><tr><th>Mã sự cố</th><th>Ngày tạo trong kho</th><th>Campus</th><th>Việc gì</th><th>Mức</th><th>Trạng thái trong kho</th><th>Ngày từ lúc tạo</th></tr></thead><tbody>'
+     +scNangCu.map(r=>'<tr><td>'+escNH(r.ma_ticket||"—")+'</td><td>'+(r.ngay_tao||"—")+'</td><td>'+nhan(r.campus)+'</td><td>'+(r.tieu_de||"—")+'</td><td>'+escNH(r.muc_do||"—")+'</td><td>'+escNH(r.trang_thai||"—")+'</td><td class="mono"><span class="down">'+fmt(r.so_ngay_mo)+' ngày</span></td></tr>').join("")
      +'</tbody></table></div></details></div>' : "")
-   +(scNang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Nghiêm trọng &amp; còn mở — đọc từng dòng</p>'
+   +(scNang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">An toàn, Hành vi hoặc mức Cao/Khẩn cấp — đang ghi mở trong kho tháng này</p>'
      +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Campus</th><th>Việc gì</th><th>Loại</th><th>Mức</th><th>Trạng thái</th><th>Đã mở</th><th>Giao cho</th></tr></thead><tbody>'
      +scNang.sort((a,b)=>(+b.so_ngay_mo||0)-(+a.so_ngay_mo||0)).map(r=>
        '<tr style="background:rgba(220,38,38,.10)"><td>'+(r.ngay_tao||"—")+'</td><td>'+nhan(r.campus)+'</td><td>'+(r.tieu_de||"—")
        +'</td><td>'+(r.phan_loai||"—")+'</td><td>'+(r.muc_do||"—")+'</td><td>'+(r.trang_thai||"—")
        +'</td><td class="mono"><span class="down">'+fmt(r.so_ngay_mo)+' ngày</span></td><td>'
        +(r.nguoi_duoc_giao||'<span style="color:#f87171">chưa giao</span>')+"</td></tr>").join("")
-     +"</tbody></table></div>" : '<p class="leg">Không có sự cố nghiêm trọng nào đang mở.</p>')
+     +"</tbody></table></div>" : '<p class="leg">Trong kho chưa có thẻ tháng này đang mở thuộc nhóm An toàn, Hành vi hoặc mức Cao/Khẩn cấp.</p>')
    +(scCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Ticket còn mở, theo campus</p>'
-     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Còn mở</th><th>An toàn/Hành vi/mức Cao</th><th>Mở quá 30 ngày</th></tr></thead><tbody>'
+     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Còn mở</th><th>An toàn/Hành vi/Cao/Khẩn cấp</th><th>Mở quá 30 ngày</th></tr></thead><tbody>'
      +scCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.mo)+'</td><td class="mono">'+(v.nang?'<span class="down">'+v.nang+"</span>":"0")
        +'</td><td class="mono">'+fmt(v.lau)+"</td></tr>").join("")+"</tbody></table></div>" : "")
    +'<p class="leg"><b>Tên người dưới tên campus</b> lấy từ hệ thống — '
