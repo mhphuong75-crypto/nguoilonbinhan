@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-11 · b88-doi-soat-su-co";
+const BUILD="2026-11-11 · b89-doc-du-su-co-tomia";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -516,6 +516,30 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
   "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm","amis_opportunity (mốc riêng)","amis_ph_ketnoi_ky","amis_doi_tac_ky"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
+async function docSuCoTomia() {
+  const rows = [], seen = new Set();
+  let expected = null;
+  for (let page = 0; page < 100; page++) {
+    const result = await sb.from("v_su_co")
+      .select("ma_ticket,ngay_tao,campus,phan_loai,muc_do,trang_thai,tieu_de,nguoi_tao,nguoi_duoc_giao,ngay_dong,so_ngay_mo,con_mo,he_trong,so_tre_lq", {count:"exact"})
+      .order("ma_ticket", {ascending:true}).range(page * 500, page * 500 + 499);
+    if (result.error) throw result.error;
+    if (!Array.isArray(result.data) || !Number.isInteger(result.count) ||
+        (expected !== null && expected !== result.count)) {
+      throw Error("Nguồn sự cố Tomia thay đổi hoặc chưa đọc đủ. Bấm Tải lại số.");
+    }
+    expected = result.count;
+    for (const row of result.data) {
+      if (!row.ma_ticket || seen.has(row.ma_ticket)) throw Error("Nguồn sự cố Tomia bị thiếu mã hoặc trùng trang.");
+      seen.add(row.ma_ticket);
+      rows.push(row);
+    }
+    if (rows.length === expected) return {data:rows,error:null};
+    if (!result.data.length || rows.length > expected) throw Error("Nguồn sự cố Tomia trả thiếu dữ liệu.");
+  }
+  throw Error("Chưa đọc hết nguồn sự cố Tomia.");
+}
+
 function taoTruyVan(CP){ return [
     sb.from("ga4_daily_channel").select("day,channel,sessions,active_users").order("day",{ascending:false}).limit(1600),
     sb.from("gsc_daily").select("day,clicks,impressions,ctr,position").order("day",{ascending:false}).limit(400),
@@ -575,7 +599,7 @@ const bocMot=async(CP,i)=>{
   const t=performance.now(); let r=null, thu=0;
   for(let lan=0;lan<2;lan++){
     thu++;
-    try{ r=await (TEN_NGUON[i]==="nlba_nhap_hoc_crm" ? docNhapHocCRM() : TEN_NGUON[i]==="mv_nhap_hoc" ? docTomiaNhapHocDoiChieu() : TEN_NGUON[i]==="amis_opportunity (mốc riêng)" ? docMocTuyenSinhAmis() : taoTruyVan(CP)[i]); }
+    try{ r=await (TEN_NGUON[i]==="v_su_co" ? docSuCoTomia() : TEN_NGUON[i]==="nlba_nhap_hoc_crm" ? docNhapHocCRM() : TEN_NGUON[i]==="mv_nhap_hoc" ? docTomiaNhapHocDoiChieu() : TEN_NGUON[i]==="amis_opportunity (mốc riêng)" ? docMocTuyenSinhAmis() : taoTruyVan(CP)[i]); }
     catch(e){ r={data:null,error:{message:String(e&&e.message||e)}}; }
     if(!r||!r.error||!HET_GIO.test(r.error.message||"")) break;
     await new Promise(s=>setTimeout(s,700));     // het gio -> nghi mot nhip roi thu lai dung 1 lan
@@ -1027,7 +1051,7 @@ async function render(){
   const scLoc=(suCo||[]).filter(r=>hopCP(r.campus));
   const _thMS=homNay.slice(0,7);                                  // "YYYY-MM" thang hien hanh
   const _trongThang=r=>String(r.ngay_tao||"").slice(0,7)===_thMS;
-  const scConMo=r=>r.con_mo===true&&!/đóng|hoàn tất|hoàn thành|closed|resolved/i.test(String(r.trang_thai||""));
+  const scConMo=r=>r.con_mo===true&&!r.ngay_dong&&!/đóng|hoàn tất|hoàn thành|closed|resolved/i.test(String(r.trang_thai||""));
   const scCanRaSoat=r=>r.he_trong===true||/khẩn cấp|khẩn|critical|urgent/i.test(String(r.muc_do||""));
   const scMoTatCa=scLoc.filter(scConMo);                      // dang mo, moi thoi gian
   const scMo=scMoTatCa.filter(_trongThang);                      // dang mo, TAO trong thang hien hanh
@@ -1057,7 +1081,9 @@ async function render(){
   const scMoHo = scLoc.filter(r=>bat(r.tieu_de).length===0);
   const scDemTC = Object.keys(TC_NT).map(k=>[k, scLoc.filter(r=>bat(r.tieu_de).indexOf(k)>=0).length]);
 
-  const scCard = !scLoc.length ? "" :
+  const scCard = KQ[TEN_NGUON.indexOf("v_su_co")]?.error
+    ? '<div class="card"><h2>An toàn &amp; sự cố</h2><p class="note">Chưa đọc đủ dữ liệu sự cố Tomia. Bấm Tải lại số để thử lại.</p></div>'
+    : !scLoc.length ? "" :
    '<div class="card" style="border-color:#7f1d1d"><h2>🚨 An toàn &amp; sự cố</h2>'
    +'<p class="sub">Từ Tomia · '+nhanCP+' · ticket vận hành, hành vi, an toàn, sức khoẻ</p>'
    +'<p class="leg" style="margin-top:-6px">⏱ Chỉ đếm ticket <b>đang mở, tạo trong tháng '+_thMS+'</b> (tháng hiện hành). Các sự cố cũ cần rà soát được liệt kê riêng bên dưới.</p>'
