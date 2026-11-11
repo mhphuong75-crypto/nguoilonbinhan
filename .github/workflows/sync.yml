@@ -22,9 +22,8 @@ jobs:
       - run: pip install google-auth requests openpyxl
 
       - name: Boc file Tomia trong kho
-        continue-on-error: true
-        timeout-minutes: 10
-        run: python scripts/tomia.py
+        timeout-minutes: 30
+        run: python -u scripts/tomia.py
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
