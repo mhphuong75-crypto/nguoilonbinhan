@@ -44,10 +44,29 @@ def ghi(bang, dong, xung_dot):
 
 
 def danh_sach_tep():
-    out = goi(f"{SB_URL}/storage/v1/object/list/{BUCKET}", "POST",
-              {"prefix": PREFIX, "limit": 200,
-               "sortBy": {"column": "created_at", "order": "asc"}})
-    return [PREFIX + o["name"] for o in json.loads(out) if o.get("name", "").endswith(".xlsx")]
+    files = []
+    offset = 0
+    seen = set()
+    while True:
+        page = json.loads(goi(f"{SB_URL}/storage/v1/object/list/{BUCKET}", "POST",
+                              {"prefix": PREFIX, "limit": 200, "offset": offset,
+                               "sortBy": {"column": "name", "order": "asc"}}))
+        if not isinstance(page, list):
+            raise ValueError("Khong doc duoc danh sach tep Tomia")
+        for item in page:
+            name = item.get("name", "")
+            if name in seen:
+                raise ValueError("Danh sach tep Tomia bi lap trang")
+            seen.add(name)
+            if name.endswith(".xlsx"):
+                files.append(item)
+        if len(page) < 200:
+            break
+        offset += len(page)
+    files.sort(key=lambda item: (item.get("updated_at") or item.get("created_at") or "", item["name"]))
+    return [{"path": PREFIX + item["name"],
+             "captured_on": (item.get("updated_at") or item.get("created_at") or "")[:10]}
+            for item in files]
 
 
 def nam_tu_ten(ten):
@@ -254,13 +273,23 @@ def boc_ticket(ws):
     rows = [list(r) for r in ws.iter_rows(values_only=True)]
     i, td = tim_tieu_de(rows, "Mã ticket")
     if i is None:
-        return []
+        raise ValueError("Sheet su co thieu tieu de Ma ticket")
     m = cot_map(td)
+    required = {"mã ticket", "ngày tạo", "mã trường", "trạng thái", "tiêu đề", "mức độ"}
+    missing = required - m.keys()
+    if missing:
+        raise ValueError("Sheet su co thieu cot: " + ", ".join(sorted(missing)))
     out, thay = [], set()
     for r in rows[i + 1:]:
         ma = chu(lay(r, m, "mã ticket"), 60)
-        if not ma or ma in thay:
+        if not ma:
             continue
+        if ma in thay:
+            raise ValueError("Sheet su co trung ma ticket: " + ma)
+        if not chu(lay(r, m, "trạng thái"), 40) or not chu(lay(r, m, "mã trường"), 40):
+            raise ValueError("Su co thieu trang thai/ma truong: " + ma)
+        if not ngay_tu(lay(r, m, "ngày tạo")):
+            raise ValueError("Su co thieu ngay tao hop le: " + ma)
         thay.add(ma)
         out.append({"ma_ticket": ma,
                     "ngay_tao": ngay_tu(lay(r, m, "ngày tạo")),
@@ -315,10 +344,19 @@ def main():
     teps = danh_sach_tep()
     print(f"Tim thay {len(teps)} tep Tomia")
     tong = {}
-    for ten in teps:
+    errors = []
+    tickets = {}
+    captured_on = {}
+    for tep in teps:
+        ten = tep["path"]
         try:
             noi_dung = goi(f"{SB_URL}/storage/v1/object/{BUCKET}/{ten}", raw=True)
             wb = openpyxl.load_workbook(io.BytesIO(noi_dung), read_only=True, data_only=True)
+            missing_sheets = [number for number in ("05", "06")
+                              if not any(name.startswith(number) for name in wb.sheetnames)]
+            if missing_sheets:
+                wb.close()
+                raise ValueError("Bao cao Tomia thieu sheet su co: " + ", ".join(missing_sheets))
             for so_hieu, moc, ham, bang, xd in BOC:
                 ten_sheet = next((s for s in wb.sheetnames
                                   if s.startswith(so_hieu) or moc.lower() in s.lower()), None)
@@ -327,12 +365,42 @@ def main():
                 ws = wb[ten_sheet]
                 dong = boc_tong_quan(ws, ten) if ham is None else ham(ws)
                 if dong:
+                    if bang == "tomia_ticket":
+                        for row in dong:
+                            tickets[row["ma_ticket"]] = row
+                            captured_on[row["ma_ticket"]] = tep["captured_on"]
+                        continue
                     ghi(bang, dong, xd)
                     tong[bang] = tong.get(bang, 0) + len(dong)
             wb.close()
             print(f"  {ten}: xong")
         except Exception as e:
             print(f"  {ten}: LOI {type(e).__name__} {e}")
+            errors.append(ten)
+    if tickets:
+        existing = {}
+        offset = 0
+        while True:
+            page = json.loads(goi(f"{SB_URL}/rest/v1/tomia_ticket?select=ma_ticket,trang_thai,ngay_cap_nhat,ngay_dong"
+                                  f"&ngay_cap_nhat=not.is.null&order=ma_ticket&limit=1000&offset={offset}"))
+            if not isinstance(page, list):
+                raise ValueError("Khong doc duoc trang thai su co de doi soat")
+            existing.update({row["ma_ticket"]: row for row in page})
+            if len(page) < 1000:
+                break
+            offset += len(page)
+        accepted = []
+        for code, row in tickets.items():
+            old = existing.get(code)
+            was_closed = old and (old["ngay_dong"] or "đóng" in (old["trang_thai"] or "").lower())
+            is_closed = row["ngay_dong"] or "đóng" in (row["trang_thai"] or "").lower()
+            source_day = row["ngay_cap_nhat"] or captured_on[code]
+            if was_closed and not is_closed and source_day <= old["ngay_cap_nhat"]:
+                print(f"  {code}: giu trang thai da doi soat; snapshot cu khong du can cu mo lai")
+                continue
+            accepted.append(row)
+        ghi("tomia_ticket", accepted, "ma_ticket")
+        tong["tomia_ticket"] = len(accepted)
     for k, v in tong.items():
         print(f"Ghi {v} dong vao {k}")
 
@@ -340,7 +408,10 @@ def main():
         print("Don kho:", goi(f"{SB_URL}/rest/v1/rpc/don_kho", "POST", {}))
     except Exception as e:
         print(f"Don kho: LOI {type(e).__name__} {e}")
+    if errors:
+        raise RuntimeError(f"{len(errors)} tep Tomia chua nhap day du; xem cac dong LOI")
 
 
 if __name__ == "__main__":
     main()
+
