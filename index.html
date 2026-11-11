@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-11 · b89-doc-du-su-co-tomia";
+const BUILD="2026-11-11 · b90-lam-moi-toi-da-3-lan";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -514,8 +514,28 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
-  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm","amis_opportunity (mốc riêng)","amis_ph_ketnoi_ky","amis_doi_tac_ky"];
+  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm","amis_opportunity (mốc riêng)","amis_ph_ketnoi_ky","amis_doi_tac_ky","tomia_refresh_status"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
+function thongBaoLamMoiTomia(result) {
+  if (result?.error) return '<p class="note">Chưa đọc được trạng thái làm mới bảng tổng hợp.</p>';
+  const row = result?.data?.[0];
+  if (!row) return "";
+  let details;
+  try { details = JSON.parse(row.message || "{}"); }
+  catch { return '<p class="note">Chưa xác định được trạng thái làm mới bảng tổng hợp.</p>'; }
+  if (row.source === "tomia_refresh_request") {
+    return '<p class="note">Đang chờ làm mới bảng tổng hợp. Tối đa 3 lần, cách nhau 5 phút.</p>';
+  }
+  if (row.status === "ok") {
+    const stamp = new Date(row.run_at);
+    const at = Number.isFinite(+stamp) ? stamp.toLocaleString("vi-VN", {timeZone:"Asia/Ho_Chi_Minh"}) : "";
+    return '<p class="leg">Bảng tổng hợp đã làm mới thành công'+(at?' · '+at:'')+'.</p>';
+  }
+  return Number(details.attempt) >= 3
+    ? '<p class="note">Làm mới bảng tổng hợp đã dừng sau 3 lần chưa thành công. Cần kiểm tra nhật ký xử lý.</p>'
+    : '<p class="note">Làm mới bảng tổng hợp chưa thành công. Hệ thống thử lại sau 5 phút, tối đa 3 lần.</p>';
+}
+
 async function docSuCoTomia() {
   const rows = [], seen = new Set();
   let expected = null;
@@ -587,7 +607,8 @@ function taoTruyVan(CP){ return [
     null, // nguồn nhập học tải có kiểm tra phân trang trong bocMot, không gọi sớm
     null, // metadata riêng của nguồn Tuyển sinh AMIS
     sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_ph_ketnoi_ky").order("ts",{ascending:false}).limit(1),
-    sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_doi_tac_ky").order("ts",{ascending:false}).limit(1)
+    sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_doi_tac_ky").order("ts",{ascending:false}).limit(1),
+    sb.from("ingest_run").select("source,status,message,run_at").in("source",["tomia_refresh_request","tomia_refresh_retry"]).order("run_id",{ascending:false}).limit(1)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -1086,6 +1107,7 @@ async function render(){
     : !scLoc.length ? "" :
    '<div class="card" style="border-color:#7f1d1d"><h2>🚨 An toàn &amp; sự cố</h2>'
    +'<p class="sub">Từ Tomia · '+nhanCP+' · ticket vận hành, hành vi, an toàn, sức khoẻ</p>'
+   +thongBaoLamMoiTomia(KQ[TEN_NGUON.indexOf("tomia_refresh_status")])
    +'<p class="leg" style="margin-top:-6px">⏱ Chỉ đếm ticket <b>đang mở, tạo trong tháng '+_thMS+'</b> (tháng hiện hành). Các sự cố cũ cần rà soát được liệt kê riêng bên dưới.</p>'
    +'<div class="kpis">'
    +kpi("Còn mở (tháng này)",fmt(scMo.length),"","tạo trong tháng "+_thMS+", chưa đóng")
