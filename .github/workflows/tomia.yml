@@ -34,11 +34,11 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      - name: Lam moi bao cao
-        if: always()
+      - name: Xep hang lam moi bao cao (toi da 3 lan)
+        if: success()
         timeout-minutes: 12
         run: |
-          curl --fail-with-body -sS -X POST "${SUPABASE_URL}/rest/v1/rpc/lam_moi_kho" \
+          curl --fail-with-body -sS -X POST "${SUPABASE_URL}/rest/v1/rpc/nlba_request_tomia_refresh" \
             -H "apikey: ${SUPABASE_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_KEY}" \
             -H "Content-Type: application/json" \
