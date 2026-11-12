@@ -159,7 +159,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-11 · b90-lam-moi-toi-da-3-lan";
+const BUILD="2026-11-12 · b91-su-co-trong-thang";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -536,6 +536,41 @@ function thongBaoLamMoiTomia(result) {
     : '<p class="note">Làm mới bảng tổng hợp chưa thành công. Hệ thống thử lại sau 5 phút, tối đa 3 lần.</p>';
 }
 
+async function ganTenTreSuCo(rows) {
+  const month = new Date(Date.now() + 7 * 3600000).toISOString().slice(0,7);
+  const current = rows.filter(r=>String(r.ngay_tao||"").slice(0,7)===month);
+  const names = new Map();
+  try {
+    const ids = current.map(r=>r.ma_ticket);
+    for (let start=0; start<ids.length; start+=200) {
+      let expected=null, loaded=0;
+      const seen=new Set();
+      for (let page=0; page<100; page++) {
+        const result=await sb.from("tomia_ticket_tre").select("ma_ticket,ma_tre,ten_tre",{count:"exact"})
+          .in("ma_ticket",ids.slice(start,start+200))
+          .order("ma_ticket",{ascending:true}).order("ma_tre",{ascending:true})
+          .range(page*500,page*500+499);
+        if(result.error) throw result.error;
+        if(!Array.isArray(result.data)||!Number.isInteger(result.count)||(expected!==null&&expected!==result.count)) throw Error("Chưa đọc đủ tên trẻ");
+        expected=result.count;
+        for(const child of result.data) {
+          const key=child.ma_ticket+"|"+child.ma_tre;
+          if(seen.has(key)) throw Error("Dữ liệu tên trẻ bị lặp trang");
+          seen.add(key);loaded++;
+          const name=String(child.ten_tre||"").trim();
+          if(name) {if(!names.has(child.ma_ticket))names.set(child.ma_ticket,new Set());names.get(child.ma_ticket).add(name);}
+        }
+        if(loaded===expected) break;
+        if(!result.data.length||loaded>expected||page===99) throw Error("Chưa đọc hết tên trẻ");
+      }
+    }
+    for(const row of current) row.ten_tre=[...(names.get(row.ma_ticket)||[])];
+  } catch(error) {
+    for(const row of current) {row.ten_tre=[];row.ten_tre_error=true;}
+  }
+  return {data:rows,error:null};
+}
+
 async function docSuCoTomia() {
   const rows = [], seen = new Set();
   let expected = null;
@@ -554,7 +589,7 @@ async function docSuCoTomia() {
       seen.add(row.ma_ticket);
       rows.push(row);
     }
-    if (rows.length === expected) return {data:rows,error:null};
+    if (rows.length === expected) return await ganTenTreSuCo(rows);
     if (!result.data.length || rows.length > expected) throw Error("Nguồn sự cố Tomia trả thiếu dữ liệu.");
   }
   throw Error("Chưa đọc hết nguồn sự cố Tomia.");
@@ -1079,77 +1114,28 @@ async function render(){
   const scNang=scMo.filter(scCanRaSoat);
   const scChuaGiao=scMo.filter(r=>!r.nguoi_duoc_giao);
   const scTBngay=scMo.length?Math.round(scMo.reduce((a,r)=>a+(+r.so_ngay_mo||0),0)/scMo.length):0;
-  // an toan tre em (nguyen tac 1): su co nghiem trong CU (truoc thang nay) van dang mo -> KHONG giau
-  const scNangCu=scMoTatCa.filter(r=>scCanRaSoat(r)&&!_trongThang(r))
-    .sort((a,b)=>(+b.so_ngay_mo||0)-(+a.so_ngay_mo||0));
-  const scTheoCampus={}; scMo.forEach(r=>{const k=r.campus||"(chưa rõ)";
-    const o=scTheoCampus[k]||(scTheoCampus[k]={mo:0,nang:0,lau:0}); o.mo++; if(scCanRaSoat(r))o.nang++;
-    if((+r.so_ngay_mo||0)>30)o.lau++});
-  const scCampusRows=Object.entries(scTheoCampus).sort((a,b)=>b[1].nang-a[1].nang||b[1].mo-a[1].mo);
-  // ===== b18: 7 TIEU CHI "NGHIEM TRONG" DO PHUONG DINH NGHIA (14/09/2026) =====
-  // Doc tu TIEU DE ticket. Chi la GOI Y cho nguoi, khong phai ket luan cua may.
-  const TC_NT={
-   "Phụ huynh can thiệp":/phụ huynh|gia đình|khiếu nại|phản ánh|bức xúc/,
-   "Đi viện / nhập viện / cấp cứu":/nhập viện|bệnh viện|cấp cứu|đi viện|đi khám|khám bác/,
-   "Chảy máu, gãy tay chân":/chảy máu|ra máu|gãy|rạn xương|trật khớp|bó bột|khâu/,
-   "Khó thở, hô hấp":/khó thở|hô hấp|tím tái|viêm phổi|co giật|hen suyễn/,
-   "Tiêu chảy, đau bụng, nôn ói":/tiêu chảy|đi ngoài|đau bụng|nôn|ói|trớ/,
-   "Người tác động vào cơ thể":/đánh|cắn|cào|tát|đấm|véo|giật tóc|xô ngã|đẩy ngã/,
-   "Dị ứng nặng, uống thuốc gấp":/dị ứng|mề đay|mẩn|sưng phù|sốc phản vệ/
-  };
-  const bat=t=>{const x=String(t||"").toLowerCase(); return Object.keys(TC_NT).filter(k=>TC_NT[k].test(x));};
-  const scNghi = scMo.filter(r=>bat(r.tieu_de).length>0);
-  const scMoHo = scLoc.filter(r=>bat(r.tieu_de).length===0);
-  const scDemTC = Object.keys(TC_NT).map(k=>[k, scLoc.filter(r=>bat(r.tieu_de).indexOf(k)>=0).length]);
-
+  const scMucCao=r=>/cao|khẩn|critical|urgent|high/i.test(String(r.muc_do||""));
+  const scCanXuLy=[...scMo].sort((a,b)=>Number(scMucCao(b))-Number(scMucCao(a))||String(a.campus||"").localeCompare(String(b.campus||""),"vi")||String(a.ngay_tao||"").localeCompare(String(b.ngay_tao||"")));
   const scCard = KQ[TEN_NGUON.indexOf("v_su_co")]?.error
     ? '<div class="card"><h2>An toàn &amp; sự cố</h2><p class="note">Chưa đọc đủ dữ liệu sự cố Tomia. Bấm Tải lại số để thử lại.</p></div>'
-    : !scLoc.length ? "" :
-   '<div class="card" style="border-color:#7f1d1d"><h2>🚨 An toàn &amp; sự cố</h2>'
-   +'<p class="sub">Từ Tomia · '+nhanCP+' · ticket vận hành, hành vi, an toàn, sức khoẻ</p>'
-   +thongBaoLamMoiTomia(KQ[TEN_NGUON.indexOf("tomia_refresh_status")])
-   +'<p class="leg" style="margin-top:-6px">⏱ Chỉ đếm ticket <b>đang mở, tạo trong tháng '+_thMS+'</b> (tháng hiện hành). Các sự cố cũ cần rà soát được liệt kê riêng bên dưới.</p>'
-   +'<div class="kpis">'
-   +kpi("Còn mở (tháng này)",fmt(scMo.length),"","tạo trong tháng "+_thMS+", chưa đóng")
-   +kpi("Nghi nghiêm trọng",fmt(scNghi.length),"","khớp 7 tiêu chí — cần người xác nhận")
-   +kpi("Chưa giao cho ai",fmt(scChuaGiao.length),"","không có người được giao")
-   +kpi("Mở trung bình",fmt(scTBngay)+" ngày","","tính đến hôm nay")+"</div>"
-   +(scNangCu.length ? '<div style="margin:14px 0;padding:10px 12px;border:1px solid #7f1d1d;border-radius:8px;background:rgba(220,38,38,.08)">'
-     +'<p style="margin:0 0 4px;font-weight:700;color:#f87171">⚠️ '+fmt(scNangCu.length)+' sự cố cũ cần đối soát trạng thái với Tomia (trước tháng '+_thMS+')</p>'
-     +'<p class="leg" style="margin:0 0 8px">Danh sách dựa trên trạng thái trong kho NLBA. Cần đối chiếu lại từng mã với Tomia. Phạm vi gồm nhóm An toàn, Hành vi hoặc mức Cao, Khẩn cấp. Mức độ gốc được hiển thị theo từng thẻ.</p>'
-     +'<details><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">Xem danh sách</summary>'
-     +'<div class="tw"><table><thead><tr><th>Mã sự cố</th><th>Ngày tạo trong kho</th><th>Campus</th><th>Việc gì</th><th>Mức</th><th>Trạng thái trong kho</th><th>Ngày từ lúc tạo</th></tr></thead><tbody>'
-     +scNangCu.map(r=>'<tr><td>'+escNH(r.ma_ticket||"—")+'</td><td>'+(r.ngay_tao||"—")+'</td><td>'+nhan(r.campus)+'</td><td>'+(r.tieu_de||"—")+'</td><td>'+escNH(r.muc_do||"—")+'</td><td>'+escNH(r.trang_thai||"—")+'</td><td class="mono"><span class="down">'+fmt(r.so_ngay_mo)+' ngày</span></td></tr>').join("")
-     +'</tbody></table></div></details></div>' : "")
-   +(scNang.length ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">An toàn, Hành vi hoặc mức Cao/Khẩn cấp — đang ghi mở trong kho tháng này</p>'
-     +'<div class="tw"><table><thead><tr><th>Ngày</th><th>Campus</th><th>Việc gì</th><th>Loại</th><th>Mức</th><th>Trạng thái</th><th>Đã mở</th><th>Giao cho</th></tr></thead><tbody>'
-     +scNang.sort((a,b)=>(+b.so_ngay_mo||0)-(+a.so_ngay_mo||0)).map(r=>
-       '<tr style="background:rgba(220,38,38,.10)"><td>'+(r.ngay_tao||"—")+'</td><td>'+nhan(r.campus)+'</td><td>'+(r.tieu_de||"—")
-       +'</td><td>'+(r.phan_loai||"—")+'</td><td>'+(r.muc_do||"—")+'</td><td>'+(r.trang_thai||"—")
-       +'</td><td class="mono"><span class="down">'+fmt(r.so_ngay_mo)+' ngày</span></td><td>'
-       +(r.nguoi_duoc_giao||'<span style="color:#f87171">chưa giao</span>')+"</td></tr>").join("")
-     +"</tbody></table></div>" : '<p class="leg">Trong kho chưa có thẻ tháng này đang mở thuộc nhóm An toàn, Hành vi hoặc mức Cao/Khẩn cấp.</p>')
-   +(scCampusRows.length>1 ? '<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Ticket còn mở, theo campus</p>'
-     +'<div class="tw"><table><thead><tr><th>Campus</th><th>Còn mở</th><th>An toàn/Hành vi/Cao/Khẩn cấp</th><th>Mở quá 30 ngày</th></tr></thead><tbody>'
-     +scCampusRows.map(([k,v])=>"<tr><td>"+nhan(k)+'</td><td class="mono">'+fmt(v.mo)+'</td><td class="mono">'+(v.nang?'<span class="down">'+v.nang+"</span>":"0")
-       +'</td><td class="mono">'+fmt(v.lau)+"</td></tr>").join("")+"</tbody></table></div>" : "")
-   +'<p class="leg"><b>Tên người dưới tên campus</b> lấy từ hệ thống — '
-   +'<b>6 campus</b> là QLVH thật (ghi trong SUPA), <b>9 campus</b> có dấu <b>?</b> là <i>người ghi nhận nhiều nhất</i>, '
-   +'không phải người chịu trách nhiệm. Muốn đúng thì gán người phụ trách vào bảng <code>nguoi_phu_trach</code> — dấu ? sẽ mất.</p>'
-   +'<details style="margin-top:14px"><summary style="cursor:pointer;font-size:12.5px;color:var(--accent)">📋 Thế nào là một sự cố NGHIÊM TRỌNG — bảng định nghĩa</summary>'
-   +'<p class="leg" style="margin-top:8px">Bảy tiêu chí dưới đây là chuẩn chung của ME School. Ai tạo ticket cũng đọc chuẩn này, ai đọc báo cáo cũng đọc chuẩn này.</p>'
-   +'<div class="tw"><table><thead><tr><th>Nghiêm trọng khi có</th><th>Ticket khớp</th></tr></thead><tbody>'
-   +scDemTC.map(function(x){return "<tr><td>"+x[0]+'</td><td class="mono">'+(x[1]?x[1]:'<span style="opacity:.4">0</span>')+"</td></tr>";}).join("")
-   +'</tbody></table></div>'
-   +'<p class="leg"><b>Vì sao app KHÔNG tự bôi đỏ:</b> máy chỉ đọc được phần người ta viết trong tiêu đề. '
-   +'Hiện có <b class="down">'+fmt(scMoHo.length)+'/'+fmt(scLoc.length)+' ticket</b> mà tiêu đề không mô tả được chuyện gì xảy ra '
-   +'(ví dụ chỉ ghi tên bé, hoặc “Trẻ bị thương”). Nếu app tự gán nhãn, nó đang ngầm nói rằng số còn lại không nghiêm trọng — '
-   +'trong khi thật ra là <i>chưa ai viết đủ để biết</i>. Với an toàn trẻ em thì không được phép đoán.</p>'
-   +'<div class="q"><b>Việc nằm ngoài app:</b> chỗ đúng để áp bảy tiêu chí này là <b>lúc tạo ticket trong Tomia</b> — một ô bắt buộc chọn. '
-   +'Khi đó app chỉ việc đọc, không phải đoán. <b>Chủ: chưa giao · Hạn: chưa có</b></div></details>'
-   +'<div class="q"><b>Nguyên tắc thứ nhất:</b> an toàn trẻ em không đứng sau tăng trưởng. '
-   +'Một ticket mức Cao còn mở sau 48 giờ là một quyết định đã bị hoãn, không phải một việc đang chờ. '
-   +'Dòng nào ghi <i>chưa giao</i> — ai là người nhận nó trước khi hết ngày hôm nay?</div></div>';
+    : '<div class="card"><h2>🚨 An toàn &amp; sự cố cần xử lý trong tháng</h2>'
+    +'<p class="sub">Từ Tomia · '+escNH(nhanCP)+' · Tháng '+escNH(_thMS)+'</p>'
+    +thongBaoLamMoiTomia(KQ[TEN_NGUON.indexOf("tomia_refresh_status")])
+    +'<p class="leg">Chỉ hiển thị sự cố tạo trong tháng hiện tại, còn mở và chưa có ngày đóng. Bao gồm tất cả nhóm sự cố; mức độ và tình trạng lấy từ Tomia.</p>'
+    +'<div class="kpis">'
+    +kpi("Còn mở (tháng này)",fmt(scMo.length),"","tạo trong tháng "+_thMS+", chưa đóng")
+    +kpi("Mức Cao / Khẩn cấp",fmt(scMo.filter(scMucCao).length),"","theo mức độ ghi trên Tomia")
+    +kpi("Chưa có người phụ trách",fmt(scChuaGiao.length),"","chưa có người được chỉ định trên Tomia")
+    +kpi("Mở trung bình",fmt(scTBngay)+" ngày","","tính đến hôm nay")+'</div>'
+    +(scCanXuLy.some(r=>r.ten_tre_error)?'<p class="note">Chưa tải được danh sách tên trẻ. Các sự cố vẫn hiển thị đầy đủ; bấm Tải lại số để tải lại tên trẻ.</p>':'')
+    +(scCanXuLy.length?'<div class="tw" style="margin-top:16px"><table><thead><tr><th>Cơ sở</th><th>Tên trẻ</th><th>Tên sự cố</th><th>Mức độ nghiêm trọng</th><th>Tình trạng</th><th>Ngày tạo</th><th>Người phụ trách</th><th>Mã sự cố</th></tr></thead><tbody>'
+      +scCanXuLy.map(r=>'<tr><td>'+escNH(r.campus||"Chưa có cơ sở")+'</td><td>'
+        +(Array.isArray(r.ten_tre)&&r.ten_tre.length?r.ten_tre.map(escNH).join('<br>'):escNH(r.ten_tre_error?"Chưa tải được tên trẻ":"Chưa có tên trẻ liên kết trong Tomia"))
+        +'</td><td>'+escNH(r.tieu_de||"Chưa có tên sự cố")+'</td><td>'+escNH(r.muc_do||"Chưa ghi mức độ")
+        +'</td><td>'+escNH(r.trang_thai||"Chưa ghi tình trạng")+'</td><td>'+escNH(r.ngay_tao||"—")
+        +'</td><td>'+escNH(r.nguoi_duoc_giao||"Chưa có người phụ trách")+'</td><td>'+escNH(r.ma_ticket||"—")+'</td></tr>').join("")
+      +'</tbody></table></div>':'<p class="leg">Không có sự cố còn mở được ghi nhận trong tháng tại phạm vi đang xem.</p>')
+    +'</div>';
 
   // b68: nghỉ phép và lưu trữ được dựng thành hai bảng không giao nhau.
   const archiveCampusMap={};(finCampus||[]).forEach(r=>{if(r.campus_code&&r.campus_ten)archiveCampusMap[r.campus_code]=r.campus_ten});
