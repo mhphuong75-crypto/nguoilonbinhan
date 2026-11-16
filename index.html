@@ -163,7 +163,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-16 · b93-so-hanh-dong-ban-2";
+const BUILD="2026-11-16 · b94-an-toan-tom-tat-giao-viec";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2783,10 +2783,36 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
 .sohd-canh{color:var(--warn,#B7791F)}
 .sohd-nhan{border:2px solid var(--accent,#2E7D6B);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:14px;line-height:1.45}
 .sohd-toast{position:fixed;left:12px;right:12px;bottom:16px;max-width:560px;margin:0 auto;z-index:9999;background:#1F2A27;color:#fff;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45;display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.sohd-tt{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;font-size:13px;margin:4px 0 6px}
+.sohd-tt th:first-child,.sohd-tt td:first-child{width:34%}
+.sohd-tt td button{overflow-wrap:anywhere}
+.sohd-tt th{text-align:right;font-weight:600;color:var(--ink2);padding:6px 4px;border-bottom:1px solid var(--line);white-space:nowrap}
+.sohd-tt th:first-child{text-align:left}
+.sohd-tt td{text-align:right;padding:0 4px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.sohd-tt td:first-child{text-align:left;padding:0}
+.sohd-tt td button{border:0;background:transparent;padding:10px 4px;min-height:44px;font:inherit;font-size:13.5px;font-weight:600;color:var(--accent,#2E7D6B);text-align:left;cursor:pointer;width:100%}
+.sohd-tt .do{color:var(--crit,#A93126);font-weight:700}
+.sohd-grp{border-top:1px solid var(--line)}
+.sohd-grp>summary{list-style:none;cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13.5px;font-weight:700;color:var(--ink2)}
+.sohd-grp>summary::-webkit-details-marker{display:none}
+.sohd-grp>summary::after{content:"▾";margin-left:auto;color:var(--muted,#8A9894)}
+.sohd-grp:not([open])>summary::after{content:"▸"}
+.sohd-len{position:fixed;right:14px;bottom:84px;z-index:9998;width:48px;height:48px;border-radius:24px;background:var(--surface);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.18);font-size:20px;display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
+@media(max-width:620px){
+  /* b94: thanh trên cùng KHÔNG dính khi cuộn trên điện thoại (trước đây chiếm ~1/2 màn hình) */
+  header{position:static}
+  /* dòng "Số liệu lấy lúc…" xuống 1 dòng riêng, không còn bị ép thành cột hẹp cao 231 px */
+  .row:has(#che){flex-wrap:wrap;overflow-x:visible}
+  #che{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #tuoi{display:block;flex:1 1 100%;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sohd-tt th{white-space:normal}
+}
 .sohd-toast button{min-height:40px;padding:6px 12px;border-radius:10px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);font-weight:600;flex:none}
 </style>
 <script id="sohd-js">
-// ===== b93 · SỔ HÀNH ĐỘNG + TRƯỜNG HỢP CẦN XỬ LÝ — BẢN 2 =====
+// ===== b94 · SỔ HÀNH ĐỘNG + TRƯỜNG HỢP CẦN XỬ LÝ — BẢN 2.1 =====
+// b94: chia mức an toàn (24 giờ / dọn sổ), "Đã giao" ≠ "Đã nhận" + Nhận việc này, Vì sao nêu máy dựa vào đâu,
+//      bảng tóm tắt theo campus, nhóm gập khi nhiều trường hợp, thanh trên cùng không dính trên điện thoại.
 // Bản 2: Nhận việc 1 chạm · Xem chi tiết 4 bước (tình trạng thật → nguyên nhân → làm gì → ai làm, khi nào)
 //        · Một phần = đang làm dở (hạn mới) · Chưa làm được: 7 lý do · Đổi hạn/người · Hoàn tác trong 10 phút.
 // Khối riêng: chỉ ĐỌC/GHI bảng mới (v_lib_truong_hop, lib_goc, lib_hanh_dong, so_hanh_dong, v_so_hd_ket_luan, xac_minh_ca).
@@ -2794,12 +2820,17 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
 (function(){
   "use strict";
   if (typeof sb === "undefined") return;
-  const S = { th:null, goc:{}, hd:{}, hdTheoGoc:{}, so:[], kl:[], xm:[], coXM:false, email:"", loi:"", tat:false, dangTai:false, mo:{}, ct:{}, sua:{} };
+  const S = { th:null, goc:{}, hd:{}, hdTheoGoc:{}, so:[], kl:[], xm:[], coXM:false, coXN:false, email:"", loi:"", tat:false, dangTai:false, mo:{}, ct:{}, sua:{} };
   let dangVe = false;
   const CS = {TT:"Tân Thuận",HVT:"Hoàng Văn Thụ",TAD:"Thảo Điền",TD:"Tân Định",NTT:"Nguyễn Trọng Tuyển",HT:"Hồ Tây",KM:"Kim Mã",
     QTG:"Quốc Tử Giám",QA:"Quảng An",CC:"Củ Chi",MGB:"Green Bitis",PCT:"Phan Chu Trinh",VSIP:"VSIP Hải Phòng",VD:"Vườn Đào",LD:"Linh Đàm"};
   const VAI = ["Giám đốc cơ sở","Tư vấn tuyển sinh","Giáo viên chủ nhiệm","Quản lý chuyên môn","Trưởng nhóm vận hành","Giám đốc nhóm cơ sở","Khác"];
-  const NHOM = [["an_toan","An toàn trẻ em — xử lý trong 24 giờ"],["vang_som","Bé mới đi học, vắng nhiều buổi liền"],["coc_cho","Đã đặt cọc hơn 21 ngày, chưa đi học"]];
+  const NHOM = [["an_toan","An toàn trẻ em — xử lý trong 24 giờ"],["vang_som","Bé mới đi học, vắng nhiều buổi liền"],["coc_cho","Đã đặt cọc hơn 21 ngày, chưa đi học"],
+    ["an_toan_cu","Sự cố cũ chưa đóng trên Tomia — dọn trong tuần"]];
+  const nhomCa = r => (r.nhom_luat==="an_toan" && r.muc==="don_so") ? "an_toan_cu" : r.nhom_luat;
+  // Máy dựa vào đâu khi gợi ý nguyên nhân (đúng theo luật trong view v_lib_truong_hop)
+  const MAY_THAY = { "A1.1":"CRM chưa có ngày đi học dự kiến cho bé", "A1.2":"ngày đi học dự kiến đã qua mà bé chưa đi học",
+    "A2.1":"ngày đi học dự kiến còn xa", "A2.2":"ngày đi học dự kiến còn xa", "B1.1":"bé mới đi học đã vắng nhiều buổi liền" };
   const TT = {mo:"Đang mở",xong:"Đã xong",mot_phan:"Đang làm dở",chua_lam:"Chưa làm được",dung:"Đã dừng",het_han_tu_dong:"Hết hạn"};
   const MO = ["mo","mot_phan"];                                   // việc còn mở
   // Nguyên nhân người dùng được chọn khi "Không đúng" (chỉ mã có trong thư viện mới hiện)
@@ -2843,15 +2874,23 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
   const khoa = (loai,ma) => loai+"|"+ma;
   const cuaToi = r => { const m=S.email; return !!m && ((r.nguoi_nhan||"").toLowerCase()===m || (r.nguoi_tao||"").toLowerCase()===m); };
   const laMo = r => MO.indexOf(r.trang_thai)>=0;
+  const laGiao = r => !!r.nguoi_nhan && (r.nguoi_nhan||"").toLowerCase()!==(r.nguoi_tao||"").toLowerCase();
+  const choXacNhan = r => S.coXN && laMo(r) && laGiao(r) && !r.xac_nhan_luc;
+  const tenNguoi = e => esc(String(e||"").split("@")[0]);
   const pad = n => String(n).padStart(2,"0");
   const dtLocal = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
   function hanMacDinh(muc){ // hạn mặc định trong giờ làm việc (8:00–17:00), không bao giờ muộn hơn hạn gốc
-    const d=new Date(Date.now()+(muc==="24h"?24:muc==="hanh_dong"?48:72)*3600e3); d.setMinutes(0,0,0);
+    const d=new Date(Date.now()+(muc==="24h"?24:muc==="hanh_dong"?48:muc==="don_so"?120:72)*3600e3); d.setMinutes(0,0,0);
     if(d.getHours()>17) d.setHours(17);
     else if(d.getHours()<8){ d.setDate(d.getDate()-1); d.setHours(17); }
     if(d.getTime()<Date.now()+2*3600e3) d.setTime(Date.now()+(muc==="24h"?24:48)*3600e3 - (Date.now()%3600e3));
     return dtLocal(d); }
 
+  const COT_SO = "id,tao_luc,loai_ca,ma_ca,campus_code,hanh_dong_text,vai_tro_nhan,nguoi_nhan,nguoi_tao,han_luc,trang_thai,xong_luc,chi_so_do,cau_tra_loi_nguyen_van,ly_do_khong_lam,ma_goc_goi_y,ma_goc_xac_nhan,chan_doan_dung,nguyen_nhan_that,hanh_dong_chinh";
+  async function docSo(tu, coXN){ // b94: cột xác nhận nhận việc; nếu SQL bản 3 chưa chạy thì đọc như b93
+    const q = c => sb.from("so_hanh_dong").select(c).or("trang_thai.in.(mo,mot_phan),tao_luc.gte."+tu).order("han_luc",{ascending:true}).limit(1000);
+    if(coXN){ const r = await q(COT_SO+",xac_nhan_luc"); if(!(r && r.error && /xac_nhan_luc/.test(r.error.message||""))){ S.coXN = !r.error; return r; } }
+    S.coXN = false; return q(COT_SO); }
   async function tai(){
     if (S.dangTai || S.tat) return; S.dangTai=true;
     try{
@@ -2863,8 +2902,7 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
         sb.from("v_lib_truong_hop").select("*").order("thu_tu",{ascending:true}).order("so_ngay",{ascending:false}).limit(500),
         sb.from("lib_goc").select("ma,ten,du_lieu_quyet_dinh,loai_bang_chung,dau_hieu_bac_bo").limit(500),
         sb.from("lib_hanh_dong").select("ma,ma_goc,ten,co_che,owner_role,chi_so_dan,chi_so_tre,cua_so_do_ngay,cau_hoi_cho_nguoi").limit(500),
-        sb.from("so_hanh_dong").select("id,tao_luc,loai_ca,ma_ca,campus_code,hanh_dong_text,vai_tro_nhan,nguoi_nhan,nguoi_tao,han_luc,trang_thai,xong_luc,chi_so_do,cau_tra_loi_nguyen_van,ly_do_khong_lam,ma_goc_goi_y,ma_goc_xac_nhan,chan_doan_dung,nguyen_nhan_that,hanh_dong_chinh")
-          .or("trang_thai.in.(mo,mot_phan),tao_luc.gte."+tu).order("han_luc",{ascending:true}).limit(1000),
+        docSo(tu, true),
         sb.from("v_so_hd_ket_luan").select("*").limit(500),
         sb.from("xac_minh_ca").select("id,luc,nguoi,loai_ca,ma_ca,campus_code,ket_luan,ghi_chu").gte("luc",tu).order("luc",{ascending:false}).limit(1000)
       ]);
@@ -2895,10 +2933,19 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
   const DAU_VET = { coc_cho:"bé có tên trên điểm danh Tomia (trường hợp tự hết khỏi danh sách)",
     vang_som:"bé đi học lại trên điểm danh Tomia (trường hợp tự hết khỏi danh sách)",
     an_toan:"sự cố đã đóng trên Tomia hoặc đã có người được giao (trường hợp tự hết khỏi danh sách)" };
-  function hdAnToan(){ return {ma:null, ten:"Xác minh sự cố với lớp, giao người xử lý, rồi đóng trên Tomia", owner_role:"Giám đốc cơ sở",
-      co_che:"Luật cứng: an toàn trẻ em đứng trước mọi việc; sự cố không minh bạch làm phụ huynh mất niềm tin.", cau_hoi_cho_nguoi:null}; }
+  function hdAnToan(r){
+    const giao = r && r.nguoi_duoc_giao, cu = r && r.muc==="don_so";
+    const ten = cu ? (giao ? "Nhắc "+giao+" cập nhật và đóng sự cố trên Tomia" : "Kiểm lại sự cố cũ với lớp, rồi đóng trên Tomia")
+                   : (giao ? "Hỏi "+giao+" tình hình xử lý ngay hôm nay; đã xong thì đóng trên Tomia" : "Xác minh sự cố với lớp, giao người xử lý, rồi đóng trên Tomia");
+    return {ma:null, ten:ten, owner_role:"Giám đốc cơ sở",
+      co_che: cu ? "Sự cố cũ còn mở làm sổ sự cố sai; nếu thật sự chưa xử lý thì phải xử lý ngay." : "Luật cứng: an toàn trẻ em đứng trước mọi việc; sự cố không minh bạch làm phụ huynh mất niềm tin.",
+      cau_hoi_cho_nguoi:null}; }
+  function viSaoAnToan(r){
+    if(r.muc==="don_so") return "sự cố mức "+esc(r.muc_do||"Thấp")+" đã mở "+r.so_ngay+" ngày — nhiều khả năng đã xử lý nhưng chưa đóng trên Tomia. Dọn trong tuần để sổ sự cố đúng.";
+    if(r.muc_do==="Khẩn cấp"||r.muc_do==="Cao") return "sự cố mức "+esc(r.muc_do)+" còn mở — phải có người xác minh trong 24 giờ, trước mọi việc khác.";
+    return "sự cố còn mở phải có người xác minh trong 24 giờ, trước mọi việc khác."; }
   function hdTheoGoc(r, goc){
-    if(r.nhom_luat==="an_toan") return hdAnToan();
+    if(r.nhom_luat==="an_toan") return hdAnToan(r);
     if(goc && S.hdTheoGoc[goc]) return S.hdTheoGoc[goc];
     if(!goc && S.hd[r.ma_hanh_dong]) return S.hd[r.ma_hanh_dong];
     return null; }
@@ -2915,13 +2962,16 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
     const now=Date.now(), mo=laMo(r), tre = mo && new Date(r.han_luc).getTime()<now;
     const sua = S.sua[r.id];
     const conHoanTac = r.trang_thai==="mo" && (r.nguoi_tao||"").toLowerCase()===S.email && now-new Date(r.tao_luc).getTime()<10*60e3;
-    return '<div class="sohd-item" data-id="'+r.id+'"><div class="sohd-t">'+esc(r.hanh_dong_text)+'</div>'
+    const moiGiao = choXacNhan(r) && (r.nguoi_nhan||"").toLowerCase()===S.email;
+    return '<div class="sohd-item" data-id="'+r.id+'">'+(moiGiao?'<div class="sohd-s"><span class="sohd-pill cam">Mới được giao</span> bởi '+tenNguoi(r.nguoi_tao)+'</div>':'')
+      +'<div class="sohd-t">'+esc(r.hanh_dong_text)+'</div>'
       +'<div class="sohd-s">'+esc(tenCS(r.campus_code))+' · '+esc(r.vai_tro_nhan)+(r.nguoi_nhan?' ('+esc(r.nguoi_nhan)+')':'')
       +' · hạn <b'+(tre?' style="color:var(--crit,#A93126)"':'')+'>'+esc(gio(r.han_luc))+(tre?' — quá hạn':'')+'</b></div>'
       +'<div class="sohd-s"><span class="sohd-pill'+(r.trang_thai==="xong"?' xanh':r.trang_thai==="mot_phan"?' cam':'')+'">'+esc(TT[r.trang_thai]||r.trang_thai)+'</span>'
         +(lyDoHien(r)?' Lý do: '+lyDoHien(r):'')+'</div>'
       +(r.cau_tra_loi_nguyen_van?'<div class="sohd-s">Ghi chú: '+esc(r.cau_tra_loi_nguyen_van)+'</div>':'')
-      +(mo && cuaToi(r) ? '<div class="sohd-btns"><button class="primary" data-sohd="xong" data-id="'+r.id+'">Đã xong</button>'
+      +(mo && cuaToi(r) ? '<div class="sohd-btns">'+(moiGiao?'<button class="primary" data-sohd="xac_nhan" data-id="'+r.id+'">Nhận việc này</button>':'')
+            +'<button'+(moiGiao?'':' class="primary"')+' data-sohd="xong" data-id="'+r.id+'">Đã xong</button>'
             +'<button data-sohd="mot_phan" data-id="'+r.id+'">Một phần</button>'
             +'<button data-sohd="chua_lam" data-id="'+r.id+'">Chưa làm được</button>'
             +'<button data-sohd="doi" data-id="'+r.id+'">Đổi hạn hoặc người làm</button>'
@@ -2933,8 +2983,10 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
     const qua = mo.filter(r=>new Date(r.han_luc).getTime()<now);
     const homNay = mo.filter(r=>{const t=new Date(r.han_luc).getTime(); return t>=now && t<=cuoiNgay.getTime();});
     const xong14 = ds.filter(r=>r.trang_thai==="xong" && new Date(r.xong_luc||r.han_luc).getTime()>=now-14*864e5);
+    const moiGiao = mo.filter(r=>choXacNhan(r) && (r.nguoi_nhan||"").toLowerCase()===S.email);
     const tom = !ds.length ? '<span class="sohd-pill">chưa có việc nào</span>'
-      : (qua.length?'<span class="sohd-pill do">'+qua.length+' quá hạn</span>':'')
+      : (moiGiao.length?'<span class="sohd-pill cam">'+moiGiao.length+' mới được giao</span>':'')
+        +(qua.length?'<span class="sohd-pill do">'+qua.length+' quá hạn</span>':'')
         +(homNay.length?'<span class="sohd-pill cam">'+homNay.length+' đến hạn hôm nay</span>':'')
         +'<span class="sohd-pill">'+mo.length+' đang mở</span>'
         +(xong14.length?'<span class="sohd-pill xanh">'+xong14.length+' xong trong 14 ngày</span>':'');
@@ -3006,11 +3058,17 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
   // ---------- THẺ "TRƯỜNG HỢP CẦN XỬ LÝ" ----------
   function nhanMuc(r){
     if(r.muc==="24h") return '<span class="sohd-pill do">24 giờ</span>';
+    if(r.muc==="don_so") return '<span class="sohd-pill vien">Dọn sổ</span>';
     if(r.muc==="hanh_dong") return '<span class="sohd-pill cam">Cần làm</span>';
     return '<span class="sohd-pill">Chú ý</span>'; }
   function dongTrangThai(r, t){
-    if(t.mo) return '<div class="sohd-nhan"><b>Đã nhận</b>'+(cuaToi(t.mo)?' · việc của bạn':'')+' · '+esc(t.mo.vai_tro_nhan)+(t.mo.nguoi_nhan?' ('+esc(t.mo.nguoi_nhan)+')':'')
-      +' · hạn <b>'+esc(gio(t.mo.han_luc))+'</b>'+(t.mo.trang_thai==="mot_phan"?' · <span class="sohd-pill cam">đang làm dở</span>':'')+'<br>'+esc(t.mo.hanh_dong_text)+'</div>';
+    if(t.mo){
+      const cho = choXacNhan(t.mo), giao = laGiao(t.mo);
+      const dau = cho ? '<b>Đã giao cho '+esc(t.mo.nguoi_nhan)+'</b> · <span class="sohd-pill cam">chưa xác nhận</span>'
+        : (giao && !S.coXN ? '<b>Đã giao cho '+esc(t.mo.nguoi_nhan)+'</b>'
+        : '<b>Đã nhận</b>'+((t.mo.nguoi_nhan||"").toLowerCase()===S.email?' · việc của bạn':(t.mo.nguoi_nhan?' · '+esc(t.mo.nguoi_nhan):'')));
+      return '<div class="sohd-nhan">'+dau+' · '+esc(t.mo.vai_tro_nhan)+(giao?' · giao bởi '+tenNguoi(t.mo.nguoi_tao):'')
+        +' · hạn <b>'+esc(gio(t.mo.han_luc))+'</b>'+(t.mo.trang_thai==="mot_phan"?' · <span class="sohd-pill cam">đang làm dở</span>':'')+'<br>'+esc(t.mo.hanh_dong_text)+'</div>'; }
     let s="";
     if(t.cuoi && t.cuoi.trang_thai==="xong") s+='<div class="sohd-s">✅ Đã báo xong lúc '+esc(gio(t.cuoi.xong_luc||t.cuoi.tao_luc))+' — chờ số liệu mới xác nhận.</div>';
     if(t.cuoi && t.cuoi.trang_thai==="chua_lam") s+='<div class="sohd-s">Lần trước chưa làm được: '+(lyDoHien(t.cuoi)||esc(t.cuoi.cau_tra_loi_nguyen_van||""))+'.</div>';
@@ -3023,8 +3081,8 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
   function htmlCa(r){
     const k=khoa(r.loai_ca,r.ma_ca), t=trangThaiCa(r), moCT=!!S.ct[k];
     const goc=gocGoiY(r), g=goc?S.goc[goc]:null, hd=hdTheoGoc(r,null);
-    const viSao = r.nhom_luat==="an_toan" ? "sự cố còn mở phải có người xác minh trong 24 giờ, trước mọi việc khác."
-      : (g ? docHoa(g.ten)+" (gợi ý, chưa phải kết luận)" : "thư viện chưa có nguyên nhân cho trường hợp này");
+    const viSao = r.nhom_luat==="an_toan" ? viSaoAnToan(r)
+      : (g ? (MAY_THAY[goc]?'máy thấy '+esc(MAY_THAY[goc])+' → có thể do: ':'')+'<b>'+doc(g.ten)+'</b> (gợi ý, chưa phải kết luận)' : "thư viện chưa có nguyên nhân cho trường hợp này");
     const nhan = canNhan(t);
     return '<div class="sohd-item" data-k="'+esc(k)+'"><div class="sohd-t">'+nhanMuc(r)+' '+esc(r.ten_hien_thi||"(không tên)")+' · '+esc(tenCS(r.campus_code))+'</div>'
       +'<div class="sohd-s">'+esc(r.cau_bang_chung)+'</div>'
@@ -3056,11 +3114,15 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
     const daBao = c.xm && tt && c.xm!==tt[0][0];
     // Bước 2 — nguyên nhân
     let b2;
-    if(an) b2='<p class="sohd-l"><b>Luật cứng về an toàn:</b> sự cố còn mở phải có người xác minh trong 24 giờ. Không cần chọn nguyên nhân trước, việc đầu tiên là xác minh.</p>';
+    if(an) b2 = r.muc==="don_so"
+      ? '<p class="sohd-l"><b>Sự cố cũ:</b> '+viSaoAnToan(r)+'</p><p class="sohd-s">Nếu kiểm lại thấy sự cố thật sự chưa được xử lý, hãy xử lý ngay như sự cố mới.</p>'
+      : '<p class="sohd-l"><b>Luật cứng về an toàn:</b> '+viSaoAnToan(r)+' Không cần chọn nguyên nhân trước, việc đầu tiên là xác minh.</p>'
+        +(r.nguoi_duoc_giao?'<p class="sohd-s">Đã có người được giao: '+esc(r.nguoi_duoc_giao)+' — việc của bạn là hỏi tình hình và đóng sự cố khi xong.</p>':'');
     else{
       const g=S.goc[gocGoiY(r)]||{}, g2=r.ma_goc_khac?S.goc[r.ma_goc_khac]:null;
-      b2='<p class="sohd-l"><b>Máy gợi ý:</b> '+docHoa(g.ten||"chưa có trong thư viện")+(g2?' — <b>hoặc</b> '+doc(g2.ten):'')+'</p>'
-        +(g.du_lieu_quyet_dinh?'<p class="sohd-s">Căn cứ: '+doc(g.du_lieu_quyet_dinh)+'</p>':'')
+      b2=(MAY_THAY[gocGoiY(r)]?'<p class="sohd-l"><b>Máy thấy:</b> '+esc(MAY_THAY[gocGoiY(r)])+'.</p>':'')
+        +'<p class="sohd-l"><b>Máy gợi ý nguyên nhân:</b> '+docHoa(g.ten||"chưa có trong thư viện")+(g2?' — <b>hoặc</b> '+doc(g2.ten):'')+'</p>'
+        +(g.du_lieu_quyet_dinh?'<p class="sohd-s">Cách xác nhận (người hỏi, máy chưa kiểm được): '+doc(g.du_lieu_quyet_dinh)+'</p>':'')
         +'<div class="sohd-s" style="margin-top:8px"><b>Đúng với trường hợp này không?</b></div><div class="sohd-opts">'
         +opt("dung","co","Đúng",c.dung===true)+opt("dung","chua","Chưa chắc",c.dung===null)+opt("dung","khong","Không đúng, chọn nguyên nhân khác",c.dung===false)+'</div>';
       if(c.dung===false){
@@ -3072,14 +3134,14 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
     }
     // Bước 3 — làm gì
     const gocChon = an ? null : (c.dung===false ? (c.goc==="khac"?null:c.goc) : gocGoiY(r));
-    const hd = an ? hdAnToan() : (c.dung===false && c.goc==="khac" ? null : hdTheoGoc(r, gocChon));
+    const hd = an ? hdAnToan(r) : (c.dung===false && c.goc==="khac" ? null : hdTheoGoc(r, gocChon));
     let b3='';
     if(hd) b3+=opt("hd","thu_vien",vietDu(hd.ten),!c.hdKhac,"Người làm phù hợp: "+vietDu(hd.owner_role||"giám đốc cơ sở"))
       +(hd.cau_hoi_cho_nguoi?'<p class="sohd-l"><b>Câu hỏi gợi ý:</b> “'+doc(hd.cau_hoi_cho_nguoi)+'”</p>':'')
       +(hd.co_che?'<p class="sohd-s">Vì sao việc này có tác dụng: '+doc(hd.co_che)+'</p>':'');
     else b3+='<p class="sohd-s">Thư viện chưa có hành động cho nguyên nhân này — ghi việc bạn sẽ làm.</p>';
     b3+='<p class="sohd-s"><b>Biết là có tác dụng khi:</b> '+esc(DAU_VET[r.nhom_luat]||"trường hợp được giải quyết")+'.</p>';
-    if(an){ const ph=S.hd["H-B2.3"]; b3+=opt("baoPH","1",ph?vietDu(ph.ten):"Báo rõ với phụ huynh trong 24 giờ",c.baoPH,"Thêm nếu phụ huynh chưa được báo · thành 1 việc riêng trong sổ",true); }
+    if(an && r.muc!=="don_so"){ const ph=S.hd["H-B2.3"]; b3+=opt("baoPH","1",ph?vietDu(ph.ten):"Báo rõ với phụ huynh trong 24 giờ",c.baoPH,"Thêm nếu phụ huynh chưa được báo · thành 1 việc riêng trong sổ",true); }
     if(hd) b3+=opt("hdk","1","Tự ghi việc khác",c.hdKhac,"",true);
     if(c.hdKhac||!hd) b3+='<div class="sohd-f"><label>Việc sẽ làm<textarea rows="2" name="viec">'+esc(c.viec)+'</textarea></label></div>';
     // Bước 4 — ai làm, khi nào
@@ -3101,17 +3163,37 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
     const chips = appCP ? '<p class="sohd-s">Đang lọc theo campus chọn ở ô phía trên.</p>'
       : '<div class="sohd-chips"><button data-sohd="cs" data-cs=""'+(ds.length?'':' class="on"')+'>Tất cả</button>'
         +csCo.map(c=>'<button data-sohd="cs" data-cs="'+esc(c)+'"'+(ds.indexOf(c)>=0?' class="on"':'')+'>'+esc(tenCS(c))+'</button>').join("")+'</div>';
-    const nhom = NHOM.map(([m,ten])=>{ const rr=loc.filter(r=>r.nhom_luat===m); if(!rr.length) return "";
+    const gap = loc.length > 8;   // nhiều trường hợp (CEO, xem toàn hệ thống) → gập nhóm, xem bảng tóm tắt trước
+    const nhom = NHOM.map(([m,ten])=>{ const rr=loc.filter(r=>nhomCa(r)===m); if(!rr.length) return "";
       const chuaNhan=rr.filter(r=>canNhan(trangThaiCa(r))).length;
       const hien = S.mo["nh:"+m] ? rr : rr.slice(0,6);
-      return '<p class="sohd-nhom">'+esc(ten)+' — '+rr.length+(chuaNhan?' · <span style="color:var(--crit,#A93126)">'+chuaNhan+' chưa ai nhận</span>':'')+'</p>'+hien.map(htmlCa).join("")
-        +(rr.length>hien.length?'<div class="sohd-btns"><button data-sohd="them" data-nh="'+m+'">Xem thêm '+(rr.length-hien.length)+'</button></div>':''); }).join("");
+      const mo = (S.mo["g:"+m]!==undefined) ? S.mo["g:"+m] : !gap;
+      return '<details class="sohd-grp" data-nh="'+m+'"'+(mo?' open':'')+'><summary>'+esc(ten)+' — '+rr.length+(chuaNhan?' · <span style="color:var(--crit,#A93126)">'+chuaNhan+' chưa ai nhận</span>':'')+'</summary>'
+        +hien.map(htmlCa).join("")
+        +(rr.length>hien.length?'<div class="sohd-btns"><button data-sohd="them" data-nh="'+m+'">Xem thêm '+(rr.length-hien.length)+'</button></div>':'')+'</details>'; }).join("");
     return '<div class="card" id="sohd-th"><h2>Trường hợp cần xử lý</h2>'
       +'<p class="sub">Máy đọc số liệu → gợi ý nguyên nhân → gợi ý việc làm. <b>Nhận việc</b> để ghi vào sổ của bạn, hoặc <b>Xem chi tiết</b> để kiểm tình trạng thật, sửa nguyên nhân, đổi việc, giao cho người khác. Thư viện đang là bản nháp, chưa qua buổi duyệt.</p>'
       +chips
+      +htmlTomTat(loc)
       +(S.loi?'<p class="note">Chưa đọc đủ dữ liệu thư viện: '+esc(S.loi)+'</p>':'')
       +(nhom || '<p class="sohd-s">Không có trường hợp nào'+(ds.length?' ở campus đang chọn':'')+'. Máy đang xét 3 loại: sự cố nghiêm trọng còn mở, bé mới vắng 3 buổi liền trở lên, đặt cọc quá 21 ngày chưa đi học.</p>')
       +'</div>'; }
+
+  // ---------- BẢNG TÓM TẮT THEO CAMPUS (khi đang xem từ 2 campus trở lên) ----------
+  function htmlTomTat(loc){
+    const cs=[...new Set(loc.map(r=>r.campus_code))]; if(cs.length<2) return "";
+    const now=Date.now();
+    const dong = cs.map(c=>{ const rr=loc.filter(r=>r.campus_code===c); let chua=0, nhan=0, qua=0, gap24=0;
+      rr.forEach(r=>{ const t=trangThaiCa(r); if(canNhan(t)){ chua++; if(r.muc==="24h") gap24++; } if(t.mo){ nhan++; if(new Date(t.mo.han_luc).getTime()<now) qua++; } });
+      return {c, n:rr.length, chua, nhan, qua, gap24}; })
+      .sort((a,b)=>b.gap24-a.gap24 || b.chua-a.chua || b.n-a.n || tenCS(a.c).localeCompare(tenCS(b.c),"vi"));
+    const tong = k => dong.reduce((s,x)=>s+x[k],0);
+    return '<table class="sohd-tt"><caption class="sohd-s" style="text-align:left;caption-side:top;margin-bottom:2px">Tóm tắt theo campus — chạm tên campus để xem chi tiết. <span class="do">●</span> = có việc 24 giờ chưa ai nhận.</caption>'
+      +'<thead><tr><th scope="col">Campus</th><th scope="col">Cần xử lý</th><th scope="col">Chưa ai nhận</th><th scope="col">Đã nhận</th><th scope="col">Quá hạn</th></tr></thead><tbody>'
+      +dong.map(x=>'<tr><td><button data-sohd="cs1" data-cs="'+esc(x.c)+'">'+(x.gap24?'<span class="do" aria-label="có việc 24 giờ chưa ai nhận">● </span>':'')+esc(tenCS(x.c))+'</button></td>'
+        +'<td>'+x.n+'</td><td'+(x.chua?' class="do"':'')+'>'+x.chua+'</td><td>'+x.nhan+'</td><td'+(x.qua?' class="do"':'')+'>'+x.qua+'</td></tr>').join("")
+      +'<tr><td style="padding:10px 4px;font-weight:700">Tổng</td><td><b>'+tong("n")+'</b></td><td><b>'+tong("chua")+'</b></td><td><b>'+tong("nhan")+'</b></td><td><b>'+tong("qua")+'</b></td></tr>'
+      +'</tbody></table>'; }
 
   // ---------- THẺ "SỔ HÀNH ĐỘNG — 14 NGÀY" (chế độ ②) ----------
   function htmlKL(){
@@ -3143,7 +3225,7 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
   }
   let toastHen=null;
   function toast(html){ try{ let el=document.getElementById("sohd-toast"); if(!el){ el=document.createElement("div"); el.id="sohd-toast"; el.className="sohd-toast"; el.setAttribute("role","status"); document.body.appendChild(el); }
-    el.innerHTML=html; el.style.display="flex"; clearTimeout(toastHen); toastHen=setTimeout(()=>{ el.style.display="none"; },9000); }catch(e){} }
+    el.innerHTML=html; el.style.display="flex"; clearTimeout(toastHen); toastHen=setTimeout(()=>{ el.style.display="none"; },6000); }catch(e){} }
   function dongMoi(r, o){
     const snap=Object.assign({luc:new Date().toISOString()},r); delete snap.ten_hien_thi;   // sổ chỉ giữ MÃ, không giữ tên trẻ
     return Object.assign({ loai_ca:r.loai_ca, ma_ca:r.ma_ca, campus_code:r.campus_code||"?", chang_phieu:r.chang_phieu||null,
@@ -3170,7 +3252,7 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
     const gocChon = an ? null : (c.dung===false ? (c.goc==="khac"?null:c.goc) : gocGoiY(r));
     if(!an && c.dung===false && !c.goc) return loi("Chọn nguyên nhân đúng hơn ở bước 2 (hoặc chọn “Chưa chắc”).");
     if(!an && c.dung===false && c.goc==="khac" && !(c.gocKhac||"").trim()) return loi("Ghi nguyên nhân bạn thấy ở bước 2.");
-    const hd = an ? hdAnToan() : (c.dung===false && c.goc==="khac" ? null : hdTheoGoc(r, gocChon));
+    const hd = an ? hdAnToan(r) : (c.dung===false && c.goc==="khac" ? null : hdTheoGoc(r, gocChon));
     const viec = (c.hdKhac||!hd) ? (c.viec||"").trim() : hoa(vietDu(hd.ten));
     if(!viec) return loi("Ghi việc sẽ làm ở bước 3.");
     const nguoi=(c.nguoi||"").trim().toLowerCase();
@@ -3185,7 +3267,7 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
       hanh_dong_text: viec.slice(0,1000), vai_tro_nhan: c.vai||"Giám đốc cơ sở", nguoi_nhan: nguoi||null,
       han_luc: hanD.toISOString(), chi_so_do: DAU_VET[r.nhom_luat]||"Trường hợp được giải quyết", muc_dich: hd&&hd.co_che||null });
     const rows=[chinh];
-    if(an && c.baoPH){ const ph=S.hd["H-B2.3"];
+    if(an && c.baoPH && r.muc!=="don_so"){ const ph=S.hd["H-B2.3"];
       rows.push(dongMoi(r,{ ma_hanh_dong:ph?"H-B2.3":null, hanh_dong_text:ph?hoa(vietDu(ph.ten)):"Báo rõ với phụ huynh trong 24 giờ",
         vai_tro_nhan:c.vai||"Giám đốc cơ sở", nguoi_nhan:nguoi||null, han_luc:hanD.toISOString(), chi_so_do:"Đã báo phụ huynh (người làm đánh dấu)", hanh_dong_chinh:false })); }
     const res=await sb.from("so_hanh_dong").insert(rows).select("id");
@@ -3222,6 +3304,10 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
         else if(cn){ const ii=cn.dataset.cn, st=S.sua[ii]; if(!st) return; docForm(cn,st); st[nhom]=v; const sl=document.querySelector('[data-slot="'+ii+'"]'); if(sl) sl.innerHTML=htmlCapNhat(ii,st); } }
       else if(a==="luu"){ await luuCT(k,b); }
       else if(a==="gui_xm"){ await guiXM(k,b); }
+      else if(a==="xac_nhan"){ b.disabled=true; const res=await sb.from("so_hanh_dong").update({xac_nhan_luc:new Date().toISOString()}).eq("id",+id).select("id");
+        if(res.error||!res.data||!res.data.length){ b.disabled=false; toast('<span style="flex:1">Chưa nhận được: '+esc(res.error?res.error.message:"không có quyền")+'</span>'); return; }
+        ghiDau("so_hd_xac_nhan","1"); toast('<span style="flex:1">Đã nhận việc. Người giao sẽ thấy “Đã nhận”.</span>'); S.mo.bar=true; await tai(); }
+      else if(a==="cs1"){ luuCS([b.dataset.cs]); ghiDau("so_hd_tom_tat_cs", b.dataset.cs); ve(); const th=document.getElementById("sohd-th"); if(th) th.scrollIntoView({block:"start"}); }
       else if(a==="cs"){ const c=b.dataset.cs; let ds=chonCS(); ds = !c ? [] : (ds.indexOf(c)>=0 ? ds.filter(x=>x!==c) : ds.concat([c])); luuCS(ds); ve(); }
       else if(a==="them"){ S.mo["nh:"+b.dataset.nh]=true; ve(); }
       else if(["xong","mot_phan","chua_lam","doi","hoan_tac"].indexOf(a)>=0){ S.mo.bar=true; S.sua[id]={loai:a}; const sl=document.querySelector('[data-slot="'+id+'"]'); if(sl) sl.innerHTML=htmlCapNhat(id,S.sua[id]); }
@@ -3238,6 +3324,16 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
       if(i.name==="nguoi"){ const kk=ct.dataset.ct, bt=ct.querySelector('[data-sohd="luu"]'); if(bt) bt.textContent=(i.value.trim()&&i.value.trim().toLowerCase()!==S.email)?"Giao việc":"Nhận việc"; } }
       const cn=i.closest&&i.closest("[data-cn]"); if(cn&&S.sua[cn.dataset.cn]) S.sua[cn.dataset.cn][i.name]=i.value; }catch(_){} }, true);
   document.addEventListener("toggle", e=>{ if(e.target&&e.target.id==="sohd-bar") S.mo.bar=e.target.open; }, true);
+  // nhớ nhóm người dùng tự mở/gập (bấm vào tiêu đề nhóm), không nhớ trạng thái mặc định
+  document.addEventListener("click", e=>{ try{ const sm=e.target.closest&&e.target.closest(".sohd-grp > summary"); if(!sm) return;
+    const d=sm.parentElement; S.mo["g:"+d.dataset.nh]=!d.open; }catch(_){} }, true);
+  // b94: nút "lên đầu trang" trên điện thoại (thanh trên cùng không còn dính khi cuộn)
+  try{ const len=document.createElement("button"); len.className="sohd-len"; len.id="sohd-len"; len.type="button";
+    len.setAttribute("aria-label","Lên đầu trang: đổi chế độ, campus"); len.textContent="↑"; document.body.appendChild(len);
+    len.addEventListener("click",()=>window.scrollTo({top:0,behavior:"smooth"}));
+    const mq=window.matchMedia("(max-width:620px)");
+    const capNhat=()=>{ len.style.display = (mq.matches && window.scrollY>600) ? "flex" : "none"; };
+    window.addEventListener("scroll",capNhat,{passive:true}); capNhat(); }catch(e){}
 
   // App dựng lại #body mỗi khi đổi campus/khoảng thời gian → gắn lại khối này (không gọi lại máy chủ)
   const theoDoi = () => {
