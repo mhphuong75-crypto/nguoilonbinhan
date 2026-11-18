@@ -163,7 +163,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-18 · b95-nhan-su";
+const BUILD="2026-11-18 · b96-hr-nguon";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2517,7 +2517,7 @@ async function render(){
     const choices=Array.from({length:18},(_,i)=>{const d=new Date(_now.getFullYear(),_now.getMonth()-i,1);const v=mStr(d.getFullYear(),d.getMonth()+1);return '<option'+(v===st.month?' selected':'')+'>'+v+'</option>';}).join('');
     const controls='<div class="row"><label>Tháng chốt <select aria-label="Tháng chốt nhân sự" onchange="window.nlbaHRChange(\'month\',this.value)">'+choices+'</select></label><label>Khoảng xem <select aria-label="Khoảng xem nhân sự" onchange="window.nlbaHRChange(\'span\',this.value)">'+[1,2,3].map(n=>'<option value="'+n+'"'+(n==st.span?' selected':'')+'>'+n+' tháng</option>').join('')+'</select></label><label>Cơ sở <select aria-label="Cơ sở nhân sự" onchange="window.nlbaHRChange(\'campus\',this.value)"><option value="">15 cơ sở</option>'+hrCatalog.map(c=>'<option value="'+c.code+'"'+(c.code===st.campus?' selected':'')+'>'+E(c.ten)+'</option>').join('')+'</select></label></div>';
     let out=card('Nhân sự · 15 cơ sở','Kỳ '+months[Number(st.span)-1]+' đến '+st.month+' · Nguồn AMIS cập nhật: '+hrLuc,
-      controls+'<p class="note">Dấu — là chưa đủ dữ liệu. Tuyển mới hiện chỉ có ngày bắt đầu của người đang làm; chưa bao gồm người vào rồi nghỉ trong kỳ. Số nghỉ là hồ sơ nhận được, chưa xác nhận độ phủ lịch sử. Không dùng quân số hiện tại làm mẫu số tỷ lệ nghỉ của tháng trước.</p>'
+      controls+((activeError||exitError)?'<p class="note" role="alert"><b>Không đọc được nguồn nhân sự.</b> Lỗi nguồn đang làm: '+E(KQ[33]?.error?.message||'Không')+'; nguồn nghỉ việc: '+E(KQ[34]?.error?.message||'Không')+'. Chưa thể kết luận dữ liệu bằng 0.</p>':(!hrA.length&&!hrN.length?'<p class="note" role="alert"><b>Chưa có dữ liệu AMIS Nhân sự trong NLBA.</b> Nguồn đang làm và nghỉ việc đều chưa có dòng dữ liệu. Màn hình AMIS và NLBA là hai nguồn riêng: đọc được trên AMIS chưa có nghĩa đã đồng bộ sang NLBA. Cần hoàn tất lần đồng bộ HR đầu tiên; bấm Tải lại số không tự lấy dữ liệu từ AMIS.</p>':''))+'<p class="note">Dấu — là chưa đủ dữ liệu. Tuyển mới hiện chỉ có ngày bắt đầu của người đang làm; chưa bao gồm người vào rồi nghỉ trong kỳ. Số nghỉ là hồ sơ nhận được, chưa xác nhận độ phủ lịch sử. Không dùng quân số hiện tại làm mẫu số tỷ lệ nghỉ của tháng trước.</p>'
       +'<div class="kpis">'+kpi('Vào làm còn trong danh sách',activeError||!hrA.length?'—':fmt(count(starts,'ngay_bat_dau',period)),'','Chưa phải tổng tuyển mới')+kpi('Hồ sơ nghỉ trong kỳ',exitError||!hrN.length?'—':fmt(periodExits.length),'','Theo ngày nghỉ có hiệu lực')+kpi('Nghỉ chưa phân loại',exitError||!hrN.length?'—':fmt(periodExits.filter(r=>reason(r)==='Chưa phân loại').length),'','Cần HR xác nhận nhóm lý do')+kpi('Suất tuyển quá hạn','—','','Chưa nối nguồn tuyển dụng')+'</div>');
     out+=card('Cần xử lý trước','Ưu tiên bổ sung bằng chứng trước khi kết luận thừa/thiếu người hoặc báo động tài chính.',
       '<ul><li>Chưa có phân công giáo viên theo lớp/ca, hệ chương trình và lớp gộp: chưa xác định thiếu theo ca.</li><li>Chưa nối yêu cầu tuyển và ngày cần nhận việc: chưa tính tuyển quá hạn.</li><li>Chưa có ngưỡng lương/doanh thu được duyệt: chưa xác định thời điểm bắt đầu báo động.</li></ul>');
