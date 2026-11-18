@@ -163,7 +163,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-16 · b94-an-toan-tom-tat-giao-viec";
+const BUILD="2026-11-18 · b95-nhan-su";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -2495,14 +2495,62 @@ async function render(){
    +'Tài chính đang trễ (đến '+finLastLbl+'): để khớp tháng, cần kéo tài chính tháng mới vào <code>fin_campus_thang</code>.</p>'
    +'<div class="q"><b>Câu hỏi:</b> cơ sở nào <b>vừa lương/DT cao vừa turnover cao</b>? Đó là bẫy kép — chi phí nhân sự lớn mà người vẫn rời; chữa bằng giữ người (eNPS) hay bằng kéo sĩ số?</div></div>';
 
-  const nhanSuHTML = hcTong
-    ? (nhanSuTrongCard + nhanSuCDCard + nhanSuHDCard + nhanSuGVCard + nhanSuMaTranCard + nhanSuFinCard)
-    : ('<div class="card" style="border-left:4px solid var(--warn)"><h2>Nhân sự — chưa có dữ liệu, bấm "Kéo HR"</h2>'
-       +'<p class="sub">Pipeline đã sẵn sàng (bảng + view). Chỉ còn 1 bước: kéo dữ liệu HR từ AMIS về.</p>'
-       +'<p class="leg"><b>Cách làm (mỗi tháng 1 lần):</b> mở AMIS → <b>Thông tin nhân sự</b> → bấm dấu trang <b>Kéo HR</b> → chờ "KÉO HR XONG ✅" → tải lại app. '
-       +'Chưa cài dấu trang? Mở file <code>cai_keo_hr.html</code> tôi gửi, kéo nút "Kéo HR" lên thanh dấu trang.</p>'
-       +'<p class="leg">Khi có dữ liệu, tab này hiện: headcount theo cơ sở &amp; vị trí, vào/ra/turnover (tháng này + 3 tháng), GV so chuẩn trẻ/cô, và bảng HR×tài chính. '
-       +'Chỉ lấy trường an toàn — <b>không</b> có ngày sinh, SĐT, email, địa chỉ, lương cá nhân.</p></div>');
+  // b95: báo cáo HR theo tháng; chỉ dùng nguồn đã có, không suy diễn dữ liệu thiếu.
+  const hrCatalog=Object.entries(VUNG).filter(([k])=>k!=="HQ").map(([code])=>({code,ten:hrCampus(({TT:"Tân Thuận",TAD:"Thảo Điền",TD:"Tân Định",MGB:"Green Bitis",VSIP:"VSIP"})[code]||({HVT:"Hoàng Văn Thụ",NTT:"Nguyễn Trọng Tuyển",CC:"Củ Chi",PCT:"Phan Chu Trinh",HT:"Hồ Tây",KM:"Kim Mã",QTG:"Quốc Tử Giám",QA:"Quảng An",LD:"Linh Đàm",VD:"Vườn Đào"})[code])[1]}));
+  const hrState=window.nlbaHRState||(window.nlbaHRState={month:M0,span:3,campus:""});
+  function renderHRReport(){
+    const E=escNH, st=hrState;
+    const months=Array.from({length:3},(_,i)=>{const [y,m]=st.month.split('-').map(Number);const d=new Date(y,m-1-i,1);return mStr(d.getFullYear(),d.getMonth()+1);});
+    const activeError=!!KQ[33]?.error, exitError=!!KQ[34]?.error;
+    const mapped=r=>hrCampus(r.co_so)[0];
+    const scope=r=>mapped(r)!=="HQ"&&(!st.campus||mapped(r)===st.campus);
+    const active=hrA.filter(scope), exits=hrN.filter(scope);
+    // Không cộng hai nguồn tuyển mới khi chưa xác minh định danh và lịch sử.
+    const starts=active;
+    const count=(rows,field,period)=>rows.filter(r=>period.includes(ym(r[field]))).length;
+    const reason=r=>{const x=_lc(r.ly_do);return /tinh gọn|tinh gon|cắt giảm|cat giam/.test(x)?"Đơn vị / tinh gọn":/tự nguyện|tu nguyen|chủ động xin nghỉ|chu dong xin nghi/.test(x)?"Chủ động":"Chưa phân loại";};
+    const period=months.slice(0,Number(st.span));
+    const periodExits=exits.filter(r=>period.includes(ym(r.ngay_nghi)));
+    const cell=v=>'<td class="mono">'+E(v==null?'—':v)+'</td>';
+    const table=(headers,rows)=>'<div class="tw"><table><thead><tr>'+headers.map(h=>'<th>'+E(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
+    const card=(title,sub,body)=>'<section class="card"><h2>'+title+'</h2><p class="sub">'+sub+'</p>'+body+'</section>';
+    const choices=Array.from({length:18},(_,i)=>{const d=new Date(_now.getFullYear(),_now.getMonth()-i,1);const v=mStr(d.getFullYear(),d.getMonth()+1);return '<option'+(v===st.month?' selected':'')+'>'+v+'</option>';}).join('');
+    const controls='<div class="row"><label>Tháng chốt <select aria-label="Tháng chốt nhân sự" onchange="window.nlbaHRChange(\'month\',this.value)">'+choices+'</select></label><label>Khoảng xem <select aria-label="Khoảng xem nhân sự" onchange="window.nlbaHRChange(\'span\',this.value)">'+[1,2,3].map(n=>'<option value="'+n+'"'+(n==st.span?' selected':'')+'>'+n+' tháng</option>').join('')+'</select></label><label>Cơ sở <select aria-label="Cơ sở nhân sự" onchange="window.nlbaHRChange(\'campus\',this.value)"><option value="">15 cơ sở</option>'+hrCatalog.map(c=>'<option value="'+c.code+'"'+(c.code===st.campus?' selected':'')+'>'+E(c.ten)+'</option>').join('')+'</select></label></div>';
+    let out=card('Nhân sự · 15 cơ sở','Kỳ '+months[Number(st.span)-1]+' đến '+st.month+' · Nguồn AMIS cập nhật: '+hrLuc,
+      controls+'<p class="note">Dấu — là chưa đủ dữ liệu. Tuyển mới hiện chỉ có ngày bắt đầu của người đang làm; chưa bao gồm người vào rồi nghỉ trong kỳ. Số nghỉ là hồ sơ nhận được, chưa xác nhận độ phủ lịch sử. Không dùng quân số hiện tại làm mẫu số tỷ lệ nghỉ của tháng trước.</p>'
+      +'<div class="kpis">'+kpi('Vào làm còn trong danh sách',activeError||!hrA.length?'—':fmt(count(starts,'ngay_bat_dau',period)),'','Chưa phải tổng tuyển mới')+kpi('Hồ sơ nghỉ trong kỳ',exitError||!hrN.length?'—':fmt(periodExits.length),'','Theo ngày nghỉ có hiệu lực')+kpi('Nghỉ chưa phân loại',exitError||!hrN.length?'—':fmt(periodExits.filter(r=>reason(r)==='Chưa phân loại').length),'','Cần HR xác nhận nhóm lý do')+kpi('Suất tuyển quá hạn','—','','Chưa nối nguồn tuyển dụng')+'</div>');
+    out+=card('Cần xử lý trước','Ưu tiên bổ sung bằng chứng trước khi kết luận thừa/thiếu người hoặc báo động tài chính.',
+      '<ul><li>Chưa có phân công giáo viên theo lớp/ca, hệ chương trình và lớp gộp: chưa xác định thiếu theo ca.</li><li>Chưa nối yêu cầu tuyển và ngày cần nhận việc: chưa tính tuyển quá hạn.</li><li>Chưa có ngưỡng lương/doanh thu được duyệt: chưa xác định thời điểm bắt đầu báo động.</li></ul>');
+    out+=card('Tổng quan từng cơ sở','Quân số là ảnh chụp hiện tại; vào/ra theo kỳ đã chọn. Khối văn phòng và đơn vị chưa khớp được tách khỏi 15 trường.',table(['Cơ sở','NS hiện tại','GV hiện tại','Vào còn làm*','Nghỉ chủ động','Đơn vị/tinh gọn','Nghỉ chưa rõ','Tuyển thiếu / quá hạn','GV / định biên','Lương / DT'],hrCatalog.filter(c=>!st.campus||c.code===st.campus).map(c=>{
+      const a=active.filter(r=>mapped(r)===c.code), n=periodExits.filter(r=>mapped(r)===c.code);
+      const f=st.month.startsWith('2026-')?finBy[c.code]?.m[Number(st.month.slice(5))]:null;
+      return '<tr><td>'+E(c.ten)+'</td>'+cell(activeError||!a.length?null:a.length)+cell(activeError||!a.length?null:a.filter(r=>isGV(r.vi_tri)).length)+cell(activeError||!a.length?null:count(a,'ngay_bat_dau',period))+['Chủ động','Đơn vị / tinh gọn','Chưa phân loại'].map(g=>cell(exitError||!hrN.length?null:n.filter(r=>reason(r)===g).length)).join('')+cell(null)+cell(null)+cell(f&&f.dt>0?pc(_rt(f)):null)+'</tr>';
+    })));
+    out+=card('Biến động 1–2–3 tháng','Các kỳ kết thúc tại tháng chốt. *Vào còn làm chưa phản ánh đầy đủ tuyển mới.',table(['Chỉ số',...months.map((m,i)=>months[i]+' → '+st.month)],['Vào làm còn trong danh sách*','Nghỉ chủ động','Nghỉ do đơn vị/tinh gọn','Nghỉ chưa phân loại'].map((label,i)=>'<tr><td>'+label+'</td>'+[1,2,3].map(n=>cell(i===0?(activeError||!hrA.length?null:count(starts,'ngay_bat_dau',months.slice(0,n))):(exitError||!hrN.length?null:exits.filter(r=>months.slice(0,n).includes(ym(r.ngay_nghi))&&reason(r)===['','Chủ động','Đơn vị / tinh gọn','Chưa phân loại'][i]).length))).join('')+'</tr>')));
+    const ranked={};periodExits.forEach(r=>{const k=viChuan(r.vi_tri);(ranked[k]||(ranked[k]=[])).push(r);});
+    out+=card('Vị trí có nhiều hồ sơ nghỉ nhất','Xếp theo số hồ sơ trong kỳ; chưa tính tỷ lệ nghỉ khi thiếu quân số lịch sử.',table(['Vị trí','Số nghỉ','Chủ động','Đơn vị/tinh gọn','Chưa rõ'],Object.entries(ranked).sort((a,b)=>b[1].length-a[1].length).map(([k,v])=>'<tr><td>'+E(k)+'</td>'+cell(v.length)+['Chủ động','Đơn vị / tinh gọn','Chưa phân loại'].map(g=>cell(v.filter(r=>reason(r)===g).length)).join('')+'</tr>'))+(periodExits.length?'':'<p>Chưa có hồ sơ nghỉ trong kỳ từ nguồn đang đọc.</p>'));
+    out+=card('Nhu cầu tuyển dụng và quá hạn','Chưa nối nguồn dữ liệu tuyển dụng.',table(['Cơ sở','Vị trí','Loại nhu cầu','Cần tuyển','Đã nhận việc','Còn thiếu','Ngày cần nhận việc','Số ngày trễ'],['<tr><td colspan="8">Chưa có dữ liệu. Cần mã yêu cầu, ngày duyệt, số suất, ngày cần nhận việc và trạng thái.</td></tr>']));
+    out+=card('Định biên lớp','Bản 20/05/2025 đang áp dụng · chị Hiền xác nhận ME Green 6–18 tháng: 5 trẻ = 2 GVVN.',
+      table(['Lớp','Hệ / độ tuổi','Sĩ số','GVVN cần / bố trí','GVNN cần / bố trí','Hỗ trợ / ngoại lệ'],['<tr><td colspan="6">Chưa có dữ liệu lớp/ca và phân công. Chưa tính chênh lệch định biên.</td></tr>'])
+      +'<details><summary>Xem quy tắc định biên đã nhận</summary>'+table(['Hệ','Độ tuổi','Sĩ số → số GVVN'],[
+        ['ME School tiêu chuẩn + MON','6–18 tháng','1–3: gộp lớp (0 riêng); 4–7: 2; 8–11: 3; 12–15: 4'],
+        ['ME School tiêu chuẩn + MON','18 tháng–3 tuổi','1–4: 1 (gộp); 5–12: 2; 13–20: 3'],
+        ['ME School tiêu chuẩn + MON','3–6 tuổi','1–5: 1 (gộp); 6–18: 2; 19–25: 3'],
+        ['ME School tăng cường','6–18 tháng','1–3: 1 (gộp); 4–7: 2; 8–11: 3; 12–15: 4'],
+        ['ME School tăng cường','18 tháng–3 tuổi','1–4: 1 (gộp); 5–22: 2 GVVN + 1 GVNN'],
+        ['ME School tăng cường','3–6 tuổi','1–5: 1 (gộp); 6–25: 2 GVVN + 1 GVNN'],
+        ['ME Green','6–18 tháng','1–4: 1; 5–10: 2; 11–15: 3; 16–20: 4'],
+        ['ME Green','18 tháng–3 tuổi','1–6: 1 (gộp); 7–20: 2; 21–30: 3'],
+        ['ME Green','3–6 tuổi','1–6: 1 (gộp); 7–30: 2']
+      ].map(r=>'<tr>'+r.map(x=>'<td>'+E(x)+'</td>').join('')+'</tr>'))+'<p>Gộp lớp phải xác định lớp nhận để tránh đếm trùng. Hệ tăng cường dưới 10 trẻ có thể áp dụng 1 GVVN + 1 GVNN theo phê duyệt. Ô GVNN bán thời gian trống không coi là 0.</p><p>Hỗ trợ nhóm 6–12 tháng: tiêu chuẩn thêm 1 khi có 5/7 hoặc 9/11 bé; tăng cường khi có 5/7 hoặc 8/11 bé; Green khi có 6/10 hoặc 12/15 bé. Cần số trẻ đúng nhóm tuổi để xét.</p><p>Bếp (suất cô và trẻ): dưới 70: 1 toàn thời gian; 70–150: 2 (có thể cân nhắc 1 toàn thời gian + 1 bán thời gian); trên 150: 3. Ngoại lệ phối hợp Phòng Nhân sự.</p></details>');
+    out+=card('Lương / doanh thu theo tháng','Nguồn KHNS hiện có ghi năm 2026. Chỉ hiển thị đúng tháng đã chọn; thiếu doanh thu hoặc doanh thu ≤ 0 không tính tỷ lệ.',table(['Cơ sở',...months.slice().reverse(),'Ngưỡng được duyệt','Vượt từ / thời gian'],hrCatalog.filter(c=>!st.campus||c.code===st.campus).map(c=>'<tr><td>'+E(c.ten)+'</td>'+months.slice().reverse().map(m=>{const f=m.startsWith('2026-')?finBy[c.code]?.m[Number(m.slice(5))]:null;return cell(f&&f.dt>0?pc(_rt(f)):null);}).join('')+'<td>Chưa có</td><td>Chưa xác định</td></tr>'))+'<p class="note">Chưa có ngưỡng cảnh báo được duyệt và dữ liệu định biên thực tế. Không kết luận thừa người từ tỷ lệ lương cao.</p>');
+    const unknown=hrA.filter(r=>mapped(r)==='HQ').length;
+    out+=card('Độ đầy đủ dữ liệu','AMIS → nguồn hiện có → báo cáo; chưa bổ sung nguồn tự động mới.', '<p>'+E(unknown)+' hồ sơ hiện tại thuộc văn phòng hoặc đơn vị chưa khớp, không cộng vào tổng 15 trường. Tuyển mới cần lịch sử đầy đủ để bao gồm người đã nghỉ và tách điều chuyển/tái tuyển. Part-time là hình thức làm việc, không tự xếp thành lý do nghỉ.</p>');
+    return out;
+  }
+  window.nlbaHRChange=(key,value)=>{if(!['month','span','campus'].includes(key))return;hrState[key]=value;const el=document.getElementById('nlba-hr-report');if(el)el.innerHTML=renderHRReport();};
+  const nhanSuHTML='<div id="nlba-hr-report">'+renderHRReport()+'</div>';
+
 
   // ----- THE: LEAD TUYEN SINH THANG NAY theo nguon & co so (CRM Co hoi: Opportunity, CreatedDate thang nay, LeadSourceIDText + CustomField17Text) -----
   var _llAll=(leadThang||[]);
@@ -2651,7 +2699,7 @@ async function render(){
    +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
    +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
    +'<div class="dom" data-dom="channel">'+SEC("Channel — Meta · việc PH làm trên web · ai giơ tay · Website · Google · Messenger")+metaCard+cmpCard+evCard+wCard+webCard+chanCard+kwCard+nearCard+pageCard+hrCard+'</div>'
-   +'<div class="dom" data-dom="nhansu">'+SEC("Nhân sự & hiệu quả lương")+nhanSuHTML+finCard+'</div>'
+   +'<div class="dom" data-dom="nhansu">'+SEC("Nhân sự & hiệu quả lương")+nhanSuHTML+'</div>'
    +'</div>';
   if(KHO&&KHO.t){const gio=KHO.t.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
     const phut=Math.round((Date.now()-KHO.t.getTime())/60000);
