@@ -163,7 +163,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-18 · b96-hr-nguon";
+const BUILD="2026-11-18 · b97-hr-du-lieu-that";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -518,7 +518,7 @@ const TEN_NGUON=["ga4_daily_channel","gsc_daily","gsc_query","meta_ad_daily","me
   "v_siso (1 dòng)","v_web_tong","mv_tuan_campus","chi_tieu","mv_can_ly_do","mv_cohort_tuan",
   "mv_viec_tuan","mv_danh_sach","v_su_co","mv_nghi_chuoi","v_harasocial","v_nguoi","mv_supa","mv_nhap_hoc",
   "v_tuoi_du_lieu","lan_lam_moi","v_cho_nhap_hoc","tomia_archived","fin_campus_thang","v_hocsinh","v_hs_nghi_campus",
-  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm","amis_opportunity (mốc riêng)","amis_ph_ketnoi_ky","amis_doi_tac_ky","tomia_refresh_status"];
+  "v_hr_active","v_hr_nghiviec","v_hr_hopdong","v_ph_ketnoi","hs_churn_thang","v_gv_lop","v_nghi_lydo","crm_lead_thang","nlba_nhap_hoc_crm","amis_opportunity (mốc riêng)","amis_ph_ketnoi_ky","amis_doi_tac_ky","tomia_refresh_status","amis_hr_biendong","amis_hr_sync_state"];
 const LOC_CAMPUS=[18,19];   // hai truy van duy nhat loc theo campus o phia may chu
 function thongBaoLamMoiTomia(result) {
   if (result?.error) return '<p class="note">Chưa đọc được trạng thái làm mới bảng tổng hợp.</p>';
@@ -636,7 +636,7 @@ function taoTruyVan(CP){ return [
     sb.from("v_hocsinh").select("ma_hs,ten_hs,campus,lop,ly_do_nghi,phu_trach,dien_thoai").ilike("lop","%Nghỉ học%").limit(1000),
     sb.from("v_hs_nghi_campus").select("campus,so_nghi,da_lang_nghe").limit(50),
     sb.from("v_hr_active").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,gioi_tinh,trang_thai,cap_nhat").limit(2000),
-    sb.from("v_hr_nghiviec").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,ngay_nghi,ly_do").limit(3000),
+    sb.from("v_hr_nghiviec").select("ma_nv,ho_ten,vi_tri,co_so,ngay_bat_dau,ngay_nghi,ly_do,cap_nhat").limit(3000),
     sb.from("v_hr_hopdong").select("co_so,loai_hop_dong,loai_nhom,so_nguoi").limit(500),
     sb.from("v_ph_ketnoi").select("campus,tinh_trang,loai,so_the").limit(500),
     sb.from("hs_churn_thang").select("campus_code,campus_ten,thang,hs_nghi,hs_totnghiep").limit(500),
@@ -647,7 +647,9 @@ function taoTruyVan(CP){ return [
     null, // metadata riêng của nguồn Tuyển sinh AMIS
     sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_ph_ketnoi_ky").order("ts",{ascending:false}).limit(1),
     sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_doi_tac_ky").order("ts",{ascending:false}).limit(1),
-    sb.from("ingest_run").select("source,status,message,run_at").in("source",["tomia_refresh_request","tomia_refresh_retry"]).order("run_id",{ascending:false}).limit(1)
+    sb.from("ingest_run").select("source,status,message,run_at").in("source",["tomia_refresh_request","tomia_refresh_retry"]).order("run_id",{ascending:false}).limit(1),
+    sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_hr_biendong").order("ts",{ascending:false}).limit(1000),
+    sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_hr_sync_state").order("ts",{ascending:false}).limit(1)
 ];}
 // Ban 25 truy van cung luc lam Postgres tranh CPU voi chinh no -> view nang bi
 // "canceling statement due to statement timeout". Chay theo lo nho, view nang di truoc.
@@ -2347,7 +2349,7 @@ async function render(){
   const tvRate=m=>hcTong?raThang(m)/hcTong:null;
   // thời điểm dữ liệu HR được kéo về
   const hrTs=hrA.reduce((a,r)=>{const t=r.cap_nhat||"";return t>a?t:a;},"");
-  const hrLuc=hrTs?(hrTs.slice(8,10)+"/"+hrTs.slice(5,7)+" "+hrTs.slice(11,16)):"—";
+  const hrLuc=hrTs?new Date(hrTs).toLocaleString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh"}):"—";
   // gom theo cơ sở
   const hrBy={};
   hrA.forEach(r=>{const c=hrCampus(r.co_so);const o=hrBy[c[0]]||(hrBy[c[0]]={code:c[0],ten:c[1],hc:0,gv:0,ql:0,ht:0,khac:0,trong:0,vao:0});o.hc++;
@@ -2498,6 +2500,12 @@ async function render(){
   // b95: báo cáo HR theo tháng; chỉ dùng nguồn đã có, không suy diễn dữ liệu thiếu.
   const hrCatalog=Object.entries(VUNG).filter(([k])=>k!=="HQ").map(([code])=>({code,ten:hrCampus(({TT:"Tân Thuận",TAD:"Thảo Điền",TD:"Tân Định",MGB:"Green Bitis",VSIP:"VSIP"})[code]||({HVT:"Hoàng Văn Thụ",NTT:"Nguyễn Trọng Tuyển",CC:"Củ Chi",PCT:"Phan Chu Trinh",HT:"Hồ Tây",KM:"Kim Mã",QTG:"Quốc Tử Giám",QA:"Quảng An",LD:"Linh Đàm",VD:"Vườn Đào"})[code])[1]}));
   const hrState=window.nlbaHRState||(window.nlbaHRState={month:M0,span:3,campus:""});
+  const hrSyncResult=KQ[TEN_NGUON.indexOf("amis_hr_sync_state")]||{};
+  const hrSync=hrSyncResult.data?.[0]?.du_lieu||null;
+  const hrMovementResult=KQ[TEN_NGUON.indexOf("amis_hr_biendong")]||{};
+  const hrMovementMap=new Map();
+  (hrMovementResult.data||[]).forEach(r=>{const d=r.du_lieu||{};if(hrSync&&d.sync_batch!==hrSync.sync_batch)return;const k=d.co_so+"|"+d.thang;if(!hrMovementMap.has(k))hrMovementMap.set(k,d);});
+  const hrMovement=[...hrMovementMap.values()];
   function renderHRReport(){
     const E=escNH, st=hrState;
     const months=Array.from({length:3},(_,i)=>{const [y,m]=st.month.split('-').map(Number);const d=new Date(y,m-1-i,1);return mStr(d.getFullYear(),d.getMonth()+1);});
@@ -2507,6 +2515,15 @@ async function render(){
     const active=hrA.filter(scope), exits=hrN.filter(scope);
     // Không cộng hai nguồn tuyển mới khi chưa xác minh định danh và lịch sử.
     const starts=active;
+    const missingExit=exits.filter(r=>!r.ngay_nghi).length;
+    const covered=period=>!!hrSync&&period.every(m=>m>=hrSync.coverage_from.slice(0,7)&&m<=hrSync.ngay_chup.slice(0,7));
+    const movementSum=(period,field,code)=>{
+      const codes=code?[code]:(st.campus?[st.campus]:hrCatalog.map(c=>c.code));
+      if(hrMovementResult.error||!covered(period))return null;
+      const rows=hrMovement.filter(r=>codes.includes(mapped(r))&&period.includes(r.thang));
+      if(codes.some(c=>period.some(m=>!rows.some(r=>mapped(r)===c&&r.thang===m))))return null;
+      return rows.reduce((n,r)=>n+Number(r[field]||0),0);
+    };
     const count=(rows,field,period)=>rows.filter(r=>period.includes(ym(r[field]))).length;
     const reason=r=>{const x=_lc(r.ly_do);return /tinh gọn|tinh gon|cắt giảm|cat giam/.test(x)?"Đơn vị / tinh gọn":/tự nguyện|tu nguyen|chủ động xin nghỉ|chu dong xin nghi/.test(x)?"Chủ động":"Chưa phân loại";};
     const period=months.slice(0,Number(st.span));
@@ -2514,21 +2531,26 @@ async function render(){
     const cell=v=>'<td class="mono">'+E(v==null?'—':v)+'</td>';
     const table=(headers,rows)=>'<div class="tw"><table><thead><tr>'+headers.map(h=>'<th>'+E(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
     const card=(title,sub,body)=>'<section class="card"><h2>'+title+'</h2><p class="sub">'+sub+'</p>'+body+'</section>';
-    const choices=Array.from({length:18},(_,i)=>{const d=new Date(_now.getFullYear(),_now.getMonth()-i,1);const v=mStr(d.getFullYear(),d.getMonth()+1);return '<option'+(v===st.month?' selected':'')+'>'+v+'</option>';}).join('');
+    const choices=Array.from({length:Math.min(18,_now.getFullYear()===2026?_now.getMonth()+1:18)},(_,i)=>{const d=new Date(_now.getFullYear(),_now.getMonth()-i,1);const v=mStr(d.getFullYear(),d.getMonth()+1);return '<option'+(v===st.month?' selected':'')+'>'+v+'</option>';}).join('');
     const controls='<div class="row"><label>Tháng chốt <select aria-label="Tháng chốt nhân sự" onchange="window.nlbaHRChange(\'month\',this.value)">'+choices+'</select></label><label>Khoảng xem <select aria-label="Khoảng xem nhân sự" onchange="window.nlbaHRChange(\'span\',this.value)">'+[1,2,3].map(n=>'<option value="'+n+'"'+(n==st.span?' selected':'')+'>'+n+' tháng</option>').join('')+'</select></label><label>Cơ sở <select aria-label="Cơ sở nhân sự" onchange="window.nlbaHRChange(\'campus\',this.value)"><option value="">15 cơ sở</option>'+hrCatalog.map(c=>'<option value="'+c.code+'"'+(c.code===st.campus?' selected':'')+'>'+E(c.ten)+'</option>').join('')+'</select></label></div>';
     let out=card('Nhân sự · 15 cơ sở','Kỳ '+months[Number(st.span)-1]+' đến '+st.month+' · Nguồn AMIS cập nhật: '+hrLuc,
-      controls+((activeError||exitError)?'<p class="note" role="alert"><b>Không đọc được nguồn nhân sự.</b> Lỗi nguồn đang làm: '+E(KQ[33]?.error?.message||'Không')+'; nguồn nghỉ việc: '+E(KQ[34]?.error?.message||'Không')+'. Chưa thể kết luận dữ liệu bằng 0.</p>':(!hrA.length&&!hrN.length?'<p class="note" role="alert"><b>Chưa có dữ liệu AMIS Nhân sự trong NLBA.</b> Nguồn đang làm và nghỉ việc đều chưa có dòng dữ liệu. Màn hình AMIS và NLBA là hai nguồn riêng: đọc được trên AMIS chưa có nghĩa đã đồng bộ sang NLBA. Cần hoàn tất lần đồng bộ HR đầu tiên; bấm Tải lại số không tự lấy dữ liệu từ AMIS.</p>':''))+'<p class="note">Dấu — là chưa đủ dữ liệu. Tuyển mới hiện chỉ có ngày bắt đầu của người đang làm; chưa bao gồm người vào rồi nghỉ trong kỳ. Số nghỉ là hồ sơ nhận được, chưa xác nhận độ phủ lịch sử. Không dùng quân số hiện tại làm mẫu số tỷ lệ nghỉ của tháng trước.</p>'
-      +'<div class="kpis">'+kpi('Vào làm còn trong danh sách',activeError||!hrA.length?'—':fmt(count(starts,'ngay_bat_dau',period)),'','Chưa phải tổng tuyển mới')+kpi('Hồ sơ nghỉ trong kỳ',exitError||!hrN.length?'—':fmt(periodExits.length),'','Theo ngày nghỉ có hiệu lực')+kpi('Nghỉ chưa phân loại',exitError||!hrN.length?'—':fmt(periodExits.filter(r=>reason(r)==='Chưa phân loại').length),'','Cần HR xác nhận nhóm lý do')+kpi('Suất tuyển quá hạn','—','','Chưa nối nguồn tuyển dụng')+'</div>');
+      controls+((activeError||exitError)?'<p class="note" role="alert"><b>Không đọc được nguồn nhân sự.</b> Lỗi nguồn đang làm: '+E(KQ[33]?.error?.message||'Không')+'; nguồn nghỉ việc: '+E(KQ[34]?.error?.message||'Không')+'. Chưa thể kết luận dữ liệu bằng 0.</p>':(!hrA.length&&!hrN.length?'<p class="note" role="alert"><b>Chưa có dữ liệu AMIS Nhân sự trong NLBA.</b> Nguồn đang làm và nghỉ việc đều chưa có dòng dữ liệu. Màn hình AMIS và NLBA là hai nguồn riêng: đọc được trên AMIS chưa có nghĩa đã đồng bộ sang NLBA. Cần hoàn tất lần đồng bộ HR đầu tiên; bấm Tải lại số không tự lấy dữ liệu từ AMIS.</p>':''))+'<p class="note">Dấu — là chưa đủ dữ liệu. Quân số là ảnh chụp hiện tại, không phải quân số cuối tháng được chọn. Vào/Ra lấy riêng từ báo cáo tháng AMIS; chưa xác minh ngày bắt đầu thực tế, điều chuyển và tái tuyển. Nghỉ theo hồ sơ lấy ngày nghỉ có hiệu lực, giữ riêng để đối chiếu với báo cáo tháng. Không dùng quân số hiện tại làm mẫu số tỷ lệ nghỉ lịch sử.</p>'
+      +'<div class="kpis">'+kpi('Đang làm · 15 cơ sở',activeError||!hrA.length?'—':fmt(active.length),'','Ảnh chụp hiện tại, đã tách văn phòng')+kpi('Vào · báo cáo AMIS',movementSum(period,'vao')==null?'—':fmt(movementSum(period,'vao')),'','Chưa chốt thành tuyển mới thực tế')+kpi('Nghỉ · theo hồ sơ',exitError||!hrN.length||!covered(period)?'—':fmt(periodExits.length),'','Chỉ hồ sơ có ngày nghỉ trong kỳ')+kpi('Suất tuyển quá hạn','—','','Chưa nối nguồn tuyển dụng')+'</div>'
+      +(hrSync?'<p class="note">Đã đọc '+E(hrSync.active_total)+' hồ sơ đang làm và '+E(hrSync.exit_source_total)+' hồ sơ đã nghỉ trên AMIS. NLBA nạp hồ sơ nghỉ có ngày từ 01/01/2026 và nhóm thiếu ngày. Trong phạm vi đang xem có <b>'+fmt(missingExit)+' hồ sơ nghỉ thiếu ngày</b> trên toàn lịch sử; không cộng vào kỳ. Tháng '+E(hrSync.ngay_chup.slice(0,7))+' mới tính đến '+E(hrSync.ngay_chup)+'. Đây là lần đồng bộ được kiểm tra, chưa có lịch tự động.</p>':'')
+      +(hrSyncResult.error?'<p class="note">Không đọc được thông tin độ phủ dữ liệu HR.</p>':''));
     out+=card('Cần xử lý trước','Ưu tiên bổ sung bằng chứng trước khi kết luận thừa/thiếu người hoặc báo động tài chính.',
       '<ul><li>Chưa có phân công giáo viên theo lớp/ca, hệ chương trình và lớp gộp: chưa xác định thiếu theo ca.</li><li>Chưa nối yêu cầu tuyển và ngày cần nhận việc: chưa tính tuyển quá hạn.</li><li>Chưa có ngưỡng lương/doanh thu được duyệt: chưa xác định thời điểm bắt đầu báo động.</li></ul>');
-    out+=card('Tổng quan từng cơ sở','Quân số là ảnh chụp hiện tại; vào/ra theo kỳ đã chọn. Khối văn phòng và đơn vị chưa khớp được tách khỏi 15 trường.',table(['Cơ sở','NS hiện tại','GV hiện tại','Vào còn làm*','Nghỉ chủ động','Đơn vị/tinh gọn','Nghỉ chưa rõ','Tuyển thiếu / quá hạn','GV / định biên','Lương / DT'],hrCatalog.filter(c=>!st.campus||c.code===st.campus).map(c=>{
+    out+=card('Tổng quan từng cơ sở','Quân số là ảnh chụp ngày đồng bộ; Vào/Ra là báo cáo AMIS theo kỳ đã chọn. Nghỉ theo hồ sơ có thể lệch báo cáo AMIS. Khối văn phòng và đơn vị chưa khớp được tách khỏi 15 trường.',table(['Cơ sở','NS hiện tại','GV hiện tại','Vào · AMIS','Ra · AMIS','Nghỉ · hồ sơ','Nghỉ chủ động','Đơn vị/tinh gọn','Nghỉ chưa rõ','Tuyển thiếu / quá hạn','GV / định biên','Lương / DT'],hrCatalog.filter(c=>!st.campus||c.code===st.campus).map(c=>{
       const a=active.filter(r=>mapped(r)===c.code), n=periodExits.filter(r=>mapped(r)===c.code);
       const f=st.month.startsWith('2026-')?finBy[c.code]?.m[Number(st.month.slice(5))]:null;
-      return '<tr><td>'+E(c.ten)+'</td>'+cell(activeError||!a.length?null:a.length)+cell(activeError||!a.length?null:a.filter(r=>isGV(r.vi_tri)).length)+cell(activeError||!a.length?null:count(a,'ngay_bat_dau',period))+['Chủ động','Đơn vị / tinh gọn','Chưa phân loại'].map(g=>cell(exitError||!hrN.length?null:n.filter(r=>reason(r)===g).length)).join('')+cell(null)+cell(null)+cell(f&&f.dt>0?pc(_rt(f)):null)+'</tr>';
+      return '<tr><td>'+E(c.ten)+'</td>'+cell(activeError||!a.length?null:a.length)+cell(activeError||!a.length?null:a.filter(r=>isGV(r.vi_tri)).length)+cell(movementSum(period,'vao',c.code))+cell(movementSum(period,'ra',c.code))+cell(exitError||!hrN.length||!covered(period)?null:n.length)+['Chủ động','Đơn vị / tinh gọn','Chưa phân loại'].map(g=>cell(exitError||!hrN.length||!covered(period)?null:n.filter(r=>reason(r)===g).length)).join('')+cell(null)+cell(null)+cell(f&&f.dt>0?pc(_rt(f)):null)+'</tr>';
     })));
-    out+=card('Biến động 1–2–3 tháng','Các kỳ kết thúc tại tháng chốt. *Vào còn làm chưa phản ánh đầy đủ tuyển mới.',table(['Chỉ số',...months.map((m,i)=>months[i]+' → '+st.month)],['Vào làm còn trong danh sách*','Nghỉ chủ động','Nghỉ do đơn vị/tinh gọn','Nghỉ chưa phân loại'].map((label,i)=>'<tr><td>'+label+'</td>'+[1,2,3].map(n=>cell(i===0?(activeError||!hrA.length?null:count(starts,'ngay_bat_dau',months.slice(0,n))):(exitError||!hrN.length?null:exits.filter(r=>months.slice(0,n).includes(ym(r.ngay_nghi))&&reason(r)===['','Chủ động','Đơn vị / tinh gọn','Chưa phân loại'][i]).length))).join('')+'</tr>')));
+    out+=card('Biến động 1–2–3 tháng','Kỳ kết thúc tại tháng chốt. Vào/Ra báo cáo AMIS và ngày nghỉ trên hồ sơ là hai nguồn riêng.',table(['Chỉ số',...months.map(m=>m+' → '+st.month)],['Vào · báo cáo AMIS','Ra · báo cáo AMIS','Nghỉ · theo hồ sơ','Nghỉ chủ động','Nghỉ do đơn vị/tinh gọn','Nghỉ chưa phân loại'].map((label,i)=>'<tr><td>'+label+'</td>'+[1,2,3].map(n=>{const per=months.slice(0,n);return cell(i<2?movementSum(per,i===0?'vao':'ra'):(exitError||!hrN.length||!covered(per)?null:exits.filter(r=>per.includes(ym(r.ngay_nghi))&&(i===2||reason(r)===['','','','Chủ động','Đơn vị / tinh gọn','Chưa phân loại'][i])).length));}).join('')+'</tr>')));
+    out+=card('Đối chiếu nguồn nghỉ việc','Không tự chọn một nguồn khi số khác nhau. Chênh lệch cần HR xác nhận trên hồ sơ.',table(['Tháng','Ra · báo cáo AMIS','Nghỉ · theo hồ sơ','Hồ sơ trừ báo cáo'],period.slice().reverse().map(m=>{const a=movementSum([m],'ra'),b=covered([m])&&!exitError&&hrN.length?exits.filter(r=>ym(r.ngay_nghi)===m).length:null;return '<tr><td>'+E(m)+'</td>'+cell(a)+cell(b)+cell(a==null||b==null?null:b-a)+'</tr>';})));
     const ranked={};periodExits.forEach(r=>{const k=viChuan(r.vi_tri);(ranked[k]||(ranked[k]=[])).push(r);});
     out+=card('Vị trí có nhiều hồ sơ nghỉ nhất','Xếp theo số hồ sơ trong kỳ; chưa tính tỷ lệ nghỉ khi thiếu quân số lịch sử.',table(['Vị trí','Số nghỉ','Chủ động','Đơn vị/tinh gọn','Chưa rõ'],Object.entries(ranked).sort((a,b)=>b[1].length-a[1].length).map(([k,v])=>'<tr><td>'+E(k)+'</td>'+cell(v.length)+['Chủ động','Đơn vị / tinh gọn','Chưa phân loại'].map(g=>cell(v.filter(r=>reason(r)===g).length)).join('')+'</tr>'))+(periodExits.length?'':'<p>Chưa có hồ sơ nghỉ trong kỳ từ nguồn đang đọc.</p>'));
+    const reasons={};periodExits.forEach(r=>{const k=r.ly_do||'Chưa ghi lý do';reasons[k]=(reasons[k]||0)+1;});
+    out+=card('Lý do nghỉ ghi trên AMIS','Giữ nguyên lý do nguồn. Lý do cá nhân chưa tự đồng nhất với chủ động; part-time/thời vụ là hình thức lao động.',table(['Lý do nguyên văn','Số hồ sơ'],Object.entries(reasons).sort((a,b)=>b[1]-a[1]).map(([k,n])=>'<tr><td>'+E(k)+'</td>'+cell(n)+'</tr>')));
     out+=card('Nhu cầu tuyển dụng và quá hạn','Chưa nối nguồn dữ liệu tuyển dụng.',table(['Cơ sở','Vị trí','Loại nhu cầu','Cần tuyển','Đã nhận việc','Còn thiếu','Ngày cần nhận việc','Số ngày trễ'],['<tr><td colspan="8">Chưa có dữ liệu. Cần mã yêu cầu, ngày duyệt, số suất, ngày cần nhận việc và trạng thái.</td></tr>']));
     out+=card('Định biên lớp','Bản 20/05/2025 đang áp dụng · chị Hiền xác nhận ME Green 6–18 tháng: 5 trẻ = 2 GVVN.',
       table(['Lớp','Hệ / độ tuổi','Sĩ số','GVVN cần / bố trí','GVNN cần / bố trí','Hỗ trợ / ngoại lệ'],['<tr><td colspan="6">Chưa có dữ liệu lớp/ca và phân công. Chưa tính chênh lệch định biên.</td></tr>'])
@@ -2545,7 +2567,7 @@ async function render(){
       ].map(r=>'<tr>'+r.map(x=>'<td>'+E(x)+'</td>').join('')+'</tr>'))+'<p>Gộp lớp phải xác định lớp nhận để tránh đếm trùng. Hệ tăng cường dưới 10 trẻ có thể áp dụng 1 GVVN + 1 GVNN theo phê duyệt. Ô GVNN bán thời gian trống không coi là 0.</p><p>Hỗ trợ nhóm 6–12 tháng: tiêu chuẩn thêm 1 khi có 5/7 hoặc 9/11 bé; tăng cường khi có 5/7 hoặc 8/11 bé; Green khi có 6/10 hoặc 12/15 bé. Cần số trẻ đúng nhóm tuổi để xét.</p><p>Bếp (suất cô và trẻ): dưới 70: 1 toàn thời gian; 70–150: 2 (có thể cân nhắc 1 toàn thời gian + 1 bán thời gian); trên 150: 3. Ngoại lệ phối hợp Phòng Nhân sự.</p></details>');
     out+=card('Lương / doanh thu theo tháng','Nguồn KHNS hiện có ghi năm 2026. Chỉ hiển thị đúng tháng đã chọn; thiếu doanh thu hoặc doanh thu ≤ 0 không tính tỷ lệ.',table(['Cơ sở',...months.slice().reverse(),'Ngưỡng được duyệt','Vượt từ / thời gian'],hrCatalog.filter(c=>!st.campus||c.code===st.campus).map(c=>'<tr><td>'+E(c.ten)+'</td>'+months.slice().reverse().map(m=>{const f=m.startsWith('2026-')?finBy[c.code]?.m[Number(m.slice(5))]:null;return cell(f&&f.dt>0?pc(_rt(f)):null);}).join('')+'<td>Chưa có</td><td>Chưa xác định</td></tr>'))+'<p class="note">Chưa có ngưỡng cảnh báo được duyệt và dữ liệu định biên thực tế. Không kết luận thừa người từ tỷ lệ lương cao.</p>');
     const unknown=hrA.filter(r=>mapped(r)==='HQ').length;
-    out+=card('Độ đầy đủ dữ liệu','AMIS → nguồn hiện có → báo cáo; chưa bổ sung nguồn tự động mới.', '<p>'+E(unknown)+' hồ sơ hiện tại thuộc văn phòng hoặc đơn vị chưa khớp, không cộng vào tổng 15 trường. Tuyển mới cần lịch sử đầy đủ để bao gồm người đã nghỉ và tách điều chuyển/tái tuyển. Part-time là hình thức làm việc, không tự xếp thành lý do nghỉ.</p>');
+    out+=card('Độ đầy đủ dữ liệu','AMIS → nguồn hiện có → báo cáo; chưa bổ sung nguồn tự động mới.', '<p>'+E(unknown)+' hồ sơ hiện tại thuộc văn phòng hoặc đơn vị chưa khớp, không cộng vào tổng 15 trường. Ngày thử việc và ngày chính thức được giữ ở nguồn, chưa tự dùng làm ngày vào làm thực tế. Vào/Ra báo cáo AMIS có số riêng, chưa xác minh định nghĩa tuyển mới. Lịch sử nghỉ có ngày chỉ nạp từ 01/01/2026; nhóm thiếu ngày được giữ để HR bổ sung. Part-time là hình thức làm việc, không tự xếp thành lý do nghỉ.</p>');
     return out;
   }
   window.nlbaHRChange=(key,value)=>{if(!['month','span','campus'].includes(key))return;hrState[key]=value;const el=document.getElementById('nlba-hr-report');if(el)el.innerHTML=renderHRReport();};
