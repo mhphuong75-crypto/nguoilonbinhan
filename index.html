@@ -163,7 +163,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-18 · b97-hr-du-lieu-that";
+const BUILD="2026-11-23 · b98-lead-id-snapshot";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -642,7 +642,7 @@ function taoTruyVan(CP){ return [
     sb.from("hs_churn_thang").select("campus_code,campus_ten,thang,hs_nghi,hs_totnghiep").limit(500),
     sb.from("v_gv_lop").select("campus,campus_ten,so_gv,so_chu_nhiem,tong_lop").limit(50),
     sb.from("v_nghi_lydo").select("ma_hs,thang,ngay_thoi_hoc,ly_do,ten_hs,campus,nhom_ly_do,da_lang_nghe").order("ngay_thoi_hoc",{ascending:false}).limit(1000),
-    sb.from("crm_lead_thang").select("thang,campus,nguon,so_lead,snapshot_ts").limit(2000),
+    sb.from("v_nlba_crm_lead_month").select("thang,campus,nguon,so_lead,snapshot_ts").order("thang",{ascending:false}).order("campus").order("nguon").limit(2000),
     null, // nguồn nhập học tải có kiểm tra phân trang trong bocMot, không gọi sớm
     null, // metadata riêng của nguồn Tuyển sinh AMIS
     sb.from("stg_raw").select("ts,du_lieu").eq("nguon","amis_ph_ketnoi_ky").order("ts",{ascending:false}).limit(1),
@@ -2578,15 +2578,18 @@ async function render(){
   var _llAll=(leadThang||[]);
   var _llMon=(function(){var ms=[...new Set(_llAll.map(function(r){return String(r.thang||"");}).filter(Boolean))].sort();return ms[ms.length-1]||_thNay;})();
   var _llLaNay=(_llMon===_thNay);
-  var _llNay=_llAll.filter(function(r){return String(r.thang||"")===_llMon;});
+  var _llNay=_llAll.filter(function(r){return String(r.thang||"")===_llMon;}).map(r=>({...r,campus:campusNH(r.campus)})).filter(r=>!CP||campusNH(r.campus)===campusNH(CP));
+  const _llScope=CP?[campusNH(CP)]:careTargetCampuses;
+  const _llStamp=_llAll.filter(r=>String(r.thang)===_llMon).map(r=>r.snapshot_ts).filter(Boolean).sort().pop();
+  const _llStampText=_llStamp?new Date(_llStamp).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'chưa xác định';
   var _llTong=_llNay.reduce(function(a,r){return a+(+r.so_lead||0);},0);
-  var _TGT_CS=30, _TGT_SYS=450; // KHNS: 30 lead/cơ sở/tháng · 15 cơ sở ≈ 450 (MKT ghi 446)
+  var _TGT_CS=30, _TGT_SYS=30*_llScope.length; // KHNS: 30 lead/cơ sở/tháng · 15 cơ sở ≈ 450 (MKT ghi 446)
   var _llByNguon={}; _llNay.forEach(function(r){var k=r.nguon||"(chưa gắn)"; _llByNguon[k]=(_llByNguon[k]||0)+(+r.so_lead||0);});
   var _llNguonRows=Object.entries(_llByNguon).sort(function(a,b){return b[1]-a[1];});
-  var _llByCp={}; _llNay.forEach(function(r){var k=r.campus||"(chưa gán)"; _llByCp[k]=(_llByCp[k]||0)+(+r.so_lead||0);});
+  var _llByCp=Object.fromEntries(_llScope.map(c=>[c,0])); _llNay.forEach(function(r){var k=r.campus||"(chưa gán)"; _llByCp[k]=(_llByCp[k]||0)+(+r.so_lead||0);});
   var _llCpRows=Object.entries(_llByCp).sort(function(a,b){return b[1]-a[1];});
   var _llPct=_TGT_SYS?_llTong/_TGT_SYS:0;
-  var _llDat=_llCpRows.filter(function(e){return e[1]>=_TGT_CS;}).length;
+  var _llDat=_llCpRows.filter(function(e){return _llScope.includes(e[0])&&e[1]>=_TGT_CS;}).length;
   var _llNgTop=_llNguonRows.filter(function(e){return !/chưa gắn/i.test(e[0]);}).slice(0,6).map(function(e){return e[0];});
   var _llMatrix={}; _llNay.forEach(function(r){var cp=r.campus||"(chưa gán)";var ng=r.nguon||"(chưa gắn)";(_llMatrix[cp]=_llMatrix[cp]||{})[ng]=(_llMatrix[cp][ng]||0)+(+r.so_lead||0);});
   // ----- ASK#1: gộp "theo cơ sở" + "ma trận nguồn" -> 1 bảng target-vs-thực đạt, theo nhóm nguồn KHAITRUONG20 -----
@@ -2594,7 +2597,7 @@ async function render(){
   //   Website 13 · Facebook+TikTok 8 (= FB Ads 4 + FB Organic+TikTok 4; gộp vì "Fanpage" trong CRM không tách được Ads/Organic) · Referral·Zalo·Drop-in 9 · Khác (không có target).
   var _BK=[{k:"web",ten:"Website",tg:13},{k:"fb",ten:"Facebook + TikTok",tg:8},{k:"ref",ten:"Referral · Zalo · Drop-in",tg:9},{k:"khac",ten:"Khác (chưa phân nhóm)",tg:0}];
   var _TG_CS={web:13,fb:8,ref:9,khac:0};              // target mỗi cơ sở
-  var _TG_SYS_BK={web:195,fb:120,ref:135,khac:0};     // target hệ thống = 15 cơ sở × target/cơ sở (tổng 450)
+  var _TG_SYS_BK={web:13*_llScope.length,fb:8*_llScope.length,ref:9*_llScope.length,khac:0};     // target hệ thống = 15 cơ sở × target/cơ sở (tổng 450)
   function _bkOf(ng){var s=(ng||"").toLowerCase();
     if(/web|kiddihub/.test(s)) return "web";
     if(/fanpage|facebook|tiktok|tik tok|instagram/.test(s)) return "fb";
@@ -2607,16 +2610,16 @@ async function render(){
   var leadNguonCard = !_llAll.length ?
    ('<div class="card"><h2>Lead tuyển sinh tháng này — theo nguồn &amp; cơ sở <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· nguồn sống CRM</span></h2>'
     +'<p class="sub">Nguồn: AMIS CRM module <b>Cơ hội/Tuyển sinh</b> · lead = cơ hội <b>tạo trong tháng</b> · nguồn gốc + Campus xử lý chính</p>'
-    +'<p class="leg">Chưa có dữ liệu lead tháng <b>'+_thNay+'</b>. Chạy bookmarklet <b>"Kéo lead tuyển sinh"</b> trên trang <b>TUYỂN SINH</b> của AMIS để nạp.</p></div>')
+    +'<p class="leg">Chưa có dữ liệu lead tháng <b>'+_thNay+'</b>. Nguồn tuyển sinh chưa đọc được; cần kiểm tra lần đồng bộ gần nhất.</p></div>')
    :
    ('<div class="card"><h2>Lead tuyển sinh — theo nguồn &amp; cơ sở <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">· '+_llMon+(_llLaNay?'':' (gần nhất có dữ liệu)')+' · CRM Cơ hội</span></h2>'
     +'<p class="sub">Từ AMIS CRM <b>Cơ hội/Tuyển sinh</b> · lead = cơ hội <b>tạo trong tháng</b> · <b>nguồn gốc</b> + <b>Campus xử lý chính</b>'+(_llLaNay?'':' · tháng '+_thNay.slice(5)+' chưa có snapshot — hiện tháng '+(+_llMon.slice(5)))+' · mục tiêu KHNS 30 lead/cơ sở</p>'
     +'<div class="kpis">'
-    +kpi("Lead tháng "+(+_llMon.slice(5)),fmt(_llTong),"","cơ hội mới tạo trong tháng — số sống từ CRM")
-    +kpi("Mục tiêu tháng",fmt(_TGT_SYS),"","KHNS: 15 cơ sở × 30 lead")
-    +kpi("% đạt mục tiêu",pct(_llPct,0),"","toàn hệ thống, tháng này")
-    +kpi("Cơ sở đạt ≥30",fmt(_llDat)+"/"+fmt(_llCpRows.length),"","số cơ sở đạt mục tiêu lead")+"</div>"
-    +(_llPct<0.6?'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid var(--crit);border-radius:8px;padding:12px 14px;background:rgba(226,119,106,.08)"><p style="margin:0;font-weight:700;color:var(--crit)">Toàn hệ thống mới đạt '+pct(_llPct,0)+' mục tiêu lead tháng này</p><p class="leg" style="margin:4px 0 0">Lead là đầu vào phễu — thiếu lead tháng này = thiếu nhập học 4–6 tuần tới. Soi cơ sở &amp; nguồn dưới target ở bảng dưới.</p></div>':"")
+    +kpi("Lead tháng "+(+_llMon.slice(5)),fmt(_llTong),"","mỗi mã tuyển sinh tính một lần")
+    +kpi("Mục tiêu tháng",fmt(_TGT_SYS),"","KHNS: "+_llScope.length+" cơ sở × 30 lead")
+    +kpi("% đạt mục tiêu",pct(_llPct,0),"",(CP?escNH(CP):"toàn hệ thống")+", tháng này")
+    +kpi("Cơ sở đạt ≥30",fmt(_llDat)+"/"+fmt(_llScope.length),"","số cơ sở đạt mục tiêu lead")+"</div>"
+    +(_llPct<0.6?'<div style="margin:14px 0 4px;border:1px solid var(--line);border-left:4px solid var(--crit);border-radius:8px;padding:12px 14px;background:rgba(226,119,106,.08)"><p style="margin:0;font-weight:700;color:var(--crit)">'+(CP?escNH(CP):'Toàn hệ thống')+' mới đạt '+pct(_llPct,0)+' mục tiêu lead tháng này</p><p class="leg" style="margin:4px 0 0">Lead là đầu vào phễu — thiếu lead tháng này = thiếu nhập học 4–6 tuần tới. Soi cơ sở &amp; nguồn dưới target ở bảng dưới.</p></div>':"")
     +'<p class="sub" style="margin:16px 0 6px;text-transform:none;letter-spacing:0">Theo nguồn gốc</p>'
     +'<div class="tw"><table><thead><tr><th>Nguồn gốc</th><th>Số lead</th><th>Tỷ trọng</th></tr></thead><tbody>'
     +_llNguonRows.map(function(e){var k=e[0],v=e[1];var isC=/chưa gắn/i.test(k);return '<tr><td>'+(isC?'<span class="down">'+k+'</span>':k)+'</td><td class="mono">'+fmt(v)+'</td><td class="mono">'+pct(_llTong?v/_llTong:0,0)+'</td></tr>';}).join("")
@@ -2635,7 +2638,7 @@ async function render(){
     +'</tbody></table></div>'
     +'<p class="leg" style="margin-top:6px"><b>Cách đọc:</b> mỗi ô = lead thực đạt của nhóm nguồn đó ở cơ sở đó; màu so với target/cơ sở của nhóm (🟢 đạt · 🟡 ≥60% · 🔴 &lt;60%). Target mỗi cơ sở: Website 13 · Facebook+TikTok 8 · Referral·Zalo·Drop-in 9 = 30 (file KHAITRUONG20, sheet "KPI Lead source by campus"). <b>% đạt chỉ tính ở mức TỔNG</b> ('+fmt(_llTong)+'/'+fmt(_TGT_SYS)+' = '+pct(_llPct,0)+') — không tính % từng ô.</p>'
     +'<p class="leg" style="margin-top:4px"><b>⚠ Lưu ý nhóm "Facebook + TikTok":</b> KHAITRUONG20 tách <b>FB Ads</b> (TG 4) và <b>FB Organic+TikTok</b> (TG 4) riêng, nhưng trường "nguồn gốc" trong CRM gộp hết vào <b>"Fanpage"</b> (không phân biệt được Ads/Organic) → app gộp 2 nhóm thành 1 (TG 8). Muốn tách: cần thêm trường phân biệt chiến dịch QC trong bước kéo lead. · Target T9 áp cho tháng đang xem; chưa có target T10+ trong file.</p>'
-    +'<p class="leg" style="margin-top:4px"><b>Vì sao thẻ này KHÔNG theo ô "Tháng này/Tháng trước":</b> <code>crm_lead_thang</code> hiện chỉ có <b>1 tháng snapshot</b> (T9) — bookmarklet kéo lead ghi đè mỗi lần. Muốn so lead giữa các tháng: kéo lead <b>đều mỗi tháng</b> để tích luỹ nhiều snapshot. Thẻ tự hiện tháng mới nhất có dữ liệu.</p>'
+    +'<p class="leg">Nguồn cập nhật: <b>'+escNH(_llStampText)+'</b>. Đếm mã tuyển sinh duy nhất theo ngày tạo; không cộng các lần đồng bộ. Campus lấy từ trường xử lý chính đã nhận; lead chưa nhận được campus vẫn tính vào tổng, không tính thành cơ sở. Thẻ hiển thị tháng gần nhất có dữ liệu.</p>'
     +'<div class="q"><b>Câu hỏi:</b> cơ sở đỏ (dưới 60% mục tiêu lead) — thiếu lead vì marketing chưa đẩy, hay lead có mà chưa gắn "Campus xử lý chính" trong CRM? '+((_llByNguon["(chưa gắn)"]||0)>0?fmt(_llByNguon["(chưa gắn)"])+' lead tháng này chưa gắn nguồn gốc — mất dấu kênh nào hiệu quả.':'')+'</div>'
     +'</div>');
 
