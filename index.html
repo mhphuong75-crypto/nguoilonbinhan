@@ -113,6 +113,15 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 .safety-month th:nth-child(1){width:16%}.safety-month th:nth-child(2){width:20%}.safety-month th:nth-child(3){width:29%}.safety-month th:nth-child(4){width:15%}.safety-month th:nth-child(5){width:20%}
 .safety-month small{color:var(--muted);font-size:11px}
 @media(max-width:620px){.safety-month{min-width:650px}}
+/* b99: live enrollment drill-down */
+#ts-live .ts-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0}
+#ts-live .ts-kpis{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))}
+#ts-live .ts-number{font:inherit;font-weight:inherit;color:var(--good);background:transparent;border:0;padding:0 3px;text-decoration:underline;text-underline-offset:5px}
+#ts-live .ts-table{min-width:900px}#ts-live .ts-table td{white-space:normal;vertical-align:top}
+#ts-live [hidden]{display:none!important}#ts-live h3{font-size:16px}
+#ts-live .ts-filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+#ts-live button[aria-pressed=true]{background:var(--soft);border-color:var(--good)}
+#ts-live .ts-empty{padding:16px;color:var(--muted)}
 </style></head><body>
 
 <div id="login" class="login">
@@ -147,7 +156,9 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
     <button data-z="3">③ Đào sâu</button>
   </div><span id="tuoi" style="font-size:11px;color:var(--muted)"></span></div>
   <div class="row" style="margin-top:2px"><span style="font-size:11px;color:var(--muted);align-self:center;margin-right:2px">Theo mảng:</span><div class="seg" id="mang">
-    <button data-dom="tuyensinh">Tuyển sinh &amp; tăng trưởng</button>
+    <button data-dom="tangtruong">Tăng trưởng</button>
+    <button data-dom="tuyensinh">Tuyển sinh</button>
+    <button data-dom="ketnoi">Kết nối phụ huynh</button>
     <button data-dom="hocsinhnghi">Học sinh nghỉ</button>
     <button data-dom="tomia">Tomia</button>
     <button data-dom="checklist">Checklist</button>
@@ -163,7 +174,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-23 · b98-lead-id-snapshot";
+const BUILD="2026-11-25 · b99-tuyen-sinh";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -689,12 +700,106 @@ async function napKho(CP, ep){
   return kq;
 }
 
+// b99: report data only; no illustrative children, counts or inferred CRM writes.
+const TuyenSinh=(()=>{
+  const campuses=['BITIS','CỦ CHI','HOÀNG VĂN THỤ','HỒ TÂY','KIM MÃ','LINH ĐÀM','NGUYỄN TRỌNG TUYỂN','PHAN CHU TRINH','QUẢNG AN','QUỐC TỬ GIÁM','TÂN ĐỊNH','TÂN THUẬN','THẢO ĐIỀN','VSIP','VƯỜN ĐÀO'];
+  const e=escNH, cp=campusNH, norm=ten=>String(ten||'').normalize('NFC').trim().replace(/\s+/g,' ').toLocaleUpperCase('vi-VN');
+  const iso=d=>d.toISOString().slice(0,10), short=d=>d?d.slice(8,10)+'/'+d.slice(5,7):'—';
+  let state=null, month=null, detail=null, filter='all',sourceCache=null;
+  async function source(force){
+    if(sourceCache&&!force)return sourceCache;
+    try{
+      const latest=await sb.from('nlba_dat_coc_snapshot').select('snapshot_ts').order('snapshot_ts',{ascending:false}).limit(1);
+      if(latest.error)throw latest.error;
+      const stamp=latest.data?.[0]?.snapshot_ts;
+      if(!stamp)return sourceCache={stamp:null,count:null,error:'Chưa có dữ liệu Ngày đặt cọc / Ngày nhập học dự kiến'};
+      const total=await sb.from('nlba_dat_coc_snapshot').select('ma_tuyen_sinh',{count:'exact',head:true}).eq('snapshot_ts',stamp);
+      if(total.error)throw total.error;
+      return sourceCache={stamp,count:total.count,error:null};
+    }catch(error){return sourceCache={stamp:null,count:null,error:error.message||String(error)};}
+  }
+  function weeks(m){
+    const end=iso(new Date(Date.UTC(+m.slice(0,4),+m.slice(5,7),0))), out=[];
+    let d=m+'-01';
+    while(d<=end){const a=new Date(d+'T00:00:00Z'),dow=a.getUTCDay();a.setUTCDate(a.getUTCDate()+(dow===0?0:7-dow));const hi=iso(a)>end?end:iso(a);out.push({lo:d,hi,label:short(d)+(hi===d?'':'–'+short(hi))});a.setTime(Date.parse(hi+'T00:00:00Z')+864e5);d=iso(a);}
+    return out;
+  }
+  function scope(){return state.CP?[cp(state.CP)]:campuses;}
+  function actualRows(c){const seen=new Set();return state.crm.filter(r=>{
+    if(!r.ma_hs||seen.has(r.ma_hs))return false;seen.add(r.ma_hs);
+    return r.ngay_nhap_hoc?.slice(0,7)===month&&r.ngay_nhap_hoc<=state.homNay&&(!c||cp(r.campus)===c);
+  });}
+  function goal(c){if(state.targetError||month.slice(0,4)!=='2026')return null;
+    const rows=state.targets.filter(r=>cp(r.campus)===c&&+r.thang===+month.slice(5));
+    return rows.length===1&&rows[0].tuyen_moi!=null&&Number.isFinite(+rows[0].tuyen_moi)?+rows[0].tuyen_moi:null;
+  }
+  function ready(){return !state.crmError&&!!state.crmMeta;}
+  function link(n,kind,c='',w=''){return '<button type="button" class="ts-number" data-ts-open="'+kind+'" data-cp="'+e(c)+'" data-week="'+w+'" aria-controls="ts-detail" aria-expanded="false" aria-label="Mở danh sách '+e(kind==='actual'?'đã nhập học':'')+' '+e(c)+' '+e(w)+'">'+n+'</button>';}
+  function tomiaCheck(r){
+    if(state.tomiaError)return {group:'review',date:null,text:'Chưa đọc được dữ liệu Tomia'};
+    // CRM and Tomia IDs are different namespaces: names are suggestions, never identity proof.
+    const key=x=>norm(x.ten_hs||x.ten_tre)+'\u0000'+cp(x.campus),k=key(r);
+    const cc=state.crm.filter(x=>key(x)===k),tt=state.tomia.filter(x=>key(x)===k);
+    if(cc.length>1||tt.length>1)return {group:'review',date:null,text:'Cần đối chiếu — nhiều mã trùng tên/campus'};
+    if(tt.length===1)return {group:'candidate',date:tt[0].ngay_dau,text:'Trùng tên + campus — cần xác nhận đúng trẻ'};
+    return {group:'review',date:null,text:'CRM ghi nhận nhập học — chưa xác nhận điểm danh'};
+  }
+  function details(){
+    const node=document.getElementById('ts-detail');if(!node)return;
+    node.hidden=!detail;if(!detail)return;
+    const all=actualRows(detail.c),rows=detail.w?all.filter(r=>r.ngay_nhap_hoc>=detail.w&&r.ngay_nhap_hoc<=weeks(month).find(w=>w.lo===detail.w).hi):all;
+    const rr=rows.map(r=>({r,t:tomiaCheck(r)})),shown=rr.filter(x=>filter==='all'||x.t.group===filter);
+    node.innerHTML='<h3>Đã nhập học · '+rows.length+' trẻ</h3><p class="sub">'+e(detail.c||'Toàn hệ thống')+' · '+e(detail.w?'Tuần '+weeks(month).find(w=>w.lo===detail.w).label:'Tháng '+month.slice(5)+'/'+month.slice(0,4))+' · đến '+e(state.homNay)+'</p>'
+      +'<button type="button" data-ts-close>Đóng danh sách</button><div class="ts-filters">'+[['all','Tất cả'],['candidate','Có bản ghi Tomia cùng tên/campus'],['review','Cần đối chiếu khác']].map(([k,v])=>'<button type="button" data-ts-filter="'+k+'" aria-pressed="'+(filter===k)+'">'+v+' ('+(k==='all'?rr.length:rr.filter(x=>x.t.group===k).length)+')</button>').join('')+'</div>'
+      +'<p class="leg">CRM là nguồn ghi nhận đã nhập học. Đối chiếu Tomia không loại trẻ khỏi tổng. Hai hệ thống dùng mã khác nhau; trùng tên + campus chưa đủ xác nhận danh tính.</p>'
+      +(shown.length?'<div class="tw"><table class="ts-table"><thead><tr><th>Mã học sinh CRM</th><th>Tên trẻ</th><th>Campus</th><th>Ngày nhập học thực tế · CRM</th><th>Ngày đầu ghi nhận · Tomia</th><th>Kết quả đối chiếu</th></tr></thead><tbody>'+shown.map(({r,t})=>'<tr>'+[r.ma_hs,r.ten_hs,cp(r.campus)||'Chưa gắn campus',r.ngay_nhap_hoc,t.date||'Chưa xác nhận',t.text].map(v=>'<td>'+e(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="ts-empty">Không có trẻ trong phạm vi và nhóm đang chọn.</p>');
+  }
+  function draw(){
+    const root=document.getElementById('ts-live');if(!root||!state)return;
+    const now=state.homNay, cs=scope(),all=actualRows(state.CP?cp(state.CP):''),ok=ready(),goals=cs.map(goal),missing=cs.filter(c=>goal(c)===null),known=goals.reduce((s,v)=>s+(v||0),0);
+    const months=[...new Set([now.slice(0,7),month,...Array.from({length:12},(_,i)=>'2026-'+String(i+1).padStart(2,'0'))])].sort();
+    const stamp=state.crmMeta?.capturedAt;
+    root.innerHTML='<div class="card"><h2>Đăng ký & nhịp nhập học theo tuần</h2><div class="ts-controls"><label>Tháng theo dõi <select id="ts-month">'+months.map(m=>'<option value="'+m+'"'+(m===month?' selected':'')+'>'+m.slice(5)+'/'+m.slice(0,4)+'</option>').join('')+'</select></label><span>'+e(state.CP||'Toàn hệ thống · 15 cơ sở')+'</span></div>'
+      +'<p class="leg">Đã nhập học = mỗi mã học sinh CRM một lần, có Ngày nhập học thực tế trong tháng và không sau ngày báo cáo '+e(now)+'. Không dùng Ngày đặt cọc hoặc Ngày nhập học dự kiến để ghi nhận đã nhập học.</p>'
+      +'<p class="leg">Nguồn Học sinh: '+e(stamp?new Date(stamp).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'chưa đọc được')+'. '+(stamp&&Date.now()-Date.parse(stamp)>30*3600000?'Dữ liệu đã quá 30 giờ; kết quả phản ánh lần đồng bộ này.':'')+'</p>'
+      +(!ok?'<div class="gap"><b>Chưa đủ dữ liệu nhập học.</b> '+e(state.crmError||'Chưa có lần đồng bộ đầy đủ')+'</div>':'')
+      +'<div class="kpis ts-kpis">'+kpi('Đăng ký trong tháng','—','','Chưa đủ dữ liệu Ngày đặt cọc')+kpi('Đã nhập học',ok?link(all.length,'actual'):'—','','Theo CRM Học sinh · bấm số xem danh sách')+kpi('Đã cọc, sắp nhập học','—','','Chưa đủ dữ liệu lịch sắp tới')+kpi('Tổng dự kiến tháng','—','','Đã nhập học + đã cọc, sắp nhập học')+kpi('Còn thiếu so với kế hoạch','—','','Chưa tính khi thiếu dữ liệu dự kiến hoặc chỉ tiêu')+'</div>'
+      +'<section id="ts-detail" class="card" hidden aria-live="polite"></section>'
+      +'<h3>Nhập học từng cơ sở — kết quả và kế hoạch</h3><div class="tw"><table class="ts-table"><thead><tr><th>Campus</th><th>Chỉ tiêu tháng</th><th>Đã nhập học</th><th>Đã cọc, sắp nhập học</th><th>Tổng dự kiến tháng</th><th>Còn thiếu so với kế hoạch</th><th>Tình hình</th></tr></thead><tbody>'
+      +cs.map(c=>{const g=goal(c),n=actualRows(c).length;return '<tr><td>'+e(c)+'</td><td>'+(g===null?'Chưa có chỉ tiêu':g)+'</td><td>'+(ok?link(n,'actual',c):'—')+'</td><td>—</td><td>—</td><td>—</td><td>'+(ok&&g!==null&&n>=g?'Đã đạt':g===null?'Chưa có chỉ tiêu':'Chưa đủ dữ liệu dự kiến')+'</td></tr>';}).join('')
+      +'<tr><td><b>Tổng phạm vi đang chọn</b></td><td>'+(missing.length?'Chưa đủ chỉ tiêu':known)+'</td><td>'+(ok?link(all.length,'actual',state.CP?cp(state.CP):''):'—')+'</td><td>—</td><td>—</td><td>—</td><td>'+(ok?cs.filter(c=>goal(c)!==null&&actualRows(c).length>=goal(c)).length+'/'+cs.length+' cơ sở đã đạt':'Chưa đủ dữ liệu')+'</td></tr></tbody></table></div>'
+      +(missing.length?'<p class="note">Chưa có chỉ tiêu: '+missing.map(e).join(', ')+'. Không coi chỉ tiêu trống là 0. Kế hoạch đã ghi nhận: '+known+' trẻ tại '+(cs.length-missing.length)+'/'+cs.length+' cơ sở.</p>':'')
+      +(ok&&!state.CP&&all.some(r=>!campuses.includes(cp(r.campus)))?'<p class="note">Có '+all.filter(r=>!campuses.includes(cp(r.campus))).length+' trẻ chưa gắn được một trong 15 campus; vẫn tính vào tổng hệ thống, xem trong danh sách tổng.</p>':'')
+      +'<p class="leg">Tổng dự kiến chỉ được tính khi xác định được trẻ chưa nhập học, đã đặt cọc và có lịch nhập học sau hôm nay trong tháng. Còn thiếu tính riêng từng campus; phần vượt của campus khác không bù cho cơ sở đang thiếu.</p></div>'
+      +weekly('Đã nhập học theo tuần','actual',ok)
+      +'<div class="card"><h2>Đăng ký & lịch dự kiến nhập học</h2><div class="gap"><b>Chưa đủ dữ liệu để lập báo cáo.</b> '+e(state.source?.error||('Nguồn Ngày đặt cọc / Ngày nhập học dự kiến gần nhất: '+(state.source?.stamp?new Date(state.source.stamp).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'chưa xác minh')+' · '+(state.source?.count??'chưa xác minh')+' hồ sơ. Chưa xác nhận được danh sách Tuyển sinh đầy đủ cho tháng đang chọn.'))+' Dấu — không có nghĩa là 0 trẻ.</div><p class="leg">Cần nhận bản Tuyển sinh đầy đủ từ CRM, có mã tuyển sinh, campus xử lý chính, Ngày đặt cọc, Ngày nhập học dự kiến, trạng thái và thông tin liên kết học sinh. Số lead theo ngày tạo không thay thế được các trường ngày này.</p></div>'
+      +weekly('Trẻ đăng ký theo tuần · Ngày đặt cọc','deposit',false)
+      +weekly('Lịch dự kiến nhập học theo tuần · Có cọc / Chưa cọc','expected',false);
+    details();
+  }
+  function weekly(title,kind,ok){
+    const ww=weeks(month),cs=scope();
+    const count=(c,w)=>actualRows(c).filter(r=>r.ngay_nhap_hoc>=w.lo&&r.ngay_nhap_hoc<=w.hi).length;
+    const cell=(c,w)=>!ok||w.lo>state.homNay?'—':link(count(c,w),'actual',c,w.lo);
+    return '<div class="card"><h2>'+title+'</h2><p class="sub">'+e(state.CP||'Toàn hệ thống')+' · '+month.slice(5)+'/'+month.slice(0,4)+' · tuần từ thứ Hai đến Chủ nhật; tuần giao tháng chỉ tính ngày thuộc tháng đang chọn.</p><div class="tw"><table><thead><tr><th>Campus</th>'+ww.map(w=>'<th>'+w.label+'</th>').join('')+'</tr></thead><tbody>'+cs.map(c=>'<tr><td>'+e(c)+'</td>'+ww.map(w=>'<td>'+cell(c,w)+'</td>').join('')+'</tr>').join('')+'<tr><td><b>Tổng</b></td>'+ww.map(w=>'<td>'+cell(state.CP?cp(state.CP):'',w)+'</td>').join('')+'</tr></tbody></table></div><p class="leg">'+(ok?'Bấm số để xem đúng danh sách trong tuần. Tuần chưa tới để —.':'Chưa đủ nguồn CRM Tuyển sinh; chưa công bố số đăng ký/lịch dự kiến.')+'</p></div>';
+  }
+  document.addEventListener('change',ev=>{if(ev.target.id==='ts-month'){month=ev.target.value;detail=null;filter='all';draw();}});
+  document.addEventListener('click',ev=>{
+    const b=ev.target.closest?.('[data-ts-open],[data-ts-close],[data-ts-filter]');if(!b)return;
+    if(b.hasAttribute('data-ts-open')){detail={c:b.dataset.cp||'',w:b.dataset.week||''};filter='all';details();document.querySelectorAll('[data-ts-open]').forEach(x=>x.setAttribute('aria-expanded',String(x===b)));document.getElementById('ts-detail')?.scrollIntoView({block:'center',behavior:'smooth'});}
+    else if(b.hasAttribute('data-ts-close')){detail=null;details();const active=document.querySelector('[data-ts-open][aria-expanded="true"]');if(active){active.setAttribute('aria-expanded','false');active.focus();}}
+    else{filter=b.dataset.tsFilter;details();}
+  });
+  return {source,mount(data){state=data;if(!month)month=data.homNay.slice(0,7);detail=null;filter='all';draw();},weeks};
+})();
+
 async function render(){
   const pv=$("period").value;
   const CP=$("camp").value||"";            // "" = toan he thong
   const hopCP=(c)=>!CP||String(c||"")===CP; // dong nay co thuoc campus dang chon khong
   $("body").innerHTML='<div class="card"><p class="sub">Đang tải…</p></div>';
   const KQ = await napKho(CP, buocLai);
+  const tsSource=await TuyenSinh.source(buocLai);
   const depRes=await sb.from("v_nlba_dat_coc_doi_soat").select("snapshot_ts,ma_tuyen_sinh,ten_tuyen_sinh,campus,ngay_dat_coc,ngay_nhap_du_kien,tomia_ngay_dau,so_tre_trung_ten,tomia_cap_nhat_den").order("ngay_dat_coc",{ascending:false}).limit(150);
   const depRows=depRes.error?null:(depRes.data||[]);
   const depError=depRes.error?String(depRes.error.message||depRes.error):null;
@@ -2719,7 +2824,9 @@ async function render(){
    +dongGap+cdCard+'</div>'
 
    +'<div class="zone" id="zdom">'
-   +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh & tăng trưởng — mục tiêu vs thực tế (lead theo nguồn + nhập học Tomia/CRM) · phễu · kết nối phụ huynh")+leadNguonCard+ktCard+hsCard+caCard+partnerCard+dsCard+depCard+choCard+cohCard+ctCard+'</div>'
+   +'<div class="dom" data-dom="tangtruong">'+SEC("Tăng trưởng — lead theo nguồn & cơ sở · đối tác")+leadNguonCard+partnerCard+'</div>'
+   +'<div class="dom" data-dom="tuyensinh">'+SEC("Tuyển sinh — đăng ký · nhập học · kế hoạch từng cơ sở")+'<div id="ts-live"></div><details class="card"><summary>Phễu và hồ sơ tuyển sinh</summary>'+hsCard+dsCard+depCard+choCard+cohCard+ctCard+'</details></div>'
+   +'<div class="dom" data-dom="ketnoi">'+SEC("Kết nối phụ huynh — thẻ chăm sóc")+caCard+'</div>'
    +'<div class="dom" data-dom="hocsinhnghi">'+SEC("Học sinh nghỉ — tháng này + xu hướng 3 tháng · đã lắng nghe (exit) · nghỉ liên tục · CRM nguồn sống")+churnMoiCard+nganNgayCard+churnNayCard+ngCard+'</div>'
    +'<div class="dom" data-dom="tomia">'+SEC("Tomia — an toàn/sự cố · điểm danh")+scCard+ddCard+ngayCard+bdCard+'</div>'
    +'<div class="dom" data-dom="checklist">'+SEC("Checklist SUPA")+spCard+'</div>'
@@ -2731,9 +2838,12 @@ async function render(){
     $("tuoi").innerHTML='Số liệu lấy lúc <b>'+gio+'</b>'+(phut>0?" · "+phut+" phút trước":"")
       +' · đổi thời gian <b>không</b> gọi lại máy chủ, đổi campus chỉ gọi lại <b>2</b>/25 nguồn.';}
   apDungChe();
+  TuyenSinh.mount({crm:nhapHocCRM||[],crmMeta:crmNHMeta,crmError:crmNHError,
+    tomia:nhapHoc||[],tomiaError:!!KQ[TEN_NGUON.indexOf("mv_nhap_hoc")]?.error,
+    source:tsSource,targets:ct||[],targetError:!!KQ[TEN_NGUON.indexOf("chi_tieu")]?.error,CP,homNay});
 }
 
-let CHE="1", DOM=null;   // DOM=null: dang o che do doc (1/2/3). DOM!=null: dang o tab mang.
+let CHE="1", DOM=['tuyensinh','tangtruong','ketnoi','hocsinhnghi','tomia','checklist','channel','nhansu'].includes(new URLSearchParams(location.search).get('mang'))?new URLSearchParams(location.search).get('mang'):null;   // DOM=null: dang o che do doc (1/2/3). DOM!=null: dang o tab mang.
 function apDungChe(){
   const dom=!!DOM;
   ["1","2","3"].forEach(z=>{const el=$("z"+z); if(el) el.className="zone"+(!dom&&z===CHE?" on":"")});
@@ -2742,7 +2852,7 @@ function apDungChe(){
   document.querySelectorAll("#mang > button").forEach(b=>{b.className=(dom&&b.dataset.dom===DOM?"on":"")});
   document.querySelectorAll("#zdom .dom").forEach(d=>{d.className="dom"+(d.dataset.dom===DOM?" on":"")});
   // o thoi gian chi co nghia khi co the Website/Meta/Google: che do 3, hoac tab Channel/Tuyển sinh
-  $("oTG").style.display = ((!dom&&CHE==="3")||DOM==="channel"||DOM==="tuyensinh") ? "inline-flex" : "none";
+  $("oTG").style.display = ((!dom&&CHE==="3")||DOM==="channel"||DOM==="tangtruong") ? "inline-flex" : "none";
 }
 $("che").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b||!b.dataset.z)return;
@@ -3423,3 +3533,4 @@ sb.auth.onAuthStateChange(async(_e,session)=>{ if(session) vao(session); });
 </script>
 
 </body></html>
+
