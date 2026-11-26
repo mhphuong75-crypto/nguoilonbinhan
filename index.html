@@ -174,7 +174,7 @@ td.bd{text-align:right;line-height:1.35;padding:8px}
 const URL_="https://fxxgfihjirxbfmhwarkl.supabase.co";
 const KEY_="sb_publishable_nDc9MwY0OHuWCBXhc7XqqQ_4_kRsR-T";
 const sb=supabase.createClient(URL_,KEY_);
-const BUILD="2026-11-25 · b99-tuyen-sinh";
+const BUILD="2026-11-26 · b100-tuyen-sinh-data";
 const $=id=>document.getElementById(id);
 
 // ===== b23: DAU CHAN — do AI vao, XEM GI, BAO LAU =====
@@ -709,14 +709,29 @@ const TuyenSinh=(()=>{
   async function source(force){
     if(sourceCache&&!force)return sourceCache;
     try{
-      const latest=await sb.from('nlba_dat_coc_snapshot').select('snapshot_ts').order('snapshot_ts',{ascending:false}).limit(1);
-      if(latest.error)throw latest.error;
-      const stamp=latest.data?.[0]?.snapshot_ts;
-      if(!stamp)return sourceCache={stamp:null,count:null,error:'Chưa có dữ liệu Ngày đặt cọc / Ngày nhập học dự kiến'};
-      const total=await sb.from('nlba_dat_coc_snapshot').select('ma_tuyen_sinh',{count:'exact',head:true}).eq('snapshot_ts',stamp);
-      if(total.error)throw total.error;
-      return sourceCache={stamp,count:total.count,error:null};
-    }catch(error){return sourceCache={stamp:null,count:null,error:error.message||String(error)};}
+      const result=await sb.from('nlba_tuyen_sinh_daily_snapshot').select('snapshot_ts,source,deposit_rows,expected_rows,union_rows,data').order('snapshot_ts',{ascending:false}).limit(1);
+      if(result.error)throw result.error;
+      const r=result.data?.[0];
+      if(!r||!Array.isArray(r.data))throw Error('Chưa nhận được dữ liệu tổng hợp Tuyển sinh');
+      const seen=new Set(),fields=['dat_coc','du_kien_co_coc','du_kien_chua_coc','lich_tat_ca'];
+      let deposits=0,expected=0;
+      for(const x of r.data){
+        const k=cp(x.campus)+'|'+x.ngay;
+        if(!x.campus||!/^\d{4}-\d{2}-\d{2}$/.test(x.ngay)||seen.has(k)||fields.some(f=>!Number.isInteger(x[f])||x[f]<0)||x.du_kien_co_coc+x.du_kien_chua_coc>x.lich_tat_ca)throw Error('Dữ liệu Tuyển sinh chưa nhất quán');
+        seen.add(k);deposits+=x.dat_coc;expected+=x.lich_tat_ca;
+      }
+      if(deposits!==r.deposit_rows||expected!==r.expected_rows)throw Error('Chưa nhận đủ số tổng hợp Tuyển sinh');
+      return sourceCache={stamp:r.snapshot_ts,rows:r.data.map(x=>({...x,campus:cp(x.campus)})),error:null};
+    }catch(error){return sourceCache={stamp:null,rows:[],error:error.message||String(error)};}
+  }
+  function sourceReady(){return !state.source?.error&&!!state.source?.stamp&&Array.isArray(state.source?.rows);}
+  function sum(c,key,lo=month+'-01',hi=month+'-31'){
+    return (state.source?.rows||[]).filter(r=>(!c||r.campus===c)&&r.ngay>=lo&&r.ngay<=hi).reduce((n,r)=>n+(r[key]||0),0);
+  }
+  function metrics(c){
+    const actual=actualRows(c).length,g=goal(c),readyForecast=ready()&&sourceReady();
+    const future=sum(c,'du_kien_co_coc',state.homNay>=month+'-01'?iso(new Date(Date.parse(state.homNay+'T00:00:00Z')+864e5)):month+'-01',month+'-31');
+    return {actual,goal:g,future:sourceReady()?future:null,forecast:readyForecast?actual+future:null,gap:readyForecast&&g!==null?Math.max(0,g-actual-future):null};
   }
   function weeks(m){
     const end=iso(new Date(Date.UTC(+m.slice(0,4),+m.slice(5,7),0))), out=[];
@@ -756,32 +771,41 @@ const TuyenSinh=(()=>{
   }
   function draw(){
     const root=document.getElementById('ts-live');if(!root||!state)return;
-    const now=state.homNay, cs=scope(),all=actualRows(state.CP?cp(state.CP):''),ok=ready(),goals=cs.map(goal),missing=cs.filter(c=>goal(c)===null),known=goals.reduce((s,v)=>s+(v||0),0);
+    const now=state.homNay,cs=scope(),cpScope=state.CP?cp(state.CP):'',all=actualRows(cpScope),ok=ready(),sr=sourceReady(),missing=cs.filter(c=>goal(c)===null),known=cs.reduce((n,c)=>n+(goal(c)||0),0),stats=cs.map(metrics);
+    const upcoming=sr?sum(cpScope,'du_kien_co_coc',now>=month+'-01'?iso(new Date(Date.parse(now+'T00:00:00Z')+864e5)):month+'-01',month+'-31'):null;
+    const forecast=ok&&sr?all.length+upcoming:null,gap=ok&&sr&&!missing.length?stats.reduce((n,r)=>n+r.gap,0):null;
+    const registrations=sr?sum(cpScope,'dat_coc',month+'-01',now<month+'-31'?now:month+'-31'):null;
     const months=[...new Set([now.slice(0,7),month,...Array.from({length:12},(_,i)=>'2026-'+String(i+1).padStart(2,'0'))])].sort();
-    const stamp=state.crmMeta?.capturedAt;
+    const stamp=state.crmMeta?.capturedAt,shown=n=>n==null?'—':n;
     root.innerHTML='<div class="card"><h2>Đăng ký & nhịp nhập học theo tuần</h2><div class="ts-controls"><label>Tháng theo dõi <select id="ts-month">'+months.map(m=>'<option value="'+m+'"'+(m===month?' selected':'')+'>'+m.slice(5)+'/'+m.slice(0,4)+'</option>').join('')+'</select></label><span>'+e(state.CP||'Toàn hệ thống · 15 cơ sở')+'</span></div>'
       +'<p class="leg">Đã nhập học = mỗi mã học sinh CRM một lần, có Ngày nhập học thực tế trong tháng và không sau ngày báo cáo '+e(now)+'. Không dùng Ngày đặt cọc hoặc Ngày nhập học dự kiến để ghi nhận đã nhập học.</p>'
-      +'<p class="leg">Nguồn Học sinh: '+e(stamp?new Date(stamp).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'chưa đọc được')+'. '+(stamp&&Date.now()-Date.parse(stamp)>30*3600000?'Dữ liệu đã quá 30 giờ; kết quả phản ánh lần đồng bộ này.':'')+'</p>'
+      +'<p class="leg">Nguồn Học sinh: '+e(stamp?new Date(stamp).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'chưa đọc được')+'. Nguồn Ngày đặt cọc / lịch nhập học: '+e(state.source?.stamp?new Date(state.source.stamp).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'chưa đọc được')+'.</p>'
+      +(state.source?.stamp&&Date.now()-Date.parse(state.source.stamp)>30*3600000?'<div class="gap">Nguồn Tuyển sinh quá 30 giờ chưa cập nhật. Số liệu phản ánh lần đồng bộ ghi ở trên; cần cập nhật trước khi dùng dự báo.</div>':'')
       +(!ok?'<div class="gap"><b>Chưa đủ dữ liệu nhập học.</b> '+e(state.crmError||'Chưa có lần đồng bộ đầy đủ')+'</div>':'')
-      +'<div class="kpis ts-kpis">'+kpi('Đăng ký trong tháng','—','','Chưa đủ dữ liệu Ngày đặt cọc')+kpi('Đã nhập học',ok?link(all.length,'actual'):'—','','Theo CRM Học sinh · bấm số xem danh sách')+kpi('Đã cọc, sắp nhập học','—','','Chưa đủ dữ liệu lịch sắp tới')+kpi('Tổng dự kiến tháng','—','','Đã nhập học + đã cọc, sắp nhập học')+kpi('Còn thiếu so với kế hoạch','—','','Chưa tính khi thiếu dữ liệu dự kiến hoặc chỉ tiêu')+'</div>'
+      +(!sr?'<div class="gap"><b>Chưa đọc được Ngày đặt cọc / lịch nhập học.</b> '+e(state.source?.error||'Chưa có nguồn tổng hợp')+'. Dấu — không có nghĩa là 0.</div>':'')
+      +'<div class="kpis ts-kpis">'+kpi('Đăng ký trong tháng',shown(registrations),'','Theo Ngày đặt cọc · không phụ thuộc ngày tạo lead')+kpi('Đã nhập học',ok?link(all.length,'actual'):'—','','Theo CRM Học sinh · bấm số xem danh sách')+kpi('Đã cọc, sắp nhập học',shown(upcoming),'','Lịch sau hôm nay trong tháng · hồ sơ CRM còn mở')+kpi('Tổng dự kiến tháng',shown(forecast),'','Đã nhập học + đã cọc, sắp nhập học')+kpi('Còn thiếu so với kế hoạch',missing.length?'Chưa đủ chỉ tiêu':shown(gap),'',missing.length?'Thiếu chỉ tiêu tại '+missing.length+' cơ sở':'Cộng phần còn thiếu của từng campus')+'</div>'
       +'<section id="ts-detail" class="card" hidden aria-live="polite"></section>'
       +'<h3>Nhập học từng cơ sở — kết quả và kế hoạch</h3><div class="tw"><table class="ts-table"><thead><tr><th>Campus</th><th>Chỉ tiêu tháng</th><th>Đã nhập học</th><th>Đã cọc, sắp nhập học</th><th>Tổng dự kiến tháng</th><th>Còn thiếu so với kế hoạch</th><th>Tình hình</th></tr></thead><tbody>'
-      +cs.map(c=>{const g=goal(c),n=actualRows(c).length;return '<tr><td>'+e(c)+'</td><td>'+(g===null?'Chưa có chỉ tiêu':g)+'</td><td>'+(ok?link(n,'actual',c):'—')+'</td><td>—</td><td>—</td><td>—</td><td>'+(ok&&g!==null&&n>=g?'Đã đạt':g===null?'Chưa có chỉ tiêu':'Chưa đủ dữ liệu dự kiến')+'</td></tr>';}).join('')
-      +'<tr><td><b>Tổng phạm vi đang chọn</b></td><td>'+(missing.length?'Chưa đủ chỉ tiêu':known)+'</td><td>'+(ok?link(all.length,'actual',state.CP?cp(state.CP):''):'—')+'</td><td>—</td><td>—</td><td>—</td><td>'+(ok?cs.filter(c=>goal(c)!==null&&actualRows(c).length>=goal(c)).length+'/'+cs.length+' cơ sở đã đạt':'Chưa đủ dữ liệu')+'</td></tr></tbody></table></div>'
-      +(missing.length?'<p class="note">Chưa có chỉ tiêu: '+missing.map(e).join(', ')+'. Không coi chỉ tiêu trống là 0. Kế hoạch đã ghi nhận: '+known+' trẻ tại '+(cs.length-missing.length)+'/'+cs.length+' cơ sở.</p>':'')
-      +(ok&&!state.CP&&all.some(r=>!campuses.includes(cp(r.campus)))?'<p class="note">Có '+all.filter(r=>!campuses.includes(cp(r.campus))).length+' trẻ chưa gắn được một trong 15 campus; vẫn tính vào tổng hệ thống, xem trong danh sách tổng.</p>':'')
-      +'<p class="leg">Tổng dự kiến chỉ được tính khi xác định được trẻ chưa nhập học, đã đặt cọc và có lịch nhập học sau hôm nay trong tháng. Còn thiếu tính riêng từng campus; phần vượt của campus khác không bù cho cơ sở đang thiếu.</p></div>'
+      +cs.map(c=>{const x=metrics(c);return '<tr><td>'+e(c)+'</td><td>'+(x.goal===null?'Chưa có chỉ tiêu':x.goal)+'</td><td>'+(ok?link(x.actual,'actual',c):'—')+'</td><td>'+shown(x.future)+'</td><td>'+shown(x.forecast)+'</td><td>'+shown(x.gap)+'</td><td>'+(x.goal===null?'Chưa có chỉ tiêu':ok&&x.actual>=x.goal?'Đã đạt':x.forecast===null?'Chưa đủ dữ liệu dự kiến':x.forecast>=x.goal?'Dự kiến đủ':'Còn thiếu '+x.gap)+'</td></tr>';}).join('')
+      +'<tr><td><b>Tổng phạm vi đang chọn</b></td><td>'+(missing.length?'Chưa đủ chỉ tiêu':known)+'</td><td>'+(ok?link(all.length,'actual',cpScope):'—')+'</td><td>'+shown(upcoming)+'</td><td>'+shown(forecast)+'</td><td>'+(missing.length?'Chưa đủ chỉ tiêu':shown(gap))+'</td><td>'+(ok?stats.filter(x=>x.goal!==null&&x.actual>=x.goal).length+'/'+cs.length+' cơ sở đã đạt':'Chưa đủ dữ liệu')+'</td></tr></tbody></table></div>'
+      +(missing.length?'<p class="note">Chưa có chỉ tiêu: '+missing.map(e).join(', ')+'. Không coi chỉ tiêu trống là 0. Kế hoạch đã ghi nhận: '+known+' trẻ tại '+(cs.length-missing.length)+'/'+cs.length+' cơ sở.'+(ok&&sr?' Tổng còn thiếu ở các cơ sở đã có chỉ tiêu: '+stats.reduce((n,x)=>n+(x.gap||0),0)+' trẻ; chưa đại diện toàn hệ thống.':'')+'</p>':'')
+      +'<p class="leg"><b>Dự kiến có điều kiện:</b> chỉ cộng lịch sau hôm nay trong tháng, có Ngày đặt cọc và hồ sơ chưa Kết thúc thành công / Không có nhu cầu. Giả định trạng thái CRM được cập nhật đúng và trẻ đi học đúng lịch. Nguồn tổng hợp chưa liên kết từng mã Tuyển sinh với mã Học sinh; chưa coi đây là kết quả đã đạt. Campus vượt chỉ tiêu không bù cho campus còn thiếu.</p>'
+      +(sr?'<p class="leg">Có '+sum(cpScope,'lich_tat_ca')+' hồ sơ có Ngày nhập học dự kiến trong tháng (gồm cả hồ sơ đã đóng). Bảng lịch bên dưới chỉ giữ hồ sơ còn mở. '+sum(cpScope,'du_kien_co_coc',month+'-01',now<month+'-31'?now:month+'-31')+' hồ sơ có cọc đã đến/quá ngày dự kiến trong tháng cần xác nhận tình trạng.</p>':'')+'</div>'
       +weekly('Đã nhập học theo tuần','actual',ok)
-      +'<div class="card"><h2>Đăng ký & lịch dự kiến nhập học</h2><div class="gap"><b>Chưa đủ dữ liệu để lập báo cáo.</b> '+e(state.source?.error||('Nguồn Ngày đặt cọc / Ngày nhập học dự kiến gần nhất: '+(state.source?.stamp?new Date(state.source.stamp).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'chưa xác minh')+' · '+(state.source?.count??'chưa xác minh')+' hồ sơ. Chưa xác nhận được danh sách Tuyển sinh đầy đủ cho tháng đang chọn.'))+' Dấu — không có nghĩa là 0 trẻ.</div><p class="leg">Cần nhận bản Tuyển sinh đầy đủ từ CRM, có mã tuyển sinh, campus xử lý chính, Ngày đặt cọc, Ngày nhập học dự kiến, trạng thái và thông tin liên kết học sinh. Số lead theo ngày tạo không thay thế được các trường ngày này.</p></div>'
-      +weekly('Trẻ đăng ký theo tuần · Ngày đặt cọc','deposit',false)
-      +weekly('Lịch dự kiến nhập học theo tuần · Có cọc / Chưa cọc','expected',false);
+      +weekly('Trẻ đăng ký theo tuần · Ngày đặt cọc','deposit',sr)
+      +weekly('Lịch dự kiến nhập học theo tuần · Có cọc / Chưa cọc','expected',sr);
     details();
   }
   function weekly(title,kind,ok){
     const ww=weeks(month),cs=scope();
-    const count=(c,w)=>actualRows(c).filter(r=>r.ngay_nhap_hoc>=w.lo&&r.ngay_nhap_hoc<=w.hi).length;
-    const cell=(c,w)=>!ok||w.lo>state.homNay?'—':link(count(c,w),'actual',c,w.lo);
-    return '<div class="card"><h2>'+title+'</h2><p class="sub">'+e(state.CP||'Toàn hệ thống')+' · '+month.slice(5)+'/'+month.slice(0,4)+' · tuần từ thứ Hai đến Chủ nhật; tuần giao tháng chỉ tính ngày thuộc tháng đang chọn.</p><div class="tw"><table><thead><tr><th>Campus</th>'+ww.map(w=>'<th>'+w.label+'</th>').join('')+'</tr></thead><tbody>'+cs.map(c=>'<tr><td>'+e(c)+'</td>'+ww.map(w=>'<td>'+cell(c,w)+'</td>').join('')+'</tr>').join('')+'<tr><td><b>Tổng</b></td>'+ww.map(w=>'<td>'+cell(state.CP?cp(state.CP):'',w)+'</td>').join('')+'</tr></tbody></table></div><p class="leg">'+(ok?'Bấm số để xem đúng danh sách trong tuần. Tuần chưa tới để —.':'Chưa đủ nguồn CRM Tuyển sinh; chưa công bố số đăng ký/lịch dự kiến.')+'</p></div>';
+    const cell=(c,w)=>{
+      if(!ok||kind!=='expected'&&w.lo>state.homNay)return '—';
+      const hi=kind==='deposit'&&w.hi>state.homNay?state.homNay:w.hi;
+      if(kind==='actual')return link(actualRows(c).filter(r=>r.ngay_nhap_hoc>=w.lo&&r.ngay_nhap_hoc<=w.hi).length,'actual',c,w.lo);
+      if(kind==='deposit')return sum(c,'dat_coc',w.lo,hi);
+      return sum(c,'du_kien_co_coc',w.lo,w.hi)+' / '+sum(c,'du_kien_chua_coc',w.lo,w.hi);
+    };
+    return '<div class="card"><h2>'+title+'</h2><p class="sub">'+e(state.CP||'Toàn hệ thống')+' · '+month.slice(5)+'/'+month.slice(0,4)+' · tuần từ thứ Hai đến Chủ nhật; tuần giao tháng chỉ tính ngày thuộc tháng đang chọn.</p><div class="tw"><table><thead><tr><th>Campus</th>'+ww.map(w=>'<th>'+w.label+'</th>').join('')+'</tr></thead><tbody>'+cs.map(c=>'<tr><td>'+e(c)+'</td>'+ww.map(w=>'<td>'+cell(c,w)+'</td>').join('')+'</tr>').join('')+'<tr><td><b>Tổng</b></td>'+ww.map(w=>'<td>'+cell(state.CP?cp(state.CP):'',w)+'</td>').join('')+'</tr></tbody></table></div><p class="leg">'+(!ok?'Chưa đủ nguồn dữ liệu.':kind==='actual'?'Bấm số để xem đúng danh sách trong tuần. Tuần chưa tới để —.':kind==='deposit'?'Mỗi mã Tuyển sinh tính một lần theo Ngày đặt cọc, gồm cả hồ sơ đã chuyển giai đoạn. Tuần chưa tới để —.':'Mỗi ô = Có cọc / Chưa cọc, chỉ hồ sơ CRM còn mở theo lịch dự kiến. Các tuần đã qua cần xác nhận lại tình trạng. Dữ liệu tổng hợp không kèm danh tính trẻ.')+'</p></div>';
   }
   document.addEventListener('change',ev=>{if(ev.target.id==='ts-month'){month=ev.target.value;detail=null;filter='all';draw();}});
   document.addEventListener('click',ev=>{
